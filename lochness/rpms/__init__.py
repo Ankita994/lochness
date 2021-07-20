@@ -63,7 +63,7 @@ def initialize_metadata(Lochness: 'Lochness object',
 
     source_source_name_dict = {
         'beiwe': 'Beiwe', 'xnat': 'XNAT', 'dropbox': 'Drpbox',
-        'box': 'Box', 'mediaflux': 'Mediaflux',
+        'box': 'Box',
         'mindlamp': 'Mindlamp', 'daris': 'Daris', 'rpms': 'RPMS'}
 
     # get list of csv files from the rpms root
@@ -79,8 +79,11 @@ def initialize_metadata(Lochness: 'Lochness object',
             if not site_two_letters_rpms_id == site_two_letters_study:
                 continue
 
-        subject_dict = {'Subject ID': df_measure[rpms_id_colname].values}
-
+        # mediaflux source has its foldername as its subject ID
+        subject_dict = {
+                'Subject ID': df_measure[rpms_id_colname].values,
+                'Mediaflux': (f'mediaflux.{study_name}:' +
+                              df_measure[rpms_id_colname]).values}
         # Consent date
         try:
             subject_dict['Consent'] = df_measure[rpms_consent_colname].values
