@@ -107,20 +107,22 @@ def write_commands_needed(args: 'argparse',
         f.write('# run this command to run sync.py\n')
         f.write('# eg) bash 2_sync_command.sh\n')
 
-        print(dir(args))
         if args.lochness_sync_send:
             if args.s3:
                 command = f"sync.py -c {config_loc} \
+                       --studies {' '.join(args.studies)} \
                        --source {' '.join(args.sources)} \
                        --lochness_sync_send --s3 \
                        --debug --continuous\n"
             elif args.rsync:
                 command = f"sync.py -c {config_loc} \
+                        --studies {' '.join(args.studies)} \
                         --source {' '.join(args.sources)} \
                         --lochness_sync_send --rsync \
                         --debug --continuous\n"
             else:
                 command = f"sync.py -c {config_loc} \
+                        --studies {' '.join(args.studies)} \
                         --source {' '.join(args.sources)} \
                         --lochness_sync_send --s3 \
                         --debug --continuous\n"
@@ -253,7 +255,7 @@ lochness_sync_history_csv: {args.lochness_sync_history_csv}
 
     if 'rpms' in args.sources:
         config_example += '''RPMS_PATH: /mnt/prescient/RPMS_incoming
-RPMS_id_colname: src_subject_id
+RPMS_id_colname: subjectkey
 RPMS_consent_colname: Consent
 '''
 
@@ -279,30 +281,30 @@ AWS_BUCKET_ROOT: TEST_PHOENIX_ROOT'''
         for study in args.studies:
             line_to_add = f'''
     {study}:
-        namespace: /DATA/ROOT/UNDER/MEDIAFLUX/{study}
+        namespace: /projects/proj-5070_prescient-1128.4.380/{study}
         delete_on_success: False
         file_patterns:
             actigraphy:
                 - vendor: Philips
                   product: Actiwatch 2
-                  data_dir: actigraphy
+                  data_dir: Actigraphy
                   pattern: '*csv'
                   protect: True
                 - vendor: Activinsights
                   product: GENEActiv
-                  data_dir: actigraphy
+                  data_dir: Actigraphy
                   pattern: '*csv'
                 - vendor: Insights
                   product: GENEActivQC
-                  data_dir: actigraphy
+                  data_dir: Actigraphy
                   pattern: '*csv'
             eeg:
                    - product: eeg
-                     data_dir: eeg
+                     data_dir: EEG
                      pattern: '*.csv'
             interviews:
                    - product: offsite_interview
-                     data_dir: interviews
+                     data_dir: Interview_recordings
                      pattern: '*.mp4'
               '''
 
