@@ -139,7 +139,6 @@ def do(args, Lochness):
 
     # initialize (overwrite) metadata.csv using either REDCap or RPMS database
     if 'redcap' in args.input_sources or 'rpms' in args.input_sources:
-
         if len(args.studies)==1:
             lochness.initialize_metadata(Lochness, args, multiple_site_in_a_repo=False)
         else:
