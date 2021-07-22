@@ -42,7 +42,7 @@ def get_rpms_database(rpms_root_path: str) -> Dict[str, pd.DataFrame]:
         rpms_pattern = re.compile(
                 r'PrescientStudy_Prescient_(\w+)_(\d{2}.\d{2}.\d{4}).csv',
                 re.IGNORECASE)
-        pattern_search = re.search(rpms_pattern, measure_file)
+        pattern_search = re.search(rpms_pattern, Path(measure_file).name)
         measure_name = pattern_search.group(1)
         measure_file_date = pd.to_datetime(pattern_search.group(2),
                                            dayfirst=True)
