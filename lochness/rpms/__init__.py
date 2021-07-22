@@ -11,6 +11,7 @@ import lochness.net as net
 import lochness.tree as tree
 from typing import List, Dict
 import pandas as pd
+import re
 from lochness.redcap.process_piis import process_and_copy_db
 
 
@@ -19,8 +20,11 @@ yaml.SafeDumper.add_representer(
 logger = logging.getLogger(__name__)
 
 
-def get_rpms_database(rpms_root_path) -> Dict[str, pd.DataFrame]:
+def get_rpms_database(rpms_root_path: str) -> Dict[str, pd.DataFrame]:
     '''Return dictionary of RPMS database in pandas dataframes
+
+    Base on the file name, the most recent csv file is added to the dictionary
+    to be backed up.
 
     Key arguments:
         rpms_root_path: root of the RPMS sync directory, str.
@@ -29,17 +33,33 @@ def get_rpms_database(rpms_root_path) -> Dict[str, pd.DataFrame]:
         all_df_dict: all measures loaded as pandas dataframe in dict.
                      key: name of the measure extracted from the file name.
                      value: pandas dataframe of the measure database
-        
     '''
     all_df_dict = {}
+    measure_date_dict = {}
+
     for measure_file in Path(rpms_root_path).glob('*csv'):
-        measure_name = measure_file.name.split('.')[0]
+        # measure_name = measure_file.name.split('.')[0]
+        rpms_pattern = re.compile(
+                r'PrescientStudy_Prescient_(\w+)_(\d{2}.\d{2}.\d{4}).csv',
+                re.IGNORECASE)
+        pattern_search = re.search(rpms_pattern, measure_file)
+        measure_name = pattern_search.group(1)
+        measure_file_date = pd.to_datetime(pattern_search.group(2),
+                                           dayfirst=True)
+
         try:
             df_tmp = pd.read_csv(measure_file)
-        except pd.errors.EmptyDataError:
+        except pd.errors.EmptyDataError:  # ignore if the csv file is empty
             continue
 
-        all_df_dict[measure_name] = df_tmp
+        if measure_name in all_df_dict:
+            # store df_tmp only if it's more recent than df_tmp for the measure
+            if measure_file_date > measure_date_dict[measure_name]:
+                all_df_dict[measure_name] = df_tmp
+                measure_date_dict[measure_name] = measure_file_date
+        else:
+            all_df_dict[measure_name] = df_tmp
+            measure_date_dict[measure_name] = measure_file_date
 
     return all_df_dict
 
