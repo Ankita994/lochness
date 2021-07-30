@@ -161,7 +161,8 @@ def do(args, Lochness):
                 lochness.attempt(Module.sync, Lochness, subject, dry=args.dry)
 
     # annonymize PII
-    dpanonymize.lock_lochness(Lochness)
+    dpanonymize.lock_lochness(Lochness,
+                              pii_table_loc=Lochness['pii_table'])
 
     # transfer new files after all sync attempts are done
     if args.lochness_sync_send:
