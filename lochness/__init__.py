@@ -296,6 +296,7 @@ def _parse_beiwe(value, default_id=None):
 def _parse_redcap(value, default_id=None):
     '''helper function to parse a redcap metadata value'''
     default = 'redcap.*:{ID}'.format(ID=default_id)
+
     return _simple_parser(value, default=default)
 
 
