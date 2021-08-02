@@ -69,7 +69,6 @@ def initialize_metadata(Lochness: 'Lochness object',
 
     source_source_name_dict = {
         'beiwe': 'Beiwe', 'xnat': 'XNAT', 'dropbox': 'Drpbox',
-        'box': 'Box', 'mediaflux': 'Mediaflux',
         'mindlamp': 'Mindlamp', 'daris': 'Daris', 'rpms': 'RPMS'}
 
     record_query = {
@@ -110,7 +109,7 @@ def initialize_metadata(Lochness: 'Lochness object',
     for item in data:
         if multistudy:
             site_two_letters_redcap_id = item[redcap_id_colname][:2]
-            site_two_letters_study = study_name.split('_')[1]
+            site_two_letters_study = study_name[-2:]
 
             if site_two_letters_redcap_id != site_two_letters_study:
                 continue
@@ -125,10 +124,12 @@ def initialize_metadata(Lochness: 'Lochness object',
 
         # Redcap default information
         subject_dict['REDCap'] = f'redcap.{study_name}:{item[redcap_id_colname]}'
+        subject_dict['Box'] = f'box.{study_name}:{item[redcap_id_colname]}'
 
         for source, source_name in source_source_name_dict.items():
             try:
-                subject_dict[source_name] = item[f'{source}_id']
+                subject_dict[source_name] = item[
+                        f'{source}.{study_name}:{source}_id']
             except:
                 pass
 

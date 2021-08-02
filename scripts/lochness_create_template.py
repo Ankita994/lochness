@@ -138,6 +138,13 @@ def create_keyring_template(keyring_loc: Path, args: object) -> None:
     template_dict['lochness'] = {}
 
     if 'redcap' in args.sources:
+        if args.enter_passwords:
+            url = getpass.getpass('REDCAP URL: ')
+            api_token = getpass.getpass('REDCAP API_TOKEN: ')
+        else:
+            url = 'https://redcap.partners.org/redcap'
+            api_token = '*****'
+
         template_dict['lochness']['REDCAP'] = {}
         template_dict['lochness']['SECRETS'] = {}
         for study in args.studies:
@@ -148,29 +155,47 @@ def create_keyring_template(keyring_loc: Path, args: object) -> None:
 
             # lower part of the keyring
             template_dict[f'redcap.{study}'] = {
-                    'URL': f'**https://redcap.address.org/redcap/{study}**',
-                    'API_TOKEN': {study: f'**API_TOEN_FOR_{study}**'}}
+                    'URL': url,
+                    'API_TOKEN': api_token}
 
     if 'xnat' in args.sources:
+        if args.enter_passwords:
+            url = getpass.getpass('XNAT URL: ')
+            username = getpass.getpass('XNAT USERNAME: ')
+            password = getpass.getpass('XNAT PASSWORD: ')
+        else:
+            url = '*****'
+            username = '*****'
+            password = '*****'
+
         for study in args.studies:
             # lower part of the keyring
             template_dict[f'xnat.{study}'] = {
-                'URL': f'**https://{study}-xnat.address.edu**',
-                'USERNAME': f'**id_for_xnat_{study}**',
-                'PASSWORD': f'**password_for_xnat_{study}**'}
+                'URL': url,
+                'USERNAME': username,
+                'PASSWORD': password}
 
     if 'SECRETS' not in template_dict['lochness'].keys():
         template_dict['lochness']['SECRETS'] = {}
 
     if 'box' in args.sources:
+        if args.enter_passwords:
+            client_id = getpass.getpass('BOX CLIENT ID: ')
+            client_secret = getpass.getpass('BOX CLIENT SECRET: ')
+            api_token = getpass.getpass('BOX API TOKEN: ')
+        else:
+            client_id = '*****'
+            client_secret = '*****'
+            api_token = '*****'
+
         for study in args.studies:
             template_dict['lochness']['SECRETS'][study] = 'LOCHNESS_SECRETS'
 
             # lower part of the keyring
             template_dict[f'box.{study}'] = {
-                'CLIENT_ID': '**CLIENT_ID_FROM_BOX_APPS**',
-                'CLIENT_SECRET': '**CLIENT_SECRET_FROM_BOX_APPS**',
-                'API_TOEN': '**APITOKEN_FROM_BOX_APPS**'}
+                'CLIENT_ID': client_id,
+                'CLIENT_SECRET': client_secret,
+                'API_TOKEN': api_token}
 
     if 'mediaflux' in args.sources:
         for study in args.studies:
@@ -210,7 +235,7 @@ def create_keyring_template(keyring_loc: Path, args: object) -> None:
             # lower part of the keyring
             template_dict['rsync'] = {
                 'ID': "rsync_server_id",
-                'SERVER': "rsync_server_ip",
+                'SERVER': rsync_server_ip",
                 'PASSWORD': "rsync_server_password",
                 'PHOENIX_PATH_RSYNC': "/rsync/server/phoenix/path"}
         else:
@@ -315,7 +340,7 @@ AWS_BUCKET_ROOT: TEST_PHOENIX_ROOT'''
         for study in args.studies:
             line_to_add = f'''
     {study}:
-        base: /DATA/ROOT/UNDER/BOX
+        base: /example_box_root/{study}
         delete_on_success: False
         file_patterns:
             actigraphy:
@@ -444,6 +469,11 @@ def get_arguments():
                         default='pii_convert.csv',
                         help='Location of table to be used in deidentifying '
                              'redcap fields')
+    parser.add_argument('-ep', '--enter_passwords',
+                        action='store_true',
+                        default=False
+                        help='Enter passwords to the shell to be stored in '
+                             'the lochness.json')
 
     args = parser.parse_args()
 
