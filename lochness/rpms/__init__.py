@@ -56,7 +56,7 @@ def get_rpms_database(rpms_root_path: str) -> Dict[str, pd.DataFrame]:
             'measure_file_date': measure_file_date})
         measure_file_df = pd.concat([measure_file_df, measure_file_df_tmp])
     
-    for measure, table in measure_file_df.groupby('measure_name'):
+    for measure_name, table in measure_file_df.groupby('measure_name'):
         n = 0
         for _, row in table.sort_values(
                 'measure_file_date', ascending=False).iterrows():
