@@ -128,8 +128,10 @@ def initialize_metadata(Lochness: 'Lochness object',
 
         for source, source_name in source_source_name_dict.items():
             try:
-                subject_dict[source_name] = item[
-                        f'{source}.{study_name}:{source}_id']
+                # subject_dict[source_name] = item[
+                        # f'{source}.{study_name}:{source}_id']
+                source_id = item[f'{source}_id']
+                subject_dict[source_name] = f"{source}.{study_name}:{source_id}"
             except:
                 pass
 
