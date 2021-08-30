@@ -235,7 +235,7 @@ def create_keyring_template(keyring_loc: Path, args: object) -> None:
             # lower part of the keyring
             template_dict['rsync'] = {
                 'ID': "rsync_server_id",
-                'SERVER': rsync_server_ip",
+                'SERVER': "rsync_server_ip",
                 'PASSWORD': "rsync_server_password",
                 'PHOENIX_PATH_RSYNC': "/rsync/server/phoenix/path"}
         else:
@@ -471,7 +471,7 @@ def get_arguments():
                              'redcap fields')
     parser.add_argument('-ep', '--enter_passwords',
                         action='store_true',
-                        default=False
+                        default=False,
                         help='Enter passwords to the shell to be stored in '
                              'the lochness.json')
 
