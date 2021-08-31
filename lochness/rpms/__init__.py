@@ -23,8 +23,9 @@ logger = logging.getLogger(__name__)
 def get_rpms_database(rpms_root_path: str) -> Dict[str, pd.DataFrame]:
     '''Return dictionary of RPMS database in pandas dataframes
 
-    Base on the file name, the most recent csv file is added to the dictionary
-    to be backed up.
+    Base on the date in the file name, the most recent csv file among the csv
+    files exported by the RPMS is loaded as a dictionary to be backed stored.
+    Old csv files are moved to a temporary directory.
 
     Key arguments:
         rpms_root_path: root of the RPMS sync directory, str.
