@@ -105,6 +105,7 @@ def initialize_metadata(Lochness: 'Lochness object',
             data = json.load(f)
 
     df = pd.DataFrame()
+
     # for each record in pulled information, extract subject ID and source IDs
     for item in data:
         if multistudy:
@@ -123,8 +124,10 @@ def initialize_metadata(Lochness: 'Lochness object',
             subject_dict['Consent'] = '1988-09-16'
 
         # Redcap default information
-        subject_dict['REDCap'] = f'redcap.{study_name}:{item[redcap_id_colname]}'
+        subject_dict['REDCap'] = f'redcap.{study_name}:' \
+                                 f'{item[redcap_id_colname]}'
         subject_dict['Box'] = f'box.{study_name}:{item[redcap_id_colname]}'
+
 
         for source, source_name in source_source_name_dict.items():
             try:
