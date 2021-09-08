@@ -11,6 +11,7 @@ import lochness.net as net
 import lochness.tree as tree
 from typing import List, Dict
 import pandas as pd
+import re
 from lochness.redcap.process_piis import process_and_copy_db
 
 
@@ -19,8 +20,12 @@ yaml.SafeDumper.add_representer(
 logger = logging.getLogger(__name__)
 
 
-def get_rpms_database(rpms_root_path) -> Dict[str, pd.DataFrame]:
+def get_rpms_database(rpms_root_path: str) -> Dict[str, pd.DataFrame]:
     '''Return dictionary of RPMS database in pandas dataframes
+
+    Based on the date in the file name, the most recent csv file exported by
+    the RPMS is loaded as a dictionary to be stored to the phoenix directory.
+    Other old csv files are moved to a temporary directory.
 
     Key arguments:
         rpms_root_path: root of the RPMS sync directory, str.
@@ -29,17 +34,45 @@ def get_rpms_database(rpms_root_path) -> Dict[str, pd.DataFrame]:
         all_df_dict: all measures loaded as pandas dataframe in dict.
                      key: name of the measure extracted from the file name.
                      value: pandas dataframe of the measure database
-        
     '''
     all_df_dict = {}
-    for measure_file in Path(rpms_root_path).glob('*csv'):
-        measure_name = measure_file.name.split('.')[0]
-        try:
-            df_tmp = pd.read_csv(measure_file)
-        except pd.errors.EmptyDataError:
-            continue
+    measure_date_dict = {}
 
-        all_df_dict[measure_name] = df_tmp
+    rpms_old_files_root = Path(rpms_root_path) / 'old_files'
+    rpms_old_files_root.mkdir(exist_ok=True)
+    
+    measure_file_df = pd.DataFrame()
+    for measure_file in Path(rpms_root_path).glob('*csv'):
+        # measure_name = measure_file.name.split('.')[0]
+        rpms_pattern = re.compile(
+                r'PrescientStudy_Prescient_(\w+)_(\d{2}.\d{2}.\d{4}).csv',
+                re.IGNORECASE)
+        pattern_search = re.search(rpms_pattern, Path(measure_file).name)
+        measure_name = pattern_search.group(1)
+        measure_file_date = pd.to_datetime(pattern_search.group(2),
+                                           dayfirst=True)
+        measure_file_df_tmp = pd.DataFrame({
+            'measure_file': [measure_file],
+            'measure_name': measure_name,
+            'measure_file_date': measure_file_date})
+        measure_file_df = pd.concat([measure_file_df, measure_file_df_tmp])
+    
+    for measure_name, table in measure_file_df.groupby('measure_name'):
+        n = 0
+        for _, row in table.sort_values(
+                'measure_file_date', ascending=False).iterrows():
+            if n == 0:
+                try:
+                    df_tmp = pd.read_csv(row.measure_file)
+                except pd.errors.EmptyDataError:  # ignore csv is empty
+                    continue
+
+                all_df_dict[measure_name] = df_tmp
+                measure_date_dict[measure_name] = row.measure_file_date
+            else:
+                shutil.move(row.measure_file,
+                            rpms_old_files_root / row.measure_file.name)
+            n += 1
 
     return all_df_dict
 
@@ -62,8 +95,8 @@ def initialize_metadata(Lochness: 'Lochness object',
     rpms_root_path = Lochness['RPMS_PATH']
 
     source_source_name_dict = {
-        'beiwe': 'Beiwe', 'xnat': 'XNAT', 'dropbox': 'Drpbox',
-        'box': 'Box', 'mediaflux': 'Mediaflux',
+        'beiwe': 'Beiwe', 'xnat': 'XNAT', 'dropbox': 'Dropbox',
+        'box': 'Box',
         'mindlamp': 'Mindlamp', 'daris': 'Daris', 'rpms': 'RPMS'}
 
     # get list of csv files from the rpms root
@@ -79,8 +112,11 @@ def initialize_metadata(Lochness: 'Lochness object',
             if not site_two_letters_rpms_id == site_two_letters_study:
                 continue
 
-        subject_dict = {'Subject ID': df_measure[rpms_id_colname].values}
-
+        # mediaflux source has its foldername as its subject ID
+        subject_dict = {
+                'Subject ID': df_measure[rpms_id_colname].values,
+                'Mediaflux': (f'mediaflux.{study_name}:' +
+                              df_measure[rpms_id_colname]).values}
         # Consent date
         try:
             subject_dict['Consent'] = df_measure[rpms_consent_colname].values

@@ -1,4 +1,5 @@
 from typing import List
+import re
 from pathlib import Path
 from datetime import datetime
 import os
@@ -308,10 +309,10 @@ def lochness_to_lochness_transfer_s3(Lochness, general_only: bool = True):
             {source_directory}/ \
             s3://{s3_bucket_name}/{s3_phoenix_root}'
 
-    proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE)
-    proc.wait()
-
-    outs, _ = proc.communicate()
+    print('Executing aws s3 sync function')
+    print(re.sub('\s+', ' ', command))
+    print(os.popen(command).read())
+    print('aws rsync completed')
 
 
 def lochness_to_lochness_transfer_receive_sftp(Lochness):

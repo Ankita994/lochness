@@ -53,11 +53,14 @@ def test_lamp_modules():
     mindlamp_token, access_key, secret_key, api_url = \
             token.read_token_or_get_input('mindlamp')
     LAMP.connect(access_key, secret_key)
+    print(LAMP.Study.all_by_researcher('me')['data'])
+    # study_id, study_name = get_study_lamp(LAMP)
     study_id, study_name = get_study_lamp(LAMP)
     subject_ids = get_participants_lamp(LAMP, study_id)
 
     for subject_id in subject_ids:
-        if subject_id == 'U7045332804':
+        # if subject_id == 'U7045332804':
+        if subject_id == 'U4518928219' or subject_id == 'U6198539134':
             print(subject_id)
             # activity_dicts = get_activities_lamp(LAMP, subject_id)
             activity_dicts = get_activity_events_lamp(LAMP, subject_id)
@@ -65,12 +68,12 @@ def test_lamp_modules():
             # print(activity_dicts)
             # print(sensor_dicts)
 
-            # with open('activity_data.json', 'w') as f:
-                # json.dump(activity_dicts, f)
+            with open(f'{subject_id}_activity_data.json', 'w') as f:
+                json.dump(activity_dicts, f)
 
-            # with open('sensor_data.json', 'w') as f:
-                # json.dump(sensor_dicts, f)
-            # break
+            with open(f'{subject_id}_sensor_data.json', 'w') as f:
+                json.dump(sensor_dicts, f)
+            # # break
 
     # print(os.popen('tree').read())
     # os.remove('activity_data.json')

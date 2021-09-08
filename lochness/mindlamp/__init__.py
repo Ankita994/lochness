@@ -139,7 +139,7 @@ def get_study_lamp(lamp: LAMP) -> Tuple[str, str]:
         (study_id, study_name): study id and study objects, Tuple.
     '''
     study_objs = lamp.Study.all_by_researcher('me')['data']
-    assert len(study_objs) == 1, "There are more than one MindLamp study"
+    # assert len(study_objs) == 1, "There are more than one MindLamp study"
     study_obj = study_objs[0]
     return study_obj['id'], study_obj['name']
 
