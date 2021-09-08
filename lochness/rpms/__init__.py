@@ -95,7 +95,7 @@ def initialize_metadata(Lochness: 'Lochness object',
     rpms_root_path = Lochness['RPMS_PATH']
 
     source_source_name_dict = {
-        'beiwe': 'Beiwe', 'xnat': 'XNAT', 'dropbox': 'Drpbox',
+        'beiwe': 'Beiwe', 'xnat': 'XNAT', 'dropbox': 'Dropbox',
         'box': 'Box',
         'mindlamp': 'Mindlamp', 'daris': 'Daris', 'rpms': 'RPMS'}
 
