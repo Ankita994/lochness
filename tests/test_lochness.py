@@ -59,6 +59,7 @@ class Args:
         self.pii_csv = ''
         self.rsync = False
         self.s3 = False
+        self.enter_passwords = False
 
 
 class Tokens():

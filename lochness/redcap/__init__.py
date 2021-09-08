@@ -346,6 +346,7 @@ def redcap_projects(Lochness, phoenix_study, redcap_instance):
         logger.debug(f'lochness > REDCAP > {phoenix_study}'
                      'not found in keyring')
         return
+
     if redcap_instance not in Keyring['lochness']['REDCAP'][phoenix_study]:
         logger.debug(f'lochness > REDCAP > {phoenix_study} '
                      f'> {redcap_instance} not found in keyring')
