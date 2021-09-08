@@ -24,7 +24,7 @@ def get_rpms_database(rpms_root_path: str) -> Dict[str, pd.DataFrame]:
     '''Return dictionary of RPMS database in pandas dataframes
 
     Based on the date in the file name, the most recent csv file exported by
-    the RPMS is loaded as a dictionary to be stored to the phoenix directory.
+    the RPMS is loaded as a dictionary to be stored in the phoenix directory.
     Other old csv files are moved to a temporary directory.
 
     Key arguments:
