@@ -63,9 +63,17 @@ def initialize_metadata(Lochness: 'Lochness object',
                                 str.
         multistudy: True if the redcap repo contains more than one study's data
     '''
-    study_redcap = Lochness['keyring'][f'redcap.{study_name}']
-    api_url = study_redcap['URL'] + '/api/'
-    api_key = study_redcap['API_TOKEN'][study_name]
+    # study_redcap = Lochness['keyring'][f'redcap.{study_name}']
+    if multistudy:
+        site_two_letters_study = study_name[-2:]
+        project_name = 'redcap.' + study_name.split(site_two_letters_study)[0]
+    else:
+        project_name = 'redcap.{study_name}'
+    
+    for _, api_url, api_key in redcap_projects(Lochness,
+                                               study_name,
+                                               project_name):
+        pass
 
     source_source_name_dict = {
         'beiwe': 'Beiwe', 'xnat': 'XNAT', 'dropbox': 'Drpbox',
@@ -124,15 +132,13 @@ def initialize_metadata(Lochness: 'Lochness object',
             subject_dict['Consent'] = '1988-09-16'
 
         # Redcap default information
-        subject_dict['REDCap'] = f'redcap.{study_name}:' \
-                                 f'{item[redcap_id_colname]}'
+        subject_dict['REDCap'] = \
+                f'redcap.{study_name}:{item[redcap_id_colname]};' \
+                f'redcap.UPENN:{item[redcap_id_colname]}'  # UPENN REDCAP
         subject_dict['Box'] = f'box.{study_name}:{item[redcap_id_colname]}'
-
 
         for source, source_name in source_source_name_dict.items():
             try:
-                # subject_dict[source_name] = item[
-                        # f'{source}.{study_name}:{source}_id']
                 source_id = item[f'{source}_id']
                 subject_dict[source_name] = f"{source}.{study_name}:{source_id}"
             except:
@@ -326,31 +332,50 @@ class REDCapError(Exception):
 
 
 def redcap_projects(Lochness, phoenix_study, redcap_instance):
-    '''get redcap api_url and api_key for a phoenix study'''
+    '''get redcap api_url and api_key for a phoenix study
+
+    Key Arguments:
+        Lochness: Lochness object.
+        phoenix_study: name of the study, str. eg) STUDY_A
+        redcap_instance: name of the redcap field for the study in the keyring,
+                         str. eg) redcap.STUDY_A
+
+    Yields:
+        project: name of the redcap project field in the keyring file, str.
+                 eg) "Pronet" when the lochness keyring file has
+                     "redcap.Pronet" : {"URL": ***, API_TOKEN: ...}
+        api_url: REDCap API url, str
+        api_key: REDCap API key, str
+    '''
     Keyring = Lochness['keyring']
-    # check for mandatory keyring items
+
+    # Check for mandatory keyring items
+    # part 1 - checking for REDCAP field right below the 'lochness' in keyring
     if 'REDCAP' not in Keyring['lochness']:
         raise KeyringError("lochness > REDCAP not found in keyring")
+
+    # part 2 - check for study under 'REDCAP' field
+    if phoenix_study not in Keyring['lochness']['REDCAP']:
+        raise KeyringError(f'lochness > REDCAP > {phoenix_study}'
+                     'not found in keyring')
+
+    if redcap_instance not in Keyring['lochness']['REDCAP'][phoenix_study]:
+        raise KeyringError(f'lochness > REDCAP > {phoenix_study} '
+                     f'> {redcap_instance} not found in keyring')
+
+    # part 3 - checking for redcap_instance
     if redcap_instance not in Keyring:
         raise KeyringError(f"{redcap_instance} not found in keyring")
+
     if 'URL' not in Keyring[redcap_instance]:
         raise KeyringError(f"{redcap_instance} > URL not found in keyring")
+
     if 'API_TOKEN' not in Keyring[redcap_instance]:
         raise KeyringError(f"{redcap_instance} > API_TOKEN "
                            "not found in keyring")
 
+    # get URL
     api_url = Keyring[redcap_instance]['URL'].rstrip('/') + '/api/'
-
-    # check for soft keyring items
-    if phoenix_study not in Keyring['lochness']['REDCAP']:
-        logger.debug(f'lochness > REDCAP > {phoenix_study}'
-                     'not found in keyring')
-        return
-
-    if redcap_instance not in Keyring['lochness']['REDCAP'][phoenix_study]:
-        logger.debug(f'lochness > REDCAP > {phoenix_study} '
-                     f'> {redcap_instance} not found in keyring')
-        return
 
     # begin generating project,api_url,api_key tuples
     for project in Keyring['lochness']['REDCAP']\
