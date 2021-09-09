@@ -139,6 +139,7 @@ def create_keyring_template(keyring_loc: Path, args: object) -> None:
 
     if 'redcap' in args.sources:
         if args.enter_passwords:
+            import getpass
             url = getpass.getpass('REDCAP URL: ')
             api_token = getpass.getpass('REDCAP API_TOKEN: ')
         else:
