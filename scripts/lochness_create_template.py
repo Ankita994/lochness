@@ -12,6 +12,7 @@ from typing import List
 import pandas as pd
 import json
 import importlib
+import getpass
 from phoenix_generator import main as pg
 
 
@@ -137,9 +138,16 @@ def create_keyring_template(keyring_loc: Path, args: object) -> None:
     template_dict = {}
     template_dict['lochness'] = {}
 
+    if 'upenn' in args.sources:
+        if args.enter_passwords:
+            upenn_url = getpass.getpass('UPENN REDCAP URL: ')
+            upenn_api_token = getpass.getpass('UPENN API_TOKEN: ')
+        else:
+            upenn_url = 'https://redcap.upenn.org/redcap'
+            upenn_api_token = '*****'
+
     if 'redcap' in args.sources:
         if args.enter_passwords:
-            import getpass
             url = getpass.getpass('REDCAP URL: ')
             api_token = getpass.getpass('REDCAP API_TOKEN: ')
         else:
@@ -149,28 +157,22 @@ def create_keyring_template(keyring_loc: Path, args: object) -> None:
         template_dict['lochness']['REDCAP'] = {}
         template_dict['lochness']['SECRETS'] = {}
         for study in args.studies:
+            project_name = study[:-2]
             if 'upenn' in args.sources:
-                if args.enter_passwords:
-                    upenn_url = getpass.getpass('UPENN REDCAP URL: ')
-                    upenn_api_token = getpass.getpass('UPENN API_TOKEN: ')
-                else:
-                    upenn_url = 'https://redcap.upenn.org/redcap'
-                    upenn_api_token = '*****'
-
-                study_dict = {f'redcap.{study}': [study],
+                study_dict = {f'redcap.{project_name}': [project_name],
                               'redcap.UPENN': ['UPENN']}
                 template_dict['redcap.UPENN'] = {
                         'URL': upenn_url,
                         'API_TOKEN': upenn_api_token}
             else:
-                study_dict = {f'redcap.{study}': [study]}
+                study_dict = {f'redcap.{project_name}': [project_name]}
 
             study_secrete = '**PASSWORD_TO_ENCRYPTE_PROTECTED_DATA**'
             template_dict['lochness']['REDCAP'][study] = study_dict
             template_dict['lochness']['SECRETS'][study] = study_secrete
 
             # lower part of the keyring
-            template_dict[f'redcap.{study}'] = {
+            template_dict[f'redcap.{project_name}'] = {
                     'URL': url,
                     'API_TOKEN': api_token}
 
