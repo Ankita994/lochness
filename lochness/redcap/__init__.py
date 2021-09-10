@@ -57,7 +57,7 @@ def initialize_metadata(Lochness: 'Lochness object',
                         redcap_consent_colname: str,
                         multistudy: bool = True,
                         upenn: bool = False) -> None:
-    '''Initialize metadata.csv by pulling data from REDCap
+    '''Initialize metadata.csv by pulling data from REDCap for Pronet project
 
     Key arguments:
         Lochness: Lochness object
@@ -66,6 +66,7 @@ def initialize_metadata(Lochness: 'Lochness object',
         redcap_consent_colname: Name of the consent date field name in REDCap,
                                 str.
         multistudy: True if the redcap repo contains multisite data, bool.
+        upenn: True if upenn redcap is included in the source list, bool.
     '''
     if multistudy:
         # specific to DPACC project
@@ -78,7 +79,7 @@ def initialize_metadata(Lochness: 'Lochness object',
     _, api_url, api_key = next(redcap_projects(
         Lochness, study_name, f'redcap.{project_name}'))
 
-    # other sources should have the same source ID as the subject ID
+    # sources to add to the metadata, apart from REDCap, XNAT, and Box
     source_source_name_dict = {'mindlamp': 'Mindlamp'}  
 
     record_query = {'token': api_key,
@@ -133,7 +134,7 @@ def initialize_metadata(Lochness: 'Lochness object',
                 f'redcap.{project_name}:{item[redcap_id_colname]}'
         if upenn:
             subject_dict['REDCap'] += \
-                    f'redcap.UPENN:{item[redcap_id_colname]}'  # UPENN REDCAP
+                    f';redcap.UPENN:{item[redcap_id_colname]}'  # UPENN REDCAP
 
         subject_dict['Box'] = f'box.{study_name}:{item[redcap_id_colname]}'
         subject_dict['XNAT'] = f'xnat.{study_name}:{item[redcap_id_colname]}'
