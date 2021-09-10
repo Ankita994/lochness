@@ -15,7 +15,9 @@ import lochness.keyring as keyring
 import lochness.net as net
 import lochness.tree as tree
 from os.path import join, basename
+logging.getLogger('boxsdk').setLevel(logging.CRITICAL)
 from boxsdk import Client, OAuth2
+from boxsdk.exception import BoxOAuthException
 import cryptease as enc
 import re
 
@@ -25,6 +27,7 @@ Module = lochness.lchop(__name__, 'lochness.')
 Basename = lochness.lchop(__name__, 'lochness.box.')
 
 CHUNK_SIZE = 65536
+
 
 def delete_on_success(Lochness, module_name):
     ''' get module-specific delete_on_success flag with a safe default '''
@@ -311,6 +314,14 @@ def sync_module(Lochness: 'lochness.config',
             access_token=api_token,
         )
         client = Client(auth)
+
+        # check if the login details are correct
+        try:
+            _ = client.user().get()
+        except BoxOAuthException:
+            logger.debug('Failed to login to BOX. Please check Box keyrings.')
+            return
+
 
         bx_base = base(Lochness, module_basename)
 
