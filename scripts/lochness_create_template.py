@@ -149,7 +149,22 @@ def create_keyring_template(keyring_loc: Path, args: object) -> None:
         template_dict['lochness']['REDCAP'] = {}
         template_dict['lochness']['SECRETS'] = {}
         for study in args.studies:
-            study_dict = {f'redcap.{study}': [study]}
+            if 'upenn' in args.sources:
+                if args.enter_passwords:
+                    upenn_url = getpass.getpass('UPENN REDCAP URL: ')
+                    upenn_api_token = getpass.getpass('UPENN API_TOKEN: ')
+                else:
+                    upenn_url = 'https://redcap.upenn.org/redcap'
+                    upenn_api_token = '*****'
+
+                study_dict = {f'redcap.{study}': [study],
+                              'redcap.UPENN': ['UPENN']}
+                template_dict['redcap.UPENN'] = {
+                        'URL': upenn_url,
+                        'API_TOKEN': upenn_api_token}
+            else:
+                study_dict = {f'redcap.{study}': [study]}
+
             study_secrete = '**PASSWORD_TO_ENCRYPTE_PROTECTED_DATA**'
             template_dict['lochness']['REDCAP'][study] = study_dict
             template_dict['lochness']['SECRETS'][study] = study_secrete
@@ -158,6 +173,7 @@ def create_keyring_template(keyring_loc: Path, args: object) -> None:
             template_dict[f'redcap.{study}'] = {
                     'URL': url,
                     'API_TOKEN': api_token}
+
 
     if 'xnat' in args.sources:
         if args.enter_passwords:
@@ -397,7 +413,8 @@ def create_example_meta_file_advanced(metadata: str,
                              'mindlamp': 'Mindlamp',
                              'mediaflux': 'Mediaflux',
                              'daris': 'Daris',
-                             'rpms': 'RPMS'}
+                             'rpms': 'RPMS',
+                             'upenn': 'REDCap'}
 
     df = pd.DataFrame({
         'Active': [1],
@@ -408,10 +425,21 @@ def create_example_meta_file_advanced(metadata: str,
         source_col = col_input_to_col_dict[source]
         if source == 'xnat':
             value = f'xnat.{project_name}:subproject:subject01'
+        elif source_col == 'REDCap':
+            if 'REDCap' in df.loc[0]:
+                prev_value = f'{df.loc[0]};'
+            else:
+                prev_value = ''
+
+            if source == 'upenn':
+                value = prev_value + 'redcap.UPENN:subject01'
+            else:
+                value = prev_value + f'redcap.{project_name}:subject01'
         else:
             value = f'{source}.{project_name}:subject01'
         df.loc[0, source_col] = value
 
+    return
     df.to_csv(metadata, index=False)
 
 
