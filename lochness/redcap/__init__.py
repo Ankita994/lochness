@@ -137,7 +137,7 @@ def initialize_metadata(Lochness: 'Lochness object',
                     f';redcap.UPENN:{item[redcap_id_colname]}'  # UPENN REDCAP
 
         subject_dict['Box'] = f'box.{study_name}:{item[redcap_id_colname]}'
-        subject_dict['XNAT'] = f'xnat.{study_name}:{item[redcap_id_colname]}'
+        subject_dict['XNAT'] = f'xnat.{study_name}:*:{item[redcap_id_colname]}'
 
         for source, source_name in source_source_name_dict.items():
             try:  # if mindlamp_id field is available in REDCap record
