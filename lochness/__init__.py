@@ -83,24 +83,26 @@ class Subject(object):
                 'metadata_csv': self.metadata_csv}
         
 
-def initialize_metadata(Lochness, args, multiple_site_in_a_repo) -> None:
+def initialize_metadata(Lochness, args,
+                        multiple_site_in_a_repo, upenn_redcap) -> None:
     '''Create (overwrite) metadata.csv using either REDCap or RPMS database'''
     for study_name in args.studies:
         # if 'redcap' or 'rpms' is in the sources, create (overwrite)
-        if 'redcap' in args.input_sources:
-            id_fieldname = 'chric_subject_id'
-            consent_fieldname = 'chric_consent_date'
-            REDCap.initialize_metadata(
-                    Lochness, study_name, id_fieldname, consent_fieldname,
-                    multiple_site_in_a_repo)
-
-        elif 'rpms' in args.input_sources:
-            # metadata.csv
+        if 'rpms' in args.input_sources:
+            # when rpms is included in the sources, initiate metadata using
+            # rpms
             id_fieldname = Lochness['RPMS_id_colname']
             consent_fieldname = Lochness['RPMS_consent_colname']
             RPMS.initialize_metadata(
                     Lochness, study_name, id_fieldname, consent_fieldname,
-                    multiple_site_in_a_repo)
+                    multiple_site_in_a_repo, upenn_redcap)
+
+        elif 'redcap' in args.input_sources:
+            id_fieldname = 'chric_subject_id'
+            consent_fieldname = 'chric_consent_date'
+            REDCap.initialize_metadata(
+                    Lochness, study_name, id_fieldname, consent_fieldname,
+                    multiple_site_in_a_repo, upenn_redcap)
 
         else:
             pass
