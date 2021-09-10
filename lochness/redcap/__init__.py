@@ -15,6 +15,9 @@ from typing import List
 import tempfile as tf
 from lochness.redcap.process_piis import process_and_copy_db
 
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+
 
 logger = logging.getLogger(__name__)
 
@@ -52,51 +55,48 @@ def initialize_metadata(Lochness: 'Lochness object',
                         study_name: str,
                         redcap_id_colname: str,
                         redcap_consent_colname: str,
-                        multistudy: bool = True) -> None:
+                        multistudy: bool = True,
+                        upenn: bool = False) -> None:
     '''Initialize metadata.csv by pulling data from REDCap
 
     Key arguments:
         Lochness: Lochness object
-        study_name: Name of the study, str.
+        study_name: Name of the study, str. eg) PronetLA
         redcap_id_colname: Name of the ID field name in REDCap, str.
         redcap_consent_colname: Name of the consent date field name in REDCap,
                                 str.
-        multistudy: True if the redcap repo contains more than one study's data
+        multistudy: True if the redcap repo contains multisite data, bool.
     '''
-    # study_redcap = Lochness['keyring'][f'redcap.{study_name}']
     if multistudy:
-        site_two_letters_study = study_name[-2:]
-        project_name = 'redcap.' + study_name.split(site_two_letters_study)[0]
+        # specific to DPACC project
+        site_two_letters_study = study_name[-2:]  # 'LA'
+        project_name = study_name.split(site_two_letters_study)[0]  # 'Pronet'
     else:
-        project_name = 'redcap.{study_name}'
-    
-    for _, api_url, api_key in redcap_projects(Lochness,
-                                               study_name,
-                                               project_name):
-        pass
+        project_name = study_name
 
-    source_source_name_dict = {
-        'beiwe': 'Beiwe', 'xnat': 'XNAT', 'dropbox': 'Drpbox',
-        'mindlamp': 'Mindlamp', 'daris': 'Daris', 'rpms': 'RPMS'}
+    # use redcap_project function to load the redcap keyrings for the project
+    _, api_url, api_key = next(redcap_projects(
+        Lochness, study_name, f'redcap.{project_name}'))
 
-    record_query = {
-        'token': api_key,
-        'content': 'record',
-        'format': 'json',
-        'fields[0]': redcap_id_colname,
-    }
+    # other sources should have the same source ID as the subject ID
+    source_source_name_dict = {'mindlamp': 'Mindlamp'}  
+
+    record_query = {'token': api_key,
+                    'content': 'record',
+                    'format': 'json',
+                    'fields[0]': redcap_id_colname}
 
     # only pull source_names
     field_num = 2
     for source, source_name in source_source_name_dict.items():
         record_query[f"fields[{field_num}]"] = f"source_id"
 
-    # pull all records from REDCap for the study
+    # pull all records from the project's REDCap repo
     try:
         content = post_to_redcap(api_url,
                                  record_query,
                                  f'initializing data {study_name}')
-    except:  # field names are not set yet
+    except:  # if subject ID field name are not set, above will raise error
         record_query = {
             'token': api_key,
             'content': 'record',
@@ -106,20 +106,17 @@ def initialize_metadata(Lochness: 'Lochness object',
                                  record_query,
                                  f'initializing data {study_name}')
 
-    # load pulled information as list of dictionary : data
+    # load pulled information as a list of dictionaries
     with tf.NamedTemporaryFile(suffix='tmp.json') as tmpfilename:
         lochness.atomic_write(tmpfilename.name, content)
         with open(tmpfilename.name, 'r') as f:
             data = json.load(f)
 
     df = pd.DataFrame()
-
-    # for each record in pulled information, extract subject ID and source IDs
+    # extract subject ID and source IDs for each sources
     for item in data:
-        if multistudy:
+        if multistudy:  # filter out data from other sites
             site_two_letters_redcap_id = item[redcap_id_colname][:2]
-            site_two_letters_study = study_name[-2:]
-
             if site_two_letters_redcap_id != site_two_letters_study:
                 continue
 
@@ -133,22 +130,28 @@ def initialize_metadata(Lochness: 'Lochness object',
 
         # Redcap default information
         subject_dict['REDCap'] = \
-                f'redcap.{study_name}:{item[redcap_id_colname]};' \
-                f'redcap.UPENN:{item[redcap_id_colname]}'  # UPENN REDCAP
+                f'redcap.{project_name}:{item[redcap_id_colname]}'
+        if upenn:
+            subject_dict['REDCap'] += \
+                    f'redcap.UPENN:{item[redcap_id_colname]}'  # UPENN REDCAP
+
         subject_dict['Box'] = f'box.{study_name}:{item[redcap_id_colname]}'
+        subject_dict['XNAT'] = f'xnat.{study_name}:{item[redcap_id_colname]}'
 
         for source, source_name in source_source_name_dict.items():
-            try:
+            try:  # if mindlamp_id field is available in REDCap record
                 source_id = item[f'{source}_id']
-                subject_dict[source_name] = f"{source}.{study_name}:{source_id}"
+                subject_dict[source_name] = \
+                        f"{source}.{study_name}:{source_id}"
             except:
-                pass
+                subject_dict[source_name] = \
+                        f"{source}.{study_name}:{item[redcap_id_colname]}"
 
         df_tmp = pd.DataFrame.from_dict(subject_dict, orient='index')
         df = pd.concat([df, df_tmp.T])
 
-
     if len(df) == 0:
+        logger.warn(f'There are no records for {site_two_letters_study}')
         return
 
     # Each subject may have more than one arms, which will result in more than
@@ -172,7 +175,6 @@ def initialize_metadata(Lochness: 'Lochness object',
     general_path = Path(Lochness['phoenix_root']) / 'GENERAL'
     metadata_study = general_path / study_name / f"{study_name}_metadata.csv"
     df_final.to_csv(metadata_study, index=False)
-
 
 
 def check_if_modified(subject_id: str,
@@ -257,14 +259,11 @@ def sync(Lochness, subject, dry=False):
                 if check_if_modified(redcap_subject, dst, db_df):
                     pass  # if modified, carry on
                 else:
-                    print("\n----")
-                    print("No updates - not downloading REDCap data")
-                    print("----\n")
+                    logger.debug(f"{subject.study}/{subject.id} "
+                                 "No updates - not downloading REDCap data")
                     break  # if not modified break
 
-            print("\n----")
-            print("Downloading REDCap data")
-            print("----\n")
+            logger.debug("Downloading REDCap data")
             _debug_tup = (redcap_instance, redcap_project, redcap_subject)
 
             record_query = {
