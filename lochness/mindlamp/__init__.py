@@ -103,17 +103,17 @@ def mindlamp_projects(Lochness: 'lochness.config',
         # raise KeyringError("lochness > mindlamp not found in keyring")
 
     if key_name not in Keyring:
-        raise KeyringError(f"{mindlamp_instance} not found in keyring")
+        raise KeyringError(f"{key_name} not found in keyring")
 
     if 'URL' not in Keyring[key_name]:
-        raise KeyringError(f"{mindlamp_instance} > URL not found in keyring")
+        raise KeyringError(f"{key_name} > URL not found in keyring")
 
     if 'ACCESS_KEY' not in Keyring[key_name]:
-        raise KeyringError(f"{mindlamp_instance} > ACCESS_KEY "
+        raise KeyringError(f"{key_name} > ACCESS_KEY "
                             "not found in keyring")
 
     if 'SECRET_KEY' not in Keyring[key_name]:
-        raise KeyringError(f"{mindlamp_instance} > SECRET_KEY "
+        raise KeyringError(f"{key_name} > SECRET_KEY "
                             "not found in keyring")
 
     api_url = Keyring[key_name]['URL'].rstrip('/')
