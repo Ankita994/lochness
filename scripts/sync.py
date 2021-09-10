@@ -39,7 +39,8 @@ SOURCES = {
     'daris': Daris,
     'rpms': RPMS,
     'icognition': iCognition,
-    'onlinescoring': OnlineScoring
+    'onlinescoring': OnlineScoring,
+    'upenn': REDCap,
 }
 
 DIR = os.path.dirname(__file__)
@@ -103,7 +104,7 @@ def main():
     # replace args.source with corresponding lochness modules
     if args.source:
         args.input_sources = args.source
-        args.source = [SOURCES[x] for x in args.source]
+        args.source = list(set([SOURCES[x] for x in args.source]))
     else:
         args.input_sources = []
 
@@ -139,14 +140,12 @@ def do(args, Lochness):
 
     # initialize (overwrite) metadata.csv using either REDCap or RPMS database
     if 'redcap' in args.input_sources or 'rpms' in args.input_sources:
-        if len(args.studies) == 1:
-            lochness.initialize_metadata(Lochness, args,
-                                         multiple_site_in_a_repo=False)
-        else:
-            # for ProNET and PRESCIENT, single REDCap and RPMS repo has
-            # information from multiple site
-            lochness.initialize_metadata(Lochness, args,
-                                         multiple_site_in_a_repo=True)
+        upenn_redcap = True if 'upenn' in args.input_sources else False
+        # for ProNET and PRESCIENT, single REDCap and RPMS repo has
+        # information from multiple site
+        multiple_site = True if len(args.studies) > 1 else False
+        lochness.initialize_metadata(Lochness, args,
+                                     multiple_site, upenn_redcap)
 
     for subject in lochness.read_phoenix_metadata(Lochness, args.studies):
         if not subject.active and args.skip_inactive:
