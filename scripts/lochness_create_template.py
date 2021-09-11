@@ -138,29 +138,30 @@ def create_keyring_template(keyring_loc: Path, args: object) -> None:
     template_dict = {}
     template_dict['lochness'] = {}
 
-    if 'upenn' in args.sources:
-        if args.enter_passwords:
-            upenn_url = getpass.getpass('UPENN REDCAP URL: ')
-            upenn_api_token = getpass.getpass('UPENN API_TOKEN: ')
-        else:
-            upenn_url = 'https://redcap.upenn.org/redcap'
-            upenn_api_token = '*****'
-
-    if 'redcap' in args.sources:
+    if 'redcap' in args.sources or 'upenn' in args.sources:
         if args.enter_passwords:
             url = getpass.getpass('REDCAP URL: ')
             api_token = getpass.getpass('REDCAP API_TOKEN: ')
+            upenn_url = getpass.getpass('UPENN REDCAP URL: ')
+            upenn_api_token = getpass.getpass('UPENN API_TOKEN: ')
         else:
             url = 'https://redcap.partners.org/redcap'
             api_token = '*****'
+            upenn_url = 'https://redcap.upenn.org/redcap'
+            upenn_api_token = '*****'
 
         template_dict['lochness']['REDCAP'] = {}
         template_dict['lochness']['SECRETS'] = {}
         for study in args.studies:
             project_name = study[:-2]
-            if 'upenn' in args.sources:
+            if 'upenn' in args.sources and 'redcap' in args.sources:
                 study_dict = {f'redcap.{project_name}': [project_name],
                               'redcap.UPENN': ['UPENN']}
+                template_dict['redcap.UPENN'] = {
+                        'URL': upenn_url,
+                        'API_TOKEN': upenn_api_token}
+            elif 'upenn' in args.sources and 'redcap' not in args.sources:
+                study_dict = {'redcap.UPENN': ['UPENN']}
                 template_dict['redcap.UPENN'] = {
                         'URL': upenn_url,
                         'API_TOKEN': upenn_api_token}
@@ -171,10 +172,11 @@ def create_keyring_template(keyring_loc: Path, args: object) -> None:
             template_dict['lochness']['REDCAP'][study] = study_dict
             template_dict['lochness']['SECRETS'][study] = study_secrete
 
-            # lower part of the keyring
-            template_dict[f'redcap.{project_name}'] = {
-                    'URL': url,
-                    'API_TOKEN': api_token}
+            if 'redcap' in args.sources:
+                # lower part of the keyring
+                template_dict[f'redcap.{project_name}'] = {
+                        'URL': url,
+                        'API_TOKEN': api_token}
 
 
     if 'xnat' in args.sources:
