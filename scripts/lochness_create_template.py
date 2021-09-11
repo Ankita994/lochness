@@ -159,12 +159,12 @@ def create_keyring_template(keyring_loc: Path, args: object) -> None:
                               'redcap.UPENN': ['UPENN']}
                 template_dict['redcap.UPENN'] = {
                         'URL': upenn_url,
-                        'API_TOKEN': upenn_api_token}
+                        'API_TOKEN': {'UPENN': upenn_api_token}}
             elif 'upenn' in args.sources and 'redcap' not in args.sources:
                 study_dict = {'redcap.UPENN': ['UPENN']}
                 template_dict['redcap.UPENN'] = {
                         'URL': upenn_url,
-                        'API_TOKEN': upenn_api_token}
+                        'API_TOKEN': {'UPENN': upenn_api_token}}
             else:
                 study_dict = {f'redcap.{project_name}': [project_name]}
 
@@ -176,7 +176,7 @@ def create_keyring_template(keyring_loc: Path, args: object) -> None:
                 # lower part of the keyring
                 template_dict[f'redcap.{project_name}'] = {
                         'URL': url,
-                        'API_TOKEN': api_token}
+                        'API_TOKEN': {project_name: api_token}}
 
 
     if 'xnat' in args.sources:
