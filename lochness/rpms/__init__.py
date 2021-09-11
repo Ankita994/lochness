@@ -133,7 +133,7 @@ def initialize_metadata(Lochness: 'Lochness object',
 
         if upenn:
             subject_dict['REDCap'] = \
-                'redcap.UPENN.:' + df_measure[rpms_id_colname].values
+                'redcap.UPENN:' + df_measure[rpms_id_colname].values
 
         for source, source_name in source_source_name_dict.items():
             try:
