@@ -295,7 +295,7 @@ def sync(Lochness, subject, dry=False):
             content = post_to_redcap(api_url, record_query, _debug_tup)
 
             # check if response body is nothing but a sad empty array
-            if content.strip() == '[]':
+            if content.strip() == b'[]':
                 logger.info(f'no redcap data for {redcap_subject}')
                 continue
 
@@ -312,7 +312,7 @@ def sync(Lochness, subject, dry=False):
                     crc_dst = lochness.crc32file(dst)
 
                     if crc_dst != crc_src:
-                        print('different - crc32: downloading data')
+                        logger.info('different - crc32: downloading data')
                         logger.warn(f'file has changed {dst}')
                         lochness.backup(dst)
                         logger.debug(f'saving {dst}')
@@ -320,8 +320,9 @@ def sync(Lochness, subject, dry=False):
                         # process_and_copy_db(Lochness, subject, dst, proc_dst)
                         # update_study_metadata(subject, json.loads(content))
                     else:
-                        print('it is the same file (crc32). '
-                              'Not saving the data')
+                        logger.info('No new update in newly downloaded '
+                                    'content for {redcap_subject}. '
+                                    'Not saving the data')
                         # update the dst file's mtime so it can prevent the
                         # same file being pulled from REDCap
                         os.utime(dst)
