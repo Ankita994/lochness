@@ -337,9 +337,9 @@ def redcap_projects(Lochness, phoenix_study, redcap_instance):
 
     Key Arguments:
         Lochness: Lochness object.
-        phoenix_study: name of the study, str. eg) STUDY_A
+        phoenix_study: name of the study, str. eg) PronetLA
         redcap_instance: name of the redcap field for the study in the keyring,
-                         str. eg) redcap.STUDY_A
+                         str. eg) redcap.PronetLA
 
     Yields:
         project: name of the redcap project field in the keyring file, str.
