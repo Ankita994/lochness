@@ -57,7 +57,7 @@ def initialize_metadata(Lochness: 'Lochness object',
                         redcap_consent_colname: str,
                         multistudy: bool = True,
                         upenn: bool = False) -> None:
-    '''Initialize metadata.csv by pulling data from REDCap for Pronet project
+    '''Initialize metadata.csv by pulling data from REDCap for Pronet network
 
     Key arguments:
         Lochness: Lochness object
@@ -70,8 +70,8 @@ def initialize_metadata(Lochness: 'Lochness object',
     '''
     if multistudy:
         # specific to DPACC project
-        site_two_letters_study = study_name[-2:]  # 'LA'
-        project_name = study_name.split(site_two_letters_study)[0]  # 'Pronet'
+        site_code_study = study_name[-2:]  # 'LA'
+        project_name = study_name.split(site_code_study)[0]  # 'Pronet'
     else:
         project_name = study_name
 
@@ -117,8 +117,8 @@ def initialize_metadata(Lochness: 'Lochness object',
     # extract subject ID and source IDs for each sources
     for item in data:
         if multistudy:  # filter out data from other sites
-            site_two_letters_redcap_id = item[redcap_id_colname][:2]
-            if site_two_letters_redcap_id != site_two_letters_study:
+            site_code_redcap_id = item[redcap_id_colname][:2]
+            if site_code_redcap_id != site_code_study:
                 continue
 
         subject_dict = {'Subject ID': item[redcap_id_colname]}
@@ -152,7 +152,7 @@ def initialize_metadata(Lochness: 'Lochness object',
         df = pd.concat([df, df_tmp.T])
 
     if len(df) == 0:
-        logger.warn(f'There are no records for {site_two_letters_study}')
+        logger.warn(f'There are no records for {site_code_study}')
         return
 
     # Each subject may have more than one arms, which will result in more than

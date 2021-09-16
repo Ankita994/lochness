@@ -381,7 +381,7 @@ def attempt(f, Lochness, *args, **kwargs):
     if len(attempt.warnings) >= 5:
         # lochness.email.attempts_error(Lochness, attempt)
         attempt.warnings = []
-        # raise AttemptsError('too many attempt warnings')
+        raise AttemptsError('too many attempt warnings')
     try:
         f(Lochness, *args, **kwargs)
     except Exception as e:

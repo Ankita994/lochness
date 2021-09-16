@@ -111,10 +111,10 @@ def initialize_metadata(Lochness: 'Lochness object',
     # for each record in pulled information, extract subject ID and source IDs
     for measure, df_measure in all_df_dict.items():
         if multistudy:
-            site_two_letters_rpms_id = df_measure[rpms_id_colname][:2]
-            site_two_letters_study = study_name.split('_')[1]
+            site_code_rpms_id = df_measure[rpms_id_colname][:2]
+            site_code_study = study_name.split('_')[1]
 
-            if not site_two_letters_rpms_id == site_two_letters_study:
+            if not site_code_rpms_id == site_code_study:
                 continue
 
         # mediaflux source has its foldername as its subject ID
