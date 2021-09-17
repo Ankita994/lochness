@@ -373,7 +373,7 @@ def redcap_projects(Lochness, phoenix_study, redcap_instance):
 
     if 'API_TOKEN' not in Keyring[redcap_instance]:
         raise KeyringError(f"{redcap_instance} > API_TOKEN "
-                           "not found in keyring")
+                           " not found in keyring")
 
     # get URL
     api_url = Keyring[redcap_instance]['URL'].rstrip('/') + '/api/'
@@ -383,7 +383,7 @@ def redcap_projects(Lochness, phoenix_study, redcap_instance):
             [phoenix_study][redcap_instance]:
         if project not in Keyring[redcap_instance]['API_TOKEN']:
             raise KeyringError(f"{redcap_instance} > API_TOKEN > {project}"
-                               "not found in keyring")
+                               " not found in keyring")
         api_key = Keyring[redcap_instance]['API_TOKEN'][project]
         yield project, api_url, api_key
 
