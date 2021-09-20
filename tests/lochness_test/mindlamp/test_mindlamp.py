@@ -183,6 +183,8 @@ def test_timestamp_to_UTC_0_24():
 
     # current time in UTC
     ct_utc = datetime.now(pytz.timezone('UTC'))
+
+    # 
     ct_utc_00 = ct_utc.replace(hour=0, minute=0, second=0, microsecond=0)
     ct_utc_00 = ct_utc_00 - timedelta(days=1)
     ct_utc_00_ts = time.mktime(ct_utc_00.timetuple()) * 1000
@@ -213,7 +215,7 @@ def test_get_days_to_pull(args_and_Lochness):
     args, Lochness = args_and_Lochness
     Lochness['mindlamp_days_to_pull'] = None
     days_to_pull = get_days_to_pull(Lochness)
-    assert days_to_pull == 10
+    assert days_to_pull == 100
 
     Lochness['mindlamp_days_to_pull'] = 5
     days_to_pull = get_days_to_pull(Lochness)
