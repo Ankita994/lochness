@@ -19,7 +19,11 @@ logger = logging.getLogger(__name__)
 
 
 def get_days_to_pull(Lochness):
-    ''' get module-specific delete_on_success flag with a safe default '''
+    '''Reads mindlamp_days_to_pull from Lochness loaded from the config.yml
+
+    If this variable is missing in the config.yml, set it to pull previous
+    100 days of data from today, from the mindlamp server. '''
+
     value = Lochness.get('mindlamp_days_to_pull', dict())
     if not isinstance(value, int):
         return 100
@@ -35,7 +39,12 @@ def get_audio_out_from_content(activity_dicts, audio_file_name):
 
     Returns:
         activity_dicts_wo_sound: list of activity dictionaries without the
-                                 sound data. (sound data replaced to 'SOUND')
+                                 sound data. (sound data replaced to
+                                 'SOUND_{num}')
+
+    Notes:
+        `num` variables used in the function to capture all audio data, when 
+        there is more than one recording each day.
     '''
     activity_dicts_wo_sound = []
 
@@ -88,6 +97,8 @@ def sync(Lochness: 'lochness.config',
 
     # current time (ct) in UTC
     ct_utc = datetime.now(pytz.timezone('UTC'))
+
+    # set the cut off point as UTC 00:00:00.00
     ct_utc_00 = ct_utc.replace(hour=0, minute=0, second=0, microsecond=0)
 
     for days_from_ct in range(days_to_check):
@@ -97,9 +108,8 @@ def sync(Lochness: 'lochness.config',
         time_utc_24 = time_utc_00 + timedelta(hours=24)
         time_utc_24_ts = time.mktime(time_utc_24.timetuple()) * 1000
 
-        # date string to be used
+        # date string to be used in the file name
         date_str = time_utc_00.strftime("%Y_%m_%d")
-
 
         # Extra information for future version
         # study_id, study_name = get_study_lamp(LAMP)
@@ -112,14 +122,10 @@ def sync(Lochness: 'lochness.config',
         activity_dicts = get_activity_events_lamp(
                 LAMP, subject_id,
                 from_ts=time_utc_00_ts, to_ts=time_utc_24_ts)
-        # activity_dicts = get_activity_events_lamp(
-                # LAMP, subject_id)
 
         sensor_dicts = get_sensor_events_lamp(
                 LAMP, subject_id,
                 from_ts=time_utc_00_ts, to_ts=time_utc_24_ts)
-        # sensor_dicts = get_sensor_events_lamp(
-                # LAMP, subject_id)
         end = time.time()
         logger.debug(f'Mindlamp {subject_id} {date_str} data pull - complete')
 
@@ -139,6 +145,7 @@ def sync(Lochness: 'lochness.config',
                     f'{subject_id}_{subject.study}_{data_name}_'
                     f'{date_str}.json')
 
+            # separate out audio data from the activity dictionary
             if data_name == 'activity' and data_dict != []:
                 sound_dst = os.path.join(
                         dst_folder,
