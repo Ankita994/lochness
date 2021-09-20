@@ -58,6 +58,10 @@ def get_access_token(client_id: str, client_secret: str, user_id: str) -> str:
 
     Returns:
         api_token: API TOKEN used to pull data, str.
+
+    Notes:
+        Current version of get_access_token function uses User ID rather
+        than Enterprise ID. (Both works in pulling data from BOX account)
     '''
     url = "https://api.box.com/oauth2/token"
     headers = {"Content-Type": "application/x-www-form-urlencoded"}
