@@ -9,8 +9,19 @@ import lochness.tree as tree
 from io import BytesIO
 from pathlib import Path
 from typing import Tuple, List
+import pytz
+import time
+from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
+
+
+def get_days_to_pull(Lochness):
+    ''' get module-specific delete_on_success flag with a safe default '''
+    value = Lochness.get('mindlamp_days_to_pull', dict())
+    if not isinstance(value, int):
+        return 100
+    return value
 
 
 @net.retry(max_attempts=5)
@@ -38,46 +49,88 @@ def sync(Lochness: 'lochness.config',
     # LAMP.connect(access_key, secret_key, api_url)
     LAMP.connect(access_key, secret_key)
 
-    # Extra information for future version
-    # study_id, study_name = get_study_lamp(LAMP)
-    # subject_ids = get_participants_lamp(LAMP, study_id)
+    # how many days of data from current time, default past 10 days
+    days_to_check = get_days_to_pull(Lochness)
 
-    subject_id = subject.mindlamp[f'mindlamp.{subject.study}'][0]
+    # current time (ct) in UTC
+    ct_utc = datetime.now(pytz.timezone('UTC'))
+    ct_utc_00 = ct_utc.replace(hour=0, minute=0, second=0, microsecond=0)
 
-    # pull data from mindlamp
-    activity_dicts = get_activity_events_lamp(LAMP, subject_id)
-    sensor_dicts = get_sensor_events_lamp(LAMP, subject_id)
+    for days_from_ct in range(days_to_check):
+        # n day before current time
+        time_utc_00 = ct_utc_00 - timedelta(days=days_from_ct)
+        time_utc_00_ts = time.mktime(time_utc_00.timetuple()) * 1000
+        time_utc_24 = time_utc_00 + timedelta(hours=24)
+        time_utc_24_ts = time.mktime(time_utc_24.timetuple()) * 1000
 
-    # set destination folder
-    # dst_folder = tree.get('mindlamp', subject.general_folder)
-    dst_folder = tree.get('mindlamp',
-                          subject.protected_folder,
-                          processed=False,
-                          BIDS=Lochness['BIDS'])
+        # date string to be used
+        date_str = time_utc_00.strftime("%Y_%m_%d")
 
-    # store both data types
-    for data_name, data_dict in zip(['activity', 'sensor'],
-                                    [activity_dicts, sensor_dicts]):
-        dst = os.path.join(
-                dst_folder,
-                f'{subject_id}_{subject.study}_{data_name}.json')
+        logger.debug(f'Mindlamp {subject_id} {date_str} data pull - start')
 
-        jsonData = json.dumps(
-            data_dict,
-            sort_keys=True, indent='\t', separators=(',', ': '))
+        # Extra information for future version
+        # study_id, study_name = get_study_lamp(LAMP)
+        # subject_ids = get_participants_lamp(LAMP, study_id)
+        subject_id = subject.mindlamp[f'mindlamp.{subject.study}'][0]
 
-        content = jsonData.encode()
+        # pull data from mindlamp
+        begin = time.time()
+        activity_dicts = get_activity_events_lamp(
+                LAMP, subject_id,
+                from_ts=time_utc_00_ts, to_ts=time_utc_24_ts)
+        # activity_dicts = get_activity_events_lamp(
+                # LAMP, subject_id)
 
-        if not Path(dst).is_file():
-            lochness.atomic_write(dst, content)
-        else:  # compare existing json to the new json
-            crc_src = lochness.crc32(content.decode('utf-8'))
-            crc_dst = lochness.crc32file(dst)
-            if crc_dst != crc_src:
-                logger.warn(f'file has changed {dst}')
-                lochness.backup(dst)
-                logger.debug(f'saving {dst}')
+        sensor_dicts = get_sensor_events_lamp(
+                LAMP, subject_id,
+                from_ts=time_utc_00_ts, to_ts=time_utc_24_ts)
+        # sensor_dicts = get_sensor_events_lamp(
+                # LAMP, subject_id)
+        end = time.time()
+        logger.debug(f'Mindlamp {subject_id} {date_str} data pull - complete')
+
+        # set destination folder
+        # dst_folder = tree.get('mindlamp', subject.general_folder)
+        dst_folder = tree.get('mindlamp',
+                              subject.protected_folder,
+                              processed=False,
+                              BIDS=Lochness['BIDS'])
+
+        # store both data types
+        for data_name, data_dict in zip(['activity', 'sensor'],
+                                        [activity_dicts, sensor_dicts]):
+            dst = os.path.join(
+                    dst_folder,
+                    f'{subject_id}_{subject.study}_{data_name}_'
+                    f'{date_str}.json')
+
+            jsonData = json.dumps(
+                data_dict,
+                sort_keys=True, indent='\t', separators=(',', ': '))
+
+            content = jsonData.encode()
+
+            if content.strip() == b'[]':
+                logger.info(f'No mindlamp data for {subject_id} {date_str}')
+                continue
+
+            if not Path(dst).is_file():
                 lochness.atomic_write(dst, content)
+                logger.info(f'Mindlamp {data_name} data is saved for '
+                            f'{subject_id} {date_str} (took {end-begin} s)')
+            else:  # compare existing json to the new json
+                crc_src = lochness.crc32(content.decode('utf-8'))
+                crc_dst = lochness.crc32file(dst)
+                if crc_dst != crc_src:
+                    logger.warn(f'file has changed {dst}')
+                    lochness.backup(dst)
+                    logger.debug(f'saving {dst}')
+                    lochness.atomic_write(dst, content)
+
+
+def separate_out_audio_from_json(json: str):
+    '''Separated json from the audio'''
+    pass
 
 
 def deidentify_flag(Lochness, study):
@@ -144,7 +197,8 @@ def get_study_lamp(lamp: LAMP) -> Tuple[str, str]:
     return study_obj['id'], study_obj['name']
 
 
-def get_participants_lamp(lamp: LAMP, study_id: str) -> List[str]:
+def get_participants_lamp(lamp: LAMP, study_id: str,
+                          from_ts: str = None, to_ts: str = None) -> List[str]:
     '''Return subject ids for a study
 
     Key arguments:
@@ -160,7 +214,8 @@ def get_participants_lamp(lamp: LAMP, study_id: str) -> List[str]:
     return subject_ids
 
 
-def get_activities_lamp(lamp: LAMP, subject_id: str) -> List[dict]:
+def get_activities_lamp(lamp: LAMP, subject_id: str,
+                        from_ts: str = None, to_ts: str = None) -> List[str]:
     '''Return list of activities for a subject
 
     Key arguments:
@@ -170,12 +225,15 @@ def get_activities_lamp(lamp: LAMP, subject_id: str) -> List[dict]:
     Returns:
         activity_dicts: activity records, list of dict.
     '''
-    activity_dicts = lamp.Activity.all_by_participant(subject_id)['data']
+    activity_dicts = lamp.Activity.all_by_participant(
+            subject_id, _from=from_ts, to=to_ts)['data']
 
     return activity_dicts
 
 
-def get_sensors_lamp(lamp: LAMP, subject_id: str) -> List[dict]:
+def get_sensors_lamp(lamp: LAMP, subject_id: str,
+                     from_ts: str = None, to_ts: str = None) -> List[str]:
+
     '''Return list of sensors for a subject
 
     Key arguments:
@@ -185,12 +243,16 @@ def get_sensors_lamp(lamp: LAMP, subject_id: str) -> List[dict]:
     Returns:
         sensor_dicts: activity records, list of dict.
     '''
-    sensor_dicts = lamp.Sensor.all_by_participant(subject_id)['data']
+    sensor_dicts = lamp.Sensor.all_by_participant(
+                        subject_id, _from=from_ts, to=to_ts)['data']
 
     return sensor_dicts
 
 
-def get_activity_events_lamp(lamp: LAMP, subject_id: str) -> List[dict]:
+def get_activity_events_lamp(
+        lamp: LAMP, subject_id: str,
+        from_ts: str = None, to_ts: str = None) -> List[str]:
+
     '''Return list of activity events for a subject
 
     Key arguments:
@@ -200,12 +262,15 @@ def get_activity_events_lamp(lamp: LAMP, subject_id: str) -> List[dict]:
     Returns:
         activity_events_dicts: activity records, list of dict.
     '''
-    activity_events_dicts = lamp.ActivityEvent.all_by_participant(subject_id)['data']
-
+    activity_events_dicts = lamp.ActivityEvent.all_by_participant(
+                    subject_id, _from=from_ts, to=to_ts)['data']
     return activity_events_dicts
 
 
-def get_sensor_events_lamp(lamp: LAMP, subject_id: str) -> List[dict]:
+def get_sensor_events_lamp(
+        lamp: LAMP, subject_id: str,
+        from_ts: str = None, to_ts: str = None) -> List[str]:
+
     '''Return list of sensor events for a subject
 
     Key arguments:
@@ -215,6 +280,10 @@ def get_sensor_events_lamp(lamp: LAMP, subject_id: str) -> List[dict]:
     Returns:
         activity_dicts: activity records, list of dict.
     '''
-    sensor_event_dicts = lamp.SensorEvent.all_by_participant(subject_id)['data']
-
+    if not from_ts == None:
+        sensor_event_dicts = lamp.SensorEvent.all_by_participant(
+                        subject_id, _from=from_ts, to=to_ts)['data']
+    else:
+        sensor_event_dicts = lamp.SensorEvent.all_by_participant(
+                        subject_id)['data']
     return sensor_event_dicts
