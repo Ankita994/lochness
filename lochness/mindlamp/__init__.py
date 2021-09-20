@@ -12,6 +12,8 @@ from typing import Tuple, List
 import pytz
 import time
 from datetime import datetime, timedelta
+import base64
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +24,38 @@ def get_days_to_pull(Lochness):
     if not isinstance(value, int):
         return 100
     return value
+
+
+def get_audio_out_from_content(activity_dicts, audio_file_name):
+    '''Separate out audio data from the content pulled from mindlamp API
+
+    Key Arguments:
+        activity_dicts: list of activity dictionaries, list.
+        audio_file_name: name of the audio file to be saved, str.
+
+    Returns:
+        activity_dicts_wo_sound: list of activity dictionaries without the
+                                 sound data. (sound data replaced to 'SOUND')
+    '''
+    activity_dicts_wo_sound = []
+
+    num = 0
+    for activity_events_dicts in activity_dicts:
+        if 'url' in activity_events_dicts['static_data']:
+            audio = activity_events_dicts['static_data']['url']
+            activity_events_dicts['static_data']['url'] = 'SOUND_{num}'
+
+            decode_bytes = base64.b64decode(audio.split(',')[1])
+
+            # just in case there are more than one recording per day
+            with open(re.sub(r'.mp3', f'_{num}.mp3', audio_file_name),
+                      'wb') as f:
+                f.write(decode_bytes)
+            num += 1
+
+        activity_dicts_wo_sound.append(activity_events_dicts)
+
+    return activity_dicts_wo_sound
 
 
 @net.retry(max_attempts=5)
@@ -66,12 +100,12 @@ def sync(Lochness: 'lochness.config',
         # date string to be used
         date_str = time_utc_00.strftime("%Y_%m_%d")
 
-        logger.debug(f'Mindlamp {subject_id} {date_str} data pull - start')
 
         # Extra information for future version
         # study_id, study_name = get_study_lamp(LAMP)
         # subject_ids = get_participants_lamp(LAMP, study_id)
         subject_id = subject.mindlamp[f'mindlamp.{subject.study}'][0]
+        logger.debug(f'Mindlamp {subject_id} {date_str} data pull - start')
 
         # pull data from mindlamp
         begin = time.time()
@@ -99,10 +133,18 @@ def sync(Lochness: 'lochness.config',
         # store both data types
         for data_name, data_dict in zip(['activity', 'sensor'],
                                         [activity_dicts, sensor_dicts]):
+
             dst = os.path.join(
                     dst_folder,
                     f'{subject_id}_{subject.study}_{data_name}_'
                     f'{date_str}.json')
+
+            if data_name == 'activity' and data_dict != []:
+                sound_dst = os.path.join(
+                        dst_folder,
+                        f'{subject_id}_{subject.study}_{data_name}_'
+                        f'{date_str}_sound.mp3')
+                data_dict = get_audio_out_from_content(data_dict, sound_dst)
 
             jsonData = json.dumps(
                 data_dict,
@@ -113,6 +155,7 @@ def sync(Lochness: 'lochness.config',
             if content.strip() == b'[]':
                 logger.info(f'No mindlamp data for {subject_id} {date_str}')
                 continue
+
 
             if not Path(dst).is_file():
                 lochness.atomic_write(dst, content)
