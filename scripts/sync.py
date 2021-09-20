@@ -62,7 +62,8 @@ def main():
     parser.add_argument('--hdd', nargs='+', default=[],
                         help='choose hdds to sync')
     parser.add_argument('--source', nargs='+', choices=SOURCES.keys(),
-                        default=SOURCES.keys(), help='Sources to sync')
+                        default=SOURCES.keys(), metavar='',
+                        help='Sources to sync {%(choices)s}')
     parser.add_argument('--continuous', action='store_true',
                         help='Continuously download data')
     parser.add_argument('--studies', nargs='+', default=[],
