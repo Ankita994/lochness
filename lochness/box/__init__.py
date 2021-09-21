@@ -438,22 +438,6 @@ def sync_module(Lochness: 'lochness.config',
                          compress=compress, delete=False,
                          dry=False)
 
-                    # check if api token is still valid after each data pull
-                    try:
-                        _ = client.user().get()
-                    except BoxOAuthException:
-                        api_token = get_access_token(client_id,
-                                                     client_secret,
-                                                     user_id)
-
-                        # box authentication
-                        auth = OAuth2(
-                            client_id=client_id,
-                            client_secret=client_secret,
-                            access_token=api_token,
-                        )
-                        client = Client(auth)
-
 
 def _find_product(s, products, **kwargs):
     for product in products:
