@@ -11,12 +11,9 @@ import sys
 import paramiko
 import tarfile
 import shutil
-import logging
 from lochness import keyring
 
 from typing import List, Tuple
-
-logger = logging.getLogger(__name__)
 
 
 def get_updated_files(phoenix_root: str,
@@ -312,9 +309,10 @@ def lochness_to_lochness_transfer_s3(Lochness, general_only: bool = True):
             {source_directory}/ \
             s3://{s3_bucket_name}/{s3_phoenix_root}'
 
-    logger.debug('Executing aws s3 sync function')
-    logger.debug(os.popen(command).read())
-    logger.debug('aws rsync completed')
+    print('Executing aws s3 sync function')
+    print(re.sub('\s+', ' ', command))
+    print(os.popen(command).read())
+    print('aws rsync completed')
 
 
 def lochness_to_lochness_transfer_receive_sftp(Lochness):

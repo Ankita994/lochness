@@ -1,6 +1,6 @@
 import lochness
 import shutil
-from lochness.box import sync, sync_module, get_access_token
+from lochness.box import sync, sync_module
 from lochness import config
 from pathlib import Path
 
@@ -14,12 +14,9 @@ from test_lochness import Args, KeyringAndEncrypt, Tokens
 from test_lochness import show_tree_then_delete, rmtree, config_load_test
 from test_lochness import initialize_metadata_test
 from lochness_create_template import create_lochness_template
-from boxsdk import Client, OAuth2
 
 import pytest
 import string
-import requests
-import time
 
 
 box_test_dir = test_dir / 'lochness_test/box'
@@ -31,31 +28,12 @@ general_root = phoenix_root/ 'GENERAL'
 class KeyringAndEncrypt(KeyringAndEncrypt):
     def update_for_box(self, study):
         token = Tokens()
-        client_id, client_secret, user_id = \
+        client_id, client_secret, api_token = \
                 token.read_token_or_get_input('box')
 
         self.keyring[f'box.{study}'] = {}
         self.keyring[f'box.{study}']['CLIENT_ID'] = client_id
         self.keyring[f'box.{study}']['CLIENT_SECRET'] = client_secret
-        self.keyring[f'box.{study}']['USER_ID'] = user_id
-
-        # get new api_token
-        url = "https://api.box.com/oauth2/token"
-        headers = {"Content-Type": "application/x-www-form-urlencoded"}
-        data = {"client_id": client_id,
-                "client_secret": client_secret,
-                "grant_type": "client_credentials",
-                "box_subject_type": "user",
-                "box_subject_id": user_id}
-
-        data = {"client_id": client_id,
-                "client_secret": client_secret,
-                "grant_type": "client_credentials",
-                "box_subject_type": "enterprise",
-                "box_subject_id": 799964836}
-
-        response = requests.post(url, headers=headers, data=data)
-        api_token = response.json()['access_token']
         self.keyring[f'box.{study}']['API_TOKEN'] = api_token
 
         self.write_keyring_and_encrypt()
@@ -109,30 +87,6 @@ def args_and_Lochness_BIDS():
     return args, lochness_obj
 
 
-def test_box_client_connection_check():
-    token = Tokens()
-    client_id, client_secret, user_id = \
-            token.read_token_or_get_input('box')
-
-    begin = time.time()
-    api_token = get_access_token(client_id, client_secret, user_id)
-
-    # box authentication
-    auth = OAuth2(
-        client_id=client_id,
-        client_secret=client_secret,
-        access_token=api_token,
-    )
-    client = Client(auth)
-    end = time.time()
-    print(end - begin)
-
-    begin = time.time()
-    _ = client.user().get()
-    end = time.time()
-    print(end - begin)
-
-
 def test_box_sync_module_default_nonBIDS(args_and_Lochness):
     args, Lochness = args_and_Lochness
 
@@ -165,7 +119,7 @@ def test_box_sync_module_without_edits(args_and_Lochness_BIDS):
         sync(Lochness, subject, dry=False)
 
     for study in args.studies:
-        subject_dir = protected_root / study / 'raw' / '1001' / 'actigraphy'
+        subject_dir = protected_root / study / 'raw' / 'actigraphy' / '1001'
         assert subject_dir.is_dir()
 
     show_tree_then_delete('tmp_lochness')
@@ -182,7 +136,7 @@ def test_box_sync_module_paths_as_the_root_negative_1(args_and_Lochness_BIDS):
         sync(Lochness, subject, dry=False)
 
     for study in args.studies:
-        subject_dir = protected_root / study / 'raw' / '1001' / 'actigraphy'
+        subject_dir = protected_root / study / 'raw' / 'actigraphy' / '1001'
         assert ~subject_dir.is_dir()
 
     show_tree_then_delete('tmp_lochness')
@@ -199,7 +153,7 @@ def test_box_sync_module_paths_as_the_root_negative_2(args_and_Lochness_BIDS):
         sync(Lochness, subject, dry=False)
 
     for study in args.studies:
-        subject_dir = protected_root / study / 'raw' / '1001' / 'actigraphy'
+        subject_dir = protected_root / study / 'raw' / 'actigraphy' / '1001'
         assert ~subject_dir.is_dir()
 
     show_tree_then_delete('tmp_lochness')
@@ -216,7 +170,7 @@ def test_box_sync_module_paths_as_the_root_positive(args_and_Lochness_BIDS):
         sync(Lochness, subject, dry=False)
 
     for study in args.studies:
-        subject_dir = protected_root / study / 'raw' / '1001' / 'actigraphy'
+        subject_dir = protected_root / study / 'raw' / 'actigraphy' / '1001'
         assert subject_dir.is_dir()
         assert len(list(subject_dir.glob('*csv'))) == 1
 
@@ -240,7 +194,7 @@ def test_box_sync_module_default_BIDS(args_and_Lochness_BIDS):
         sync(Lochness, subject, dry=False)
 
     for study in args.studies:
-        subject_dir = general_root / study / 'raw' / '1001' / 'actigraphy'
+        subject_dir = general_root / study / 'raw' / 'actigraphy' / '1001'
         assert subject_dir.is_dir()
         assert len(list(subject_dir.glob('*csv'))) >= 1
 
@@ -264,12 +218,12 @@ def test_box_sync_module_protected(args_and_Lochness_BIDS):
         sync(Lochness, subject, dry=False)
 
     for study in args.studies:
-        subject_dir = protected_root / study / 'raw' / '1001' / 'actigraphy'
+        subject_dir = protected_root / study / 'raw' / 'actigraphy' / '1001'
         print(subject_dir)
         assert subject_dir.is_dir()
         assert len(list(subject_dir.glob('*csv'))) == 1
 
-        subject_dir = general_root / study / 'raw' / '1001' / 'actigraphy'
+        subject_dir = general_root / study / 'raw' / 'actigraphy' / '1001'
         assert subject_dir.is_dir() == False
         assert len(list(subject_dir.glob('*csv'))) == 0
 
@@ -293,11 +247,11 @@ def test_box_sync_module_protect_processed(args_and_Lochness_BIDS):
         sync(Lochness, subject, dry=False)
 
     for study in args.studies:
-        subject_dir = protected_root / study / 'processed' / '1001' / 'actigraphy'
+        subject_dir = protected_root / study / 'processed' / 'actigraphy' / '1001'
         assert subject_dir.is_dir()
         assert len(list(subject_dir.glob('*csv'))) == 1
 
-        subject_dir = general_root / study / 'processed' / '1001' / 'actigraphy'
+        subject_dir = general_root / study / 'processed' / 'actigraphy' / '1001'
         assert subject_dir.is_dir() == False
         assert len(list(subject_dir.glob('*csv'))) == 0
 
@@ -314,7 +268,7 @@ def test_box_sync_module_missing_root(args_and_Lochness_BIDS):
         sync(Lochness, subject, dry=False)
 
     study = 'StudyA'
-    subject_dir = protected_root / study / 'raw' / '1001' / 'actigraphy'
+    subject_dir = protected_root / study / 'raw' / 'actigraphy' / '1001'
     assert subject_dir.is_dir() == False
 
     show_tree_then_delete('tmp_lochness')
@@ -359,7 +313,7 @@ def test_box_sync_module_no_redownload(args_and_Lochness_BIDS):
     for subject in lochness.read_phoenix_metadata(Lochness):
         sync(Lochness, subject, dry=False)
 
-    a_file_path = protected_root / 'StudyA' / 'raw' / '1001' / 'actigraphy' / \
+    a_file_path = protected_root / 'StudyA' / 'raw' / 'actigraphy' / '1001' / \
             'LA123456_actigraphy.csv'
 
     init_time = a_file_path.stat().st_mtime
