@@ -156,6 +156,8 @@ def sync(Lochness: 'lochness.config',
                 data_dict,
                 sort_keys=True, indent=3, separators=(',', ': '))
 
+            content = jsonData.encode()
+            
             if content.strip() == b'[]':
                 logger.info(f'No mindlamp data for {subject_id} {date_str}')
                 continue
