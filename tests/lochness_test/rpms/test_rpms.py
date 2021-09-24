@@ -29,7 +29,8 @@ def create_fake_rpms_repo():
     number_of_subjects = 5
     for measure_num in range(0, number_of_measures):
         # create a data
-        measure_file = root / f'measure_{measure_num}.csv'
+        measure_file = root / f'PrescientStudy_Prescient_{measure_num}' \
+                              '_01.01.1988.csv'
 
         df = pd.DataFrame()
 
