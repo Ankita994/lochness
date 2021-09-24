@@ -88,7 +88,6 @@ def sync(Lochness: 'lochness.config',
                                                         subject.mindlamp)
 
     # connect to mindlamp API sdk
-    # LAMP.connect(access_key, secret_key, api_url)
     LAMP.connect(access_key, secret_key, api_url)
 
     # how many days of data from current time, default past 100 days
@@ -129,7 +128,6 @@ def sync(Lochness: 'lochness.config',
         logger.debug(f'Mindlamp {subject_id} {date_str} data pull - complete')
 
         # set destination folder
-        # dst_folder = tree.get('mindlamp', subject.general_folder)
         dst_folder = tree.get('mindlamp',
                               subject.protected_folder,
                               processed=False,
@@ -191,8 +189,6 @@ def mindlamp_projects(Lochness: 'lochness.config',
     key_name = list(mindlamp_instance.keys())[0]  # mindlamp.StudyA
     # Assertations
     # check for mandatory keyring items
-    # if 'mindlamp' not in Keyring['lochness']:
-        # raise KeyringError("lochness > mindlamp not found in keyring")
 
     if key_name not in Keyring:
         raise KeyringError(f"{key_name} not found in keyring")
