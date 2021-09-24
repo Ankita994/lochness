@@ -162,19 +162,9 @@ def sync(Lochness: 'lochness.config',
                 logger.info(f'No mindlamp data for {subject_id} {date_str}')
                 continue
 
-
-            if not Path(dst).is_file():
-                lochness.atomic_write(dst, content)
-                logger.info(f'Mindlamp {data_name} data is saved for '
-                            f'{subject_id} {date_str} (took {end-begin} s)')
-            else:  # compare existing json to the new json
-                crc_src = lochness.crc32(content.decode('utf-8'))
-                crc_dst = lochness.crc32file(dst)
-                if crc_dst != crc_src:
-                    logger.warn(f'file has changed {dst}')
-                    lochness.backup(dst)
-                    logger.debug(f'saving {dst}')
-                    lochness.atomic_write(dst, content)
+            lochness.atomic_write(dst, content)
+            logger.info(f'Mindlamp {data_name} data is saved for '
+                        f'{subject_id} {date_str} (took {end-begin} s)')
 
 
 def separate_out_audio_from_json(json: str):
