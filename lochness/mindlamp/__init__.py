@@ -9,8 +9,61 @@ import lochness.tree as tree
 from io import BytesIO
 from pathlib import Path
 from typing import Tuple, List
+import pytz
+import time
+from datetime import datetime, timedelta
+import base64
+import re
 
 logger = logging.getLogger(__name__)
+
+
+def get_days_to_pull(Lochness):
+    '''Reads mindlamp_days_to_pull from Lochness loaded from the config.yml
+
+    If this variable is missing in the config.yml, set it to pull previous
+    100 days of data from today, from the mindlamp server. '''
+
+    value = Lochness.get('mindlamp_days_to_pull', 100)
+
+    return value
+
+
+def get_audio_out_from_content(activity_dicts, audio_file_name):
+    '''Separate out audio data from the content pulled from mindlamp API
+
+    Key Arguments:
+        activity_dicts: list of activity dictionaries, list.
+        audio_file_name: name of the audio file to be saved, str.
+
+    Returns:
+        activity_dicts_wo_sound: list of activity dictionaries without the
+                                 sound data. (sound data replaced to
+                                 'SOUND_{num}')
+
+    Notes:
+        `num` variables used in the function to capture all audio data, when
+        there is more than one recording each day.
+    '''
+    activity_dicts_wo_sound = []
+
+    num = 0
+    for activity_events_dicts in activity_dicts:
+        if 'url' in activity_events_dicts['static_data']:
+            audio = activity_events_dicts['static_data']['url']
+            activity_events_dicts['static_data']['url'] = f'SOUND_{num}'
+
+            decode_bytes = base64.b64decode(audio.split(',')[1])
+
+            # just in case there are more than one recording per day
+            with open(re.sub(r'.mp3', f'_{num}.mp3', audio_file_name),
+                      'wb') as f:
+                f.write(decode_bytes)
+            num += 1
+
+        activity_dicts_wo_sound.append(activity_events_dicts)
+
+    return activity_dicts_wo_sound
 
 
 @net.retry(max_attempts=5)
@@ -35,49 +88,86 @@ def sync(Lochness: 'lochness.config',
                                                         subject.mindlamp)
 
     # connect to mindlamp API sdk
-    # LAMP.connect(access_key, secret_key, api_url)
-    LAMP.connect(access_key, secret_key)
+    LAMP.connect(access_key, secret_key, api_url)
 
-    # Extra information for future version
-    # study_id, study_name = get_study_lamp(LAMP)
-    # subject_ids = get_participants_lamp(LAMP, study_id)
+    # how many days of data from current time, default past 100 days
+    days_to_check = get_days_to_pull(Lochness)
 
-    subject_id = subject.mindlamp[f'mindlamp.{subject.study}'][0]
+    # current time (ct) in UTC
+    ct_utc = datetime.now(pytz.timezone('UTC'))
 
-    # pull data from mindlamp
-    activity_dicts = get_activity_events_lamp(LAMP, subject_id)
-    sensor_dicts = get_sensor_events_lamp(LAMP, subject_id)
+    # set the cut off point as UTC 00:00:00.00
+    ct_utc_00 = ct_utc.replace(hour=0, minute=0, second=0, microsecond=0)
 
-    # set destination folder
-    # dst_folder = tree.get('mindlamp', subject.general_folder)
-    dst_folder = tree.get('mindlamp',
-                          subject.protected_folder,
-                          processed=False,
-                          BIDS=Lochness['BIDS'])
+    for days_from_ct in range(days_to_check):
+        # n day before current time
+        time_utc_00 = ct_utc_00 - timedelta(days=days_from_ct)
+        time_utc_00_ts = time.mktime(time_utc_00.timetuple()) * 1000
+        time_utc_24 = time_utc_00 + timedelta(hours=24)
+        time_utc_24_ts = time.mktime(time_utc_24.timetuple()) * 1000
 
-    # store both data types
-    for data_name, data_dict in zip(['activity', 'sensor'],
-                                    [activity_dicts, sensor_dicts]):
-        dst = os.path.join(
-                dst_folder,
-                f'{subject_id}_{subject.study}_{data_name}.json')
+        # date string to be used in the file name
+        date_str = time_utc_00.strftime("%Y_%m_%d")
 
-        jsonData = json.dumps(
-            data_dict,
-            sort_keys=True, indent='\t', separators=(',', ': '))
+        # Extra information for future version
+        # study_id, study_name = get_study_lamp(LAMP)
+        # subject_ids = get_participants_lamp(LAMP, study_id)
+        subject_id = subject.mindlamp[f'mindlamp.{subject.study}'][0]
+        logger.debug(f'Mindlamp {subject_id} {date_str} data pull - start')
 
-        content = jsonData.encode()
+        # pull data from mindlamp
+        begin = time.time()
+        activity_dicts = get_activity_events_lamp(
+                LAMP, subject_id,
+                from_ts=time_utc_00_ts, to_ts=time_utc_24_ts)
 
-        if not Path(dst).is_file():
+        sensor_dicts = get_sensor_events_lamp(
+                LAMP, subject_id,
+                from_ts=time_utc_00_ts, to_ts=time_utc_24_ts)
+        end = time.time()
+        logger.debug(f'Mindlamp {subject_id} {date_str} data pull - complete')
+
+        # set destination folder
+        dst_folder = tree.get('mindlamp',
+                              subject.protected_folder,
+                              processed=False,
+                              BIDS=Lochness['BIDS'])
+
+        # store both data types
+        for data_name, data_dict in zip(['activity', 'sensor'],
+                                        [activity_dicts, sensor_dicts]):
+
+            dst = os.path.join(
+                    dst_folder,
+                    f'{subject_id}_{subject.study}_{data_name}_'
+                    f'{date_str}.json')
+
+            # separate out audio data from the activity dictionary
+            if data_name == 'activity' and data_dict:
+                sound_dst = os.path.join(
+                        dst_folder,
+                        f'{subject_id}_{subject.study}_{data_name}_'
+                        f'{date_str}_sound.mp3')
+                data_dict = get_audio_out_from_content(data_dict, sound_dst)
+
+            jsonData = json.dumps(
+                data_dict,
+                sort_keys=True, indent=3, separators=(',', ': '))
+
+            content = jsonData.encode()
+            
+            if content.strip() == b'[]':
+                logger.info(f'No mindlamp data for {subject_id} {date_str}')
+                continue
+
             lochness.atomic_write(dst, content)
-        else:  # compare existing json to the new json
-            crc_src = lochness.crc32(content.decode('utf-8'))
-            crc_dst = lochness.crc32file(dst)
-            if crc_dst != crc_src:
-                logger.warn(f'file has changed {dst}')
-                lochness.backup(dst)
-                logger.debug(f'saving {dst}')
-                lochness.atomic_write(dst, content)
+            logger.info(f'Mindlamp {data_name} data is saved for '
+                        f'{subject_id} {date_str} (took {end-begin} s)')
+
+
+def separate_out_audio_from_json(json: str):
+    '''Separated json from the audio'''
+    pass
 
 
 def deidentify_flag(Lochness, study):
@@ -99,8 +189,6 @@ def mindlamp_projects(Lochness: 'lochness.config',
     key_name = list(mindlamp_instance.keys())[0]  # mindlamp.StudyA
     # Assertations
     # check for mandatory keyring items
-    # if 'mindlamp' not in Keyring['lochness']:
-        # raise KeyringError("lochness > mindlamp not found in keyring")
 
     if key_name not in Keyring:
         raise KeyringError(f"{key_name} not found in keyring")
@@ -160,61 +248,84 @@ def get_participants_lamp(lamp: LAMP, study_id: str) -> List[str]:
     return subject_ids
 
 
-def get_activities_lamp(lamp: LAMP, subject_id: str) -> List[dict]:
+def get_activities_lamp(lamp: LAMP, subject_id: str,
+                        from_ts: str = None, to_ts: str = None) -> List[str]:
     '''Return list of activities for a subject
 
     Key arguments:
         lamp: authenticated LAMP object.
         subject_id: MindLamp subject id, str.
+        from_ts: 13 digit timestamp used to limit the api call from, str.
+        to_ts: 13 digit timestamp used to limit the api call to, str.
 
     Returns:
         activity_dicts: activity records, list of dict.
     '''
-    activity_dicts = lamp.Activity.all_by_participant(subject_id)['data']
+    activity_dicts = lamp.Activity.all_by_participant(
+            subject_id, _from=from_ts, to=to_ts)['data']
 
     return activity_dicts
 
 
-def get_sensors_lamp(lamp: LAMP, subject_id: str) -> List[dict]:
+def get_sensors_lamp(lamp: LAMP, subject_id: str,
+                     from_ts: str = None, to_ts: str = None) -> List[str]:
+
     '''Return list of sensors for a subject
 
     Key arguments:
         lamp: authenticated LAMP object.
         subject_id: MindLamp subject id, str.
+        from_ts: 13 digit timestamp used to limit the api call from, str.
+        to_ts: 13 digit timestamp used to limit the api call to, str.
 
     Returns:
         sensor_dicts: activity records, list of dict.
     '''
-    sensor_dicts = lamp.Sensor.all_by_participant(subject_id)['data']
+    sensor_dicts = lamp.Sensor.all_by_participant(
+                        subject_id, _from=from_ts, to=to_ts)['data']
 
     return sensor_dicts
 
 
-def get_activity_events_lamp(lamp: LAMP, subject_id: str) -> List[dict]:
+def get_activity_events_lamp(
+        lamp: LAMP, subject_id: str,
+        from_ts: str = None, to_ts: str = None) -> List[str]:
+
     '''Return list of activity events for a subject
 
     Key arguments:
         lamp: authenticated LAMP object.
         subject_id: MindLamp subject id, str.
+        from_ts: 13 digit timestamp used to limit the api call from, str.
+        to_ts: 13 digit timestamp used to limit the api call to, str.
 
     Returns:
         activity_events_dicts: activity records, list of dict.
     '''
-    activity_events_dicts = lamp.ActivityEvent.all_by_participant(subject_id)['data']
-
+    activity_events_dicts = lamp.ActivityEvent.all_by_participant(
+                    subject_id, _from=from_ts, to=to_ts)['data']
     return activity_events_dicts
 
 
-def get_sensor_events_lamp(lamp: LAMP, subject_id: str) -> List[dict]:
+def get_sensor_events_lamp(
+        lamp: LAMP, subject_id: str,
+        from_ts: str = None, to_ts: str = None) -> List[str]:
+
     '''Return list of sensor events for a subject
 
     Key arguments:
         lamp: authenticated LAMP object.
         subject_id: MindLamp subject id, str.
+        from_ts: 13 digit timestamp used to limit the api call from, str.
+        to_ts: 13 digit timestamp used to limit the api call to, str.
 
     Returns:
         activity_dicts: activity records, list of dict.
     '''
-    sensor_event_dicts = lamp.SensorEvent.all_by_participant(subject_id)['data']
-
+    if from_ts is not None:
+        sensor_event_dicts = lamp.SensorEvent.all_by_participant(
+                        subject_id, _from=from_ts, to=to_ts)['data']
+    else:
+        sensor_event_dicts = lamp.SensorEvent.all_by_participant(
+                        subject_id)['data']
     return sensor_event_dicts
