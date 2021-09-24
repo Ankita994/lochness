@@ -145,7 +145,7 @@ def sync(Lochness: 'lochness.config',
                     f'{date_str}.json')
 
             # separate out audio data from the activity dictionary
-            if data_name == 'activity' and data_dict != []:
+            if data_name == 'activity' and data_dict:
                 sound_dst = os.path.join(
                         dst_folder,
                         f'{subject_id}_{subject.study}_{data_name}_'
@@ -154,9 +154,7 @@ def sync(Lochness: 'lochness.config',
 
             jsonData = json.dumps(
                 data_dict,
-                sort_keys=True, indent='\t', separators=(',', ': '))
-
-            content = jsonData.encode()
+                sort_keys=True, indent=3, separators=(',', ': '))
 
             if content.strip() == b'[]':
                 logger.info(f'No mindlamp data for {subject_id} {date_str}')
