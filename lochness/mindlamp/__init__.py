@@ -24,9 +24,8 @@ def get_days_to_pull(Lochness):
     If this variable is missing in the config.yml, set it to pull previous
     100 days of data from today, from the mindlamp server. '''
 
-    value = Lochness.get('mindlamp_days_to_pull', dict())
-    if not isinstance(value, int):
-        return 100
+    value = Lochness.get('mindlamp_days_to_pull', 100)
+
     return value
 
 
