@@ -1,6 +1,6 @@
 import lochness
 import shutil
-from lochness.box import sync, sync_module
+from lochness.box import sync, sync_module, get_access_token
 from lochness import config
 from pathlib import Path
 
@@ -14,10 +14,12 @@ from test_lochness import Args, KeyringAndEncrypt, Tokens
 from test_lochness import show_tree_then_delete, rmtree, config_load_test
 from test_lochness import initialize_metadata_test
 from lochness_create_template import create_lochness_template
+from boxsdk import Client, OAuth2
 
 import pytest
 import string
 import requests
+import time
 
 
 box_test_dir = test_dir / 'lochness_test/box'
@@ -105,6 +107,30 @@ def args_and_Lochness_BIDS():
         lochness_obj['box'][study]['base'] = 'PronetLA'
 
     return args, lochness_obj
+
+
+def test_box_client_connection_check():
+    token = Tokens()
+    client_id, client_secret, user_id = \
+            token.read_token_or_get_input('box')
+
+    begin = time.time()
+    api_token = get_access_token(client_id, client_secret, user_id)
+
+    # box authentication
+    auth = OAuth2(
+        client_id=client_id,
+        client_secret=client_secret,
+        access_token=api_token,
+    )
+    client = Client(auth)
+    end = time.time()
+    print(end - begin)
+
+    begin = time.time()
+    _ = client.user().get()
+    end = time.time()
+    print(end - begin)
 
 
 def test_box_sync_module_default_nonBIDS(args_and_Lochness):
