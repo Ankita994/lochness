@@ -43,7 +43,7 @@ def get_audio_out_from_content(activity_dicts, audio_file_name):
                                  'SOUND_{num}')
 
     Notes:
-        `num` variables used in the function to capture all audio data, when 
+        `num` variables used in the function to capture all audio data, when
         there is more than one recording each day.
     '''
     activity_dicts_wo_sound = []
@@ -52,7 +52,7 @@ def get_audio_out_from_content(activity_dicts, audio_file_name):
     for activity_events_dicts in activity_dicts:
         if 'url' in activity_events_dicts['static_data']:
             audio = activity_events_dicts['static_data']['url']
-            activity_events_dicts['static_data']['url'] = 'SOUND_{num}'
+            activity_events_dicts['static_data']['url'] = f'SOUND_{num}'
 
             decode_bytes = base64.b64decode(audio.split(',')[1])
 
@@ -90,9 +90,9 @@ def sync(Lochness: 'lochness.config',
 
     # connect to mindlamp API sdk
     # LAMP.connect(access_key, secret_key, api_url)
-    LAMP.connect(access_key, secret_key)
+    LAMP.connect(access_key, secret_key, api_url)
 
-    # how many days of data from current time, default past 10 days
+    # how many days of data from current time, default past 100 days
     days_to_check = get_days_to_pull(Lochness)
 
     # current time (ct) in UTC
@@ -247,8 +247,7 @@ def get_study_lamp(lamp: LAMP) -> Tuple[str, str]:
     return study_obj['id'], study_obj['name']
 
 
-def get_participants_lamp(lamp: LAMP, study_id: str,
-                          from_ts: str = None, to_ts: str = None) -> List[str]:
+def get_participants_lamp(lamp: LAMP, study_id: str) -> List[str]:
     '''Return subject ids for a study
 
     Key arguments:
@@ -271,6 +270,8 @@ def get_activities_lamp(lamp: LAMP, subject_id: str,
     Key arguments:
         lamp: authenticated LAMP object.
         subject_id: MindLamp subject id, str.
+        from_ts: 13 digit timestamp used to limit the api call from, str.
+        to_ts: 13 digit timestamp used to limit the api call to, str.
 
     Returns:
         activity_dicts: activity records, list of dict.
@@ -289,6 +290,8 @@ def get_sensors_lamp(lamp: LAMP, subject_id: str,
     Key arguments:
         lamp: authenticated LAMP object.
         subject_id: MindLamp subject id, str.
+        from_ts: 13 digit timestamp used to limit the api call from, str.
+        to_ts: 13 digit timestamp used to limit the api call to, str.
 
     Returns:
         sensor_dicts: activity records, list of dict.
@@ -308,6 +311,8 @@ def get_activity_events_lamp(
     Key arguments:
         lamp: authenticated LAMP object.
         subject_id: MindLamp subject id, str.
+        from_ts: 13 digit timestamp used to limit the api call from, str.
+        to_ts: 13 digit timestamp used to limit the api call to, str.
 
     Returns:
         activity_events_dicts: activity records, list of dict.
@@ -326,11 +331,13 @@ def get_sensor_events_lamp(
     Key arguments:
         lamp: authenticated LAMP object.
         subject_id: MindLamp subject id, str.
+        from_ts: 13 digit timestamp used to limit the api call from, str.
+        to_ts: 13 digit timestamp used to limit the api call to, str.
 
     Returns:
         activity_dicts: activity records, list of dict.
     '''
-    if not from_ts == None:
+    if from_ts is not None:
         sensor_event_dicts = lamp.SensorEvent.all_by_participant(
                         subject_id, _from=from_ts, to=to_ts)['data']
     else:
