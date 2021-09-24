@@ -88,7 +88,6 @@ def sync(Lochness: 'lochness.config',
                                                         subject.mindlamp)
 
     # connect to mindlamp API sdk
-    # LAMP.connect(access_key, secret_key, api_url)
     LAMP.connect(access_key, secret_key, api_url)
 
     # how many days of data from current time, default past 100 days
@@ -129,7 +128,6 @@ def sync(Lochness: 'lochness.config',
         logger.debug(f'Mindlamp {subject_id} {date_str} data pull - complete')
 
         # set destination folder
-        # dst_folder = tree.get('mindlamp', subject.general_folder)
         dst_folder = tree.get('mindlamp',
                               subject.protected_folder,
                               processed=False,
