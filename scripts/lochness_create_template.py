@@ -12,7 +12,6 @@ from typing import List
 import pandas as pd
 import json
 import importlib
-import getpass
 from phoenix_generator import main as pg
 
 
@@ -138,85 +137,40 @@ def create_keyring_template(keyring_loc: Path, args: object) -> None:
     template_dict = {}
     template_dict['lochness'] = {}
 
-    if 'redcap' in args.sources or 'upenn' in args.sources:
-        if args.enter_passwords:
-            url = getpass.getpass('REDCAP URL: ')
-            api_token = getpass.getpass('REDCAP API_TOKEN: ')
-            upenn_url = getpass.getpass('UPENN REDCAP URL: ')
-            upenn_api_token = getpass.getpass('UPENN API_TOKEN: ')
-        else:
-            url = 'https://redcap.partners.org/redcap'
-            api_token = '*****'
-            upenn_url = 'https://redcap.upenn.org/redcap'
-            upenn_api_token = '*****'
-
+    if 'redcap' in args.sources:
         template_dict['lochness']['REDCAP'] = {}
         template_dict['lochness']['SECRETS'] = {}
         for study in args.studies:
-            project_name = study[:-2]
-            if 'upenn' in args.sources and 'redcap' in args.sources:
-                study_dict = {f'redcap.{project_name}': [project_name],
-                              'redcap.UPENN': ['UPENN']}
-                template_dict['redcap.UPENN'] = {
-                        'URL': upenn_url,
-                        'API_TOKEN': {'UPENN': upenn_api_token}}
-            elif 'upenn' in args.sources and 'redcap' not in args.sources:
-                study_dict = {'redcap.UPENN': ['UPENN']}
-                template_dict['redcap.UPENN'] = {
-                        'URL': upenn_url,
-                        'API_TOKEN': {'UPENN': upenn_api_token}}
-            else:
-                study_dict = {f'redcap.{project_name}': [project_name]}
-
+            study_dict = {f'redcap.{study}': [study]}
             study_secrete = '**PASSWORD_TO_ENCRYPTE_PROTECTED_DATA**'
             template_dict['lochness']['REDCAP'][study] = study_dict
             template_dict['lochness']['SECRETS'][study] = study_secrete
 
-            if 'redcap' in args.sources:
-                # lower part of the keyring
-                template_dict[f'redcap.{project_name}'] = {
-                        'URL': url,
-                        'API_TOKEN': {project_name: api_token}}
-
+            # lower part of the keyring
+            template_dict[f'redcap.{study}'] = {
+                    'URL': f'**https://redcap.address.org/redcap/{study}**',
+                    'API_TOKEN': {study: f'**API_TOEN_FOR_{study}**'}}
 
     if 'xnat' in args.sources:
-        if args.enter_passwords:
-            url = getpass.getpass('XNAT URL: ')
-            username = getpass.getpass('XNAT USERNAME: ')
-            password = getpass.getpass('XNAT PASSWORD: ')
-        else:
-            url = '*****'
-            username = '*****'
-            password = '*****'
-
         for study in args.studies:
             # lower part of the keyring
             template_dict[f'xnat.{study}'] = {
-                'URL': url,
-                'USERNAME': username,
-                'PASSWORD': password}
+                'URL': f'**https://{study}-xnat.address.edu**',
+                'USERNAME': f'**id_for_xnat_{study}**',
+                'PASSWORD': f'**password_for_xnat_{study}**'}
 
     if 'SECRETS' not in template_dict['lochness'].keys():
         template_dict['lochness']['SECRETS'] = {}
 
     if 'box' in args.sources:
-        if args.enter_passwords:
-            client_id = getpass.getpass('BOX CLIENT ID: ')
-            client_secret = getpass.getpass('BOX CLIENT SECRET: ')
-            user_id = getpass.getpass('BOX USER ID: ')
-        else:
-            client_id = '*****'
-            client_secret = '*****'
-            user_id = '*****'
-
         for study in args.studies:
             template_dict['lochness']['SECRETS'][study] = 'LOCHNESS_SECRETS'
 
             # lower part of the keyring
             template_dict[f'box.{study}'] = {
-                'CLIENT_ID': client_id,
-                'CLIENT_SECRET': client_secret,
-                'USER_ID': user_id}
+                'CLIENT_ID': '**CLIENT_ID_FROM_BOX_APPS**',
+                'CLIENT_SECRET': '**CLIENT_SECRET_FROM_BOX_APPS**',
+                'API_TOEN': '**APITOKEN_FROM_BOX_APPS**'}
 
     if 'mediaflux' in args.sources:
         for study in args.studies:
@@ -295,7 +249,6 @@ poll_interval: {args.poll_interval}
 ssh_user: {args.ssh_user}
 ssh_host: {args.ssh_host}
 sender: {args.email}
-mindlamp_days_to_pull: 10
 pii_table: {args.pii_csv}
 lochness_sync_history_csv: {args.lochness_sync_history_csv}
 '''
@@ -362,7 +315,7 @@ AWS_BUCKET_ROOT: TEST_PHOENIX_ROOT'''
         for study in args.studies:
             line_to_add = f'''
     {study}:
-        base: /example_box_root/{study}
+        base: /DATA/ROOT/UNDER/BOX
         delete_on_success: False
         file_patterns:
             actigraphy:
@@ -418,8 +371,7 @@ def create_example_meta_file_advanced(metadata: str,
                              'mindlamp': 'Mindlamp',
                              'mediaflux': 'Mediaflux',
                              'daris': 'Daris',
-                             'rpms': 'RPMS',
-                             'upenn': 'REDCap'}
+                             'rpms': 'RPMS'}
 
     df = pd.DataFrame({
         'Active': [1],
@@ -430,21 +382,10 @@ def create_example_meta_file_advanced(metadata: str,
         source_col = col_input_to_col_dict[source]
         if source == 'xnat':
             value = f'xnat.{project_name}:subproject:subject01'
-        elif source_col == 'REDCap':
-            if 'REDCap' in df.loc[0]:
-                prev_value = f'{df.loc[0]};'
-            else:
-                prev_value = ''
-
-            if source == 'upenn':
-                value = prev_value + 'redcap.UPENN:subject01'
-            else:
-                value = prev_value + f'redcap.{project_name}:subject01'
         else:
             value = f'{source}.{project_name}:subject01'
         df.loc[0, source_col] = value
 
-    return
     df.to_csv(metadata, index=False)
 
 
@@ -503,11 +444,6 @@ def get_arguments():
                         default='pii_convert.csv',
                         help='Location of table to be used in deidentifying '
                              'redcap fields')
-    parser.add_argument('-ep', '--enter_passwords',
-                        action='store_true',
-                        default=False,
-                        help='Enter passwords to the shell to be stored in '
-                             'the lochness.json')
 
     args = parser.parse_args()
 

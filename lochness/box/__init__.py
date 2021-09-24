@@ -15,12 +15,9 @@ import lochness.keyring as keyring
 import lochness.net as net
 import lochness.tree as tree
 from os.path import join, basename
-logging.getLogger('boxsdk').setLevel(logging.CRITICAL)
 from boxsdk import Client, OAuth2
-from boxsdk.exception import BoxOAuthException
 import cryptease as enc
 import re
-import requests
 
 
 logger = logging.getLogger(__name__)
@@ -28,7 +25,6 @@ Module = lochness.lchop(__name__, 'lochness.')
 Basename = lochness.lchop(__name__, 'lochness.box.')
 
 CHUNK_SIZE = 65536
-
 
 def delete_on_success(Lochness, module_name):
     ''' get module-specific delete_on_success flag with a safe default '''
@@ -46,35 +42,6 @@ def base(Lochness, module_name):
     return Lochness.get('box', {}) \
                    .get(module_name, {}) \
                    .get('base', '')
-
-
-def get_access_token(client_id: str, client_secret: str, user_id: str) -> str:
-    '''Get new access token using Box API
-
-    Key Argument:
-        client_id: Client ID from the box app from box dev console, str
-        client_secret: Client secret from the box app from box dev console, str
-        user_id: user id from the box app from box dev console, str of digits.
-
-    Returns:
-        api_token: API TOKEN used to pull data, str.
-
-    Notes:
-        Current version of get_access_token function uses User ID rather
-        than Enterprise ID. (Both works in pulling data from BOX account)
-    '''
-    url = "https://api.box.com/oauth2/token"
-    headers = {"Content-Type": "application/x-www-form-urlencoded"}
-    data = {"client_id": client_id,
-            "client_secret": client_secret,
-            "grant_type": "client_credentials",
-            "box_subject_type": "user",
-            "box_subject_id": user_id}
-
-    response = requests.post(url, headers=headers, data=data)
-    api_token = response.json()['access_token']
-
-    return api_token
 
 
 def get_box_object_based_on_name(client: boxsdk.client,
@@ -334,10 +301,8 @@ def sync_module(Lochness: 'lochness.config',
         _passphrase = keyring.passphrase(Lochness, subject.study)
         enc_key = enc.kdf(_passphrase)
 
-        client_id, client_secret, user_id = keyring.box_api_token(
+        client_id, client_secret, api_token = keyring.box_api_token(
                 Lochness, module_name)
-
-        api_token = get_access_token(client_id, client_secret, user_id)
 
         # box authentication
         auth = OAuth2(
@@ -346,14 +311,6 @@ def sync_module(Lochness: 'lochness.config',
             access_token=api_token,
         )
         client = Client(auth)
-
-        # check if the login details are correct
-        try:
-            _ = client.user().get()
-        except BoxOAuthException:
-            logger.debug('Failed to login to BOX. Please check Box keyrings.')
-            return
-
 
         bx_base = base(Lochness, module_basename)
 
