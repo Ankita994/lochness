@@ -315,6 +315,50 @@ def lochness_to_lochness_transfer_s3(Lochness, general_only: bool = True):
     print('aws rsync completed')
 
 
+def lochness_to_lochness_transfer_s3_protected(Lochness, datatypes: List[str]):
+    '''Lochness to Lochness transfer using aws s3 sync for protected data
+
+    Key arguments:
+        Lochness: Lochness config.load object
+        datatypes: list of datatypes under PROTECTED to be transferred,
+                   in addition to the GENERAL root, list of str.
+
+    Requirements:
+        - AWS CLI needs to be set with the correct credentials before executing
+        this module.
+            $ aws configure
+        - s3 bucket needs to be linked to the ID
+        - The name of the s3 bucket needs to be in the config.yml
+            eg) AWS_BUCKET_NAME: ampscz-dev
+                AWS_BUCKET_PHOENIX_ROOT: TEST_PHOENIX_ROOT
+
+    '''
+
+    s3_bucket_name = Lochness['AWS_BUCKET_NAME']
+    s3_phoenix_root = Lochness['AWS_BUCKET_ROOT']
+
+    for datatype in datatypes:
+        # phoenix_root / PROTECTED / site / raw / subject / datatype
+        source_directories = Path(Lochness['phoenix_root']).glob(
+                    f'PROTECTED/*/*/*/{datatype}')
+
+        # for all studies and subjects
+        for source_directory in source_directories:
+            if source_directory.is_dir():
+                s3_phoenix_root_dtype = re.sub(Lochness['phoenix_root'],
+                                               s3_phoenix_root,
+                                               str(source_directory))
+                command = f'aws s3 sync \
+                        {source_directory}/ \
+                        s3://{s3_bucket_name}/{s3_phoenix_root_dtype}'
+
+                print(f'Executing aws s3 sync function for {source_directory}')
+                print(re.sub(r'\s+', r' ', command))
+                print(os.popen(command).read())
+
+    print('aws rsync completed')
+
+
 def lochness_to_lochness_transfer_receive_sftp(Lochness):
     '''Get newly transferred file and decompress to PHOENIX
 
