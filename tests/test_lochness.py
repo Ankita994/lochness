@@ -60,6 +60,7 @@ class Args:
         self.rsync = False
         self.s3 = False
         self.s3_selective_sync = False
+        self.enter_passwords = False
 
 
 class Tokens():

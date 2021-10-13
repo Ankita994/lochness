@@ -83,24 +83,26 @@ class Subject(object):
                 'metadata_csv': self.metadata_csv}
         
 
-def initialize_metadata(Lochness, args, multiple_site_in_a_repo) -> None:
+def initialize_metadata(Lochness, args,
+                        multiple_site_in_a_repo, upenn_redcap) -> None:
     '''Create (overwrite) metadata.csv using either REDCap or RPMS database'''
     for study_name in args.studies:
         # if 'redcap' or 'rpms' is in the sources, create (overwrite)
-        if 'redcap' in args.input_sources:
-            id_fieldname = 'chric_subject_id'
-            consent_fieldname = 'chric_consent_date'
-            REDCap.initialize_metadata(
-                    Lochness, study_name, id_fieldname, consent_fieldname,
-                    multiple_site_in_a_repo)
-
-        elif 'rpms' in args.input_sources:
-            # metadata.csv
+        if 'rpms' in args.input_sources:
+            # when rpms is included in the sources, initiate metadata using
+            # rpms
             id_fieldname = Lochness['RPMS_id_colname']
             consent_fieldname = Lochness['RPMS_consent_colname']
             RPMS.initialize_metadata(
                     Lochness, study_name, id_fieldname, consent_fieldname,
-                    multiple_site_in_a_repo)
+                    multiple_site_in_a_repo, upenn_redcap)
+
+        elif 'redcap' in args.input_sources:
+            id_fieldname = 'chric_subject_id'
+            consent_fieldname = 'chric_consent_date'
+            REDCap.initialize_metadata(
+                    Lochness, study_name, id_fieldname, consent_fieldname,
+                    multiple_site_in_a_repo, upenn_redcap)
 
         else:
             pass
@@ -296,6 +298,7 @@ def _parse_beiwe(value, default_id=None):
 def _parse_redcap(value, default_id=None):
     '''helper function to parse a redcap metadata value'''
     default = 'redcap.*:{ID}'.format(ID=default_id)
+
     return _simple_parser(value, default=default)
 
 
@@ -376,9 +379,9 @@ def listdir(Lochness, d):
 def attempt(f, Lochness, *args, **kwargs):
     '''attempt a function call'''
     if len(attempt.warnings) >= 5:
-        lochness.email.attempts_error(Lochness, attempt)
+        # lochness.email.attempts_error(Lochness, attempt)
         attempt.warnings = []
-        #raise AttemptsError('too many attempt warnings')
+        raise AttemptsError('too many attempt warnings')
     try:
         f(Lochness, *args, **kwargs)
     except Exception as e:
