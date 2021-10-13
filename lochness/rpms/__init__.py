@@ -81,8 +81,9 @@ def initialize_metadata(Lochness: 'Lochness object',
                         study_name: str,
                         rpms_id_colname: str,
                         rpms_consent_colname: str,
-                        multistudy: bool = True) -> None:
-    '''Initialize metadata.csv by pulling data from RPMS
+                        multistudy: bool = True,
+                        upenn: bool = False) -> None:
+    '''Initialize metadata.csv by pulling data from RPMS for Prescient project
 
     Key arguments:
         Lochness: Lochness object
@@ -91,13 +92,17 @@ def initialize_metadata(Lochness: 'Lochness object',
         rpms_consent_colname: Name of the consent date field name in RPMS,
                                 str.
         multistudy: True if the rpms repo contains more than one study's data
+        upenn: True if upenn redcap is included in the source list, bool.
+
+    Note:
+        Currently, this function only adds REDCap information for the UPENN
+        Cognitive battery REDCap, and does not support adding other redcap
+        sources into the metadata.
     '''
     rpms_root_path = Lochness['RPMS_PATH']
 
-    source_source_name_dict = {
-        'beiwe': 'Beiwe', 'xnat': 'XNAT', 'dropbox': 'Dropbox',
-        'box': 'Box',
-        'mindlamp': 'Mindlamp', 'daris': 'Daris', 'rpms': 'RPMS'}
+    # sources to add to the metadata, apart from RPMS, Mediaflux
+    source_source_name_dict = {'mindlamp': 'Mindlamp'}
 
     # get list of csv files from the rpms root
     all_df_dict = get_rpms_database(rpms_root_path)
@@ -106,28 +111,36 @@ def initialize_metadata(Lochness: 'Lochness object',
     # for each record in pulled information, extract subject ID and source IDs
     for measure, df_measure in all_df_dict.items():
         if multistudy:
-            site_two_letters_rpms_id = df_measure[rpms_id_colname][:2]
-            site_two_letters_study = study_name.split('_')[1]
+            site_code_rpms_id = df_measure[rpms_id_colname][:2]
+            site_code_study = study_name.split('_')[1]
 
-            if not site_two_letters_rpms_id == site_two_letters_study:
+            if not site_code_rpms_id == site_code_study:
                 continue
 
         # mediaflux source has its foldername as its subject ID
-        subject_dict = {
-                'Subject ID': df_measure[rpms_id_colname].values,
-                'Mediaflux': (f'mediaflux.{study_name}:' +
-                              df_measure[rpms_id_colname]).values}
+        subject_dict = {'Subject ID': df_measure[rpms_id_colname].values}
+
         # Consent date
         try:
             subject_dict['Consent'] = df_measure[rpms_consent_colname].values
         except:
             subject_dict['Consent'] = '1988-09-16'
 
+        subject_dict['RPMS'] = f'rpms.{study_name}:' + \
+                               df_measure[rpms_id_colname].values
+        subject_dict['Mediaflux'] = f'mediaflux.{study_name}:' + \
+                                    df_measure[rpms_id_colname].values
+
+        if upenn:
+            subject_dict['REDCap'] = \
+                'redcap.UPENN:' + df_measure[rpms_id_colname].values
+
         for source, source_name in source_source_name_dict.items():
             try:
                 subject_dict[source_name] = df_measure[f'{source}_id']
             except:
                 pass
+
 
         df_tmp = pd.DataFrame.from_dict(subject_dict, orient='index')
         df = pd.concat([df, df_tmp.T])
