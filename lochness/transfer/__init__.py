@@ -317,13 +317,11 @@ def lochness_to_lochness_transfer_s3(Lochness, general_only: bool = True):
     logger.debug('aws rsync completed')
 
 
-def lochness_to_lochness_transfer_s3_protected(Lochness, datatypes: List[str]):
+def lochness_to_lochness_transfer_s3_protected(Lochness):
     '''Lochness to Lochness transfer using aws s3 sync for protected data
 
     Key arguments:
         Lochness: Lochness config.load object
-        datatypes: list of datatypes under PROTECTED to be transferred,
-                   in addition to the GENERAL root, list of str.
 
     Requirements:
         - AWS CLI needs to be set with the correct credentials before executing
@@ -339,7 +337,7 @@ def lochness_to_lochness_transfer_s3_protected(Lochness, datatypes: List[str]):
     s3_bucket_name = Lochness['AWS_BUCKET_NAME']
     s3_phoenix_root = Lochness['AWS_BUCKET_ROOT']
 
-    for datatype in datatypes:
+    for datatype in Lochness['selective_sync']:
         # phoenix_root / PROTECTED / site / raw / subject / datatype
         source_directories = Path(Lochness['phoenix_root']).glob(
                     f'PROTECTED/*/*/*/{datatype}')
