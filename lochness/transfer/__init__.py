@@ -352,11 +352,11 @@ def lochness_to_lochness_transfer_s3_protected(Lochness):
                         {source_directory}/ \
                         s3://{s3_bucket_name}/{s3_phoenix_root_dtype}'
 
-                print(f'Executing aws s3 sync function for {source_directory}')
-                print(re.sub(r'\s+', r' ', command))
-                print(os.popen(command).read())
-
-    print('aws rsync completed')
+                logger.debug('Executing aws s3 sync function for '
+                             f'{source_directory}')
+                logger.debug(re.sub(r'\s+', r' ', command))
+                logger.debug(os.popen(command).read())
+                logger.debug('aws rsync completed')
 
 
 def lochness_to_lochness_transfer_receive_sftp(Lochness):

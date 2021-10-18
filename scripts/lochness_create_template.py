@@ -498,7 +498,7 @@ def get_arguments():
                         default=False,
                         nargs='+',
                         help='List of dtypes from protected root to transfer '
-                             'using s3')
+                             'using s3 rsync')
     parser.add_argument('-lsr', '--lochness_sync_receive',
                         default=False,
                         action='store_true',
