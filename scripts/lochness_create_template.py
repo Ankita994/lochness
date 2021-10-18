@@ -310,6 +310,12 @@ RPMS_consent_colname: Consent
         s3_lines = f'''AWS_BUCKET_NAME: ampscz-dev
 AWS_BUCKET_ROOT: TEST_PHOENIX_ROOT'''
         config_example += s3_lines
+
+    if args.s3_selective_sync:
+        # eg)
+        # s3_selective_sync: ['mri', 'actigraphy']
+        config_example += f"\ns3_selective_sync: [{','.join(args.s3_selective_sync)}]"
+
     
     if 'redcap' in args.sources:
         config_example += '\nredcap:'
@@ -488,6 +494,11 @@ def get_arguments():
                         default=False,
                         action='store_true',
                         help='Use s3 rsync in lochness to lochness transfer')
+    parser.add_argument('--s3_selective_sync',
+                        default=False,
+                        nargs='+',
+                        help='List of dtypes from protected root to transfer '
+                             'using s3 rsync')
     parser.add_argument('-lsr', '--lochness_sync_receive',
                         default=False,
                         action='store_true',

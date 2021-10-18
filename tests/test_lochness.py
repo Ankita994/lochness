@@ -59,6 +59,7 @@ class Args:
         self.pii_csv = ''
         self.rsync = False
         self.s3 = False
+        self.s3_selective_sync = False
         self.enter_passwords = False
 
 
@@ -118,7 +119,11 @@ class KeyringAndEncrypt():
         subvar_list = token.get_var_names(module_name)
 
         for subvar, keyring in zip(subvar_list, keyrings):
-            self.keyring[var][subvar] = keyring
+            if var in self.keyring:
+                self.keyring[var][subvar] = keyring
+            else:
+                self.keyring[var] = {}
+                self.keyring[var][subvar] = keyring
 
         self.write_keyring_and_encrypt()
 

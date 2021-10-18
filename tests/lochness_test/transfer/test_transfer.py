@@ -7,6 +7,7 @@ from lochness.transfer import lochness_to_lochness_transfer_sftp
 from lochness.transfer import decompress_transferred_file_and_copy
 from lochness.transfer import lochness_to_lochness_transfer_receive_sftp
 from lochness.transfer import lochness_to_lochness_transfer_s3
+from lochness.transfer import lochness_to_lochness_transfer_s3_protected
 
 from pathlib import Path
 
@@ -335,3 +336,43 @@ def test_s3_sync_function(Lochness):
     print(os.popen(command).read())
 
     
+def test_lochness_to_lochness_transfer_s3_protected():
+    args = Args('tmp_lochness')
+    args.rsync = True
+    args.s3_selective_sync = ['actigraphy', 'haha']
+    create_lochness_template(args)
+    k = KeyringAndEncrypt(args.outdir)
+    k.update_var_subvars('lochness_sync', 'transfer')
+
+    lochness = config_load_test('tmp_lochness/config.yml', '')
+    print(lochness)
+    # print(lochness)
+
+    lochness['AWS_BUCKET_NAME'] = 'ampscz-dev'
+    lochness['AWS_BUCKET_ROOT'] = 'TEST_PHOENIX_ROOT'
+
+    # create fake files
+    tmp_file = Path(lochness['phoenix_root']) / \
+            'PROTECTED/StudyA/raw/subject01/actigraphy/haha.txt'
+    tmp_file.parent.mkdir(parents=True, exist_ok=True)
+    tmp_file.touch()
+
+    tmp_file = Path(lochness['phoenix_root']) / \
+            'PROTECTED/StudyA/raw/subject01/actigraphy/haha2.txt'
+    tmp_file.touch()
+
+    tmp_file = Path(lochness['phoenix_root']) / \
+            'PROTECTED/StudyA/raw/subject02/actigraphy/haha2.txt'
+    tmp_file.parent.mkdir(parents=True, exist_ok=True)
+    tmp_file.touch()
+
+    tmp_file = Path(lochness['phoenix_root']) / \
+            'PROTECTED/StudyA/processed/subject02/actigraphy/haha2.txt'
+    tmp_file.parent.mkdir(parents=True, exist_ok=True)
+    tmp_file.touch()
+
+    # Lochness['AWS_BUCKET_NAME'] = 'ampscz-dev'
+    # Lochness['AWS_BUCKET_ROOT'] = 'TEST_PHOENIX_ROOT'
+    lochness_to_lochness_transfer_s3_protected(
+            lochness, lochness['s3_selective_sync'])
+

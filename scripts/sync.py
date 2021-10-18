@@ -166,7 +166,13 @@ def do(args, Lochness):
     # transfer new files after all sync attempts are done
     if args.lochness_sync_send:
         if args.s3:
+            # for data under GENERAL
             lochness_to_lochness_transfer_s3(Lochness)
+
+            # for data under PROTECTED (for selected datatypes)
+            if 's3_selective_sync' in Lochness:
+                lochness_to_lochness_transfer_s3_protected(Lochness)
+                
         elif args.rsync:
             lochness_to_lochness_transfer_rsync(Lochness)
         else:
