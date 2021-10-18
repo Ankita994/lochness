@@ -171,8 +171,8 @@ def do(args, Lochness):
 
             # for data under PROTECTED (for selected datatypes)
             if 's3_selective_sync' in Lochness:
-                lochness_to_lochness_transfer_s3(Lochness,
-                                                 Lochness['selective_sync'])
+                lochness_to_lochness_transfer_s3_protected(Lochness)
+                
         elif args.rsync:
             lochness_to_lochness_transfer_rsync(Lochness)
         else:
