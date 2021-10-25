@@ -187,6 +187,7 @@ def mindlamp_projects(Lochness: 'lochness.config',
     Keyring = Lochness['keyring']
 
     key_name = list(mindlamp_instance.keys())[0]  # mindlamp.StudyA
+
     # Assertations
     # check for mandatory keyring items
 
