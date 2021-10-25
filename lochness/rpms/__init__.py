@@ -101,49 +101,54 @@ def initialize_metadata(Lochness: 'Lochness object',
     '''
     rpms_root_path = Lochness['RPMS_PATH']
 
-    # sources to add to the metadata, apart from RPMS, Mediaflux
-    source_source_name_dict = {'mindlamp': 'Mindlamp'}
-
     # get list of csv files from the rpms root
     all_df_dict = get_rpms_database(rpms_root_path)
 
     df = pd.DataFrame()
-    # for each record in pulled information, extract subject ID and source IDs
-    for measure, df_measure in all_df_dict.items():
-        if multistudy:
-            site_code_rpms_id = df_measure[rpms_id_colname][:2]
-            site_code_study = study_name.split('_')[1]
 
-            if not site_code_rpms_id == site_code_study:
-                continue
+    # all_df_dict - key: name of measure, value: pd.DataFrame of the whole file
+    for measure, df_measure_all_subj in all_df_dict.items():
+        # get the site information from the study name, eg. PrescientAD
+        site_code_study = study_name[-2:]  # 'AD'
+        project_name = study_name.split(site_code_study)[0]  # 'Prescient'
 
-        # mediaflux source has its foldername as its subject ID
-        subject_dict = {'Subject ID': df_measure[rpms_id_colname].values}
+        # loop through each line of the RPMS database
+        for index, df_measure in df_measure_all_subj.iterrows():
+            if multistudy:
+                # site of the subject for the line
+                site_code_rpms_id = df_measure[rpms_id_colname][:2]
 
-        # Consent date
-        try:
-            subject_dict['Consent'] = df_measure[rpms_consent_colname].values
-        except:
-            subject_dict['Consent'] = '1988-09-16'
+                # if the subject does not belong to the site, pass it
+                if site_code_rpms_id != site_code_study:
+                    continue
 
-        subject_dict['RPMS'] = f'rpms.{study_name}:' + \
-                               df_measure[rpms_id_colname].values
-        subject_dict['Mediaflux'] = f'mediaflux.{study_name}:' + \
-                                    df_measure[rpms_id_colname].values
+            subject_dict = {'Subject ID': df_measure[rpms_id_colname]}
 
-        if upenn:
-            subject_dict['REDCap'] = \
-                'redcap.UPENN:' + df_measure[rpms_id_colname].values
+            # Consent date
+            if rpms_consent_colname in df_measure:
+                subject_dict['Consent'] = df_measure[rpms_consent_colname]
+            else:
+                subject_dict['Consent'] = '1988-09-16'  # pseudo-random date
 
-        for source, source_name in source_source_name_dict.items():
-            try:
-                subject_dict[source_name] = df_measure[f'{source}_id']
-            except:
-                pass
+            # mediaflux source has its foldername as its subject ID
+            subject_dict['RPMS'] = f'rpms.{study_name}:' + \
+                                   df_measure[rpms_id_colname]
+            subject_dict['Mediaflux'] = f'mediaflux.{study_name}:' + \
+                                        df_measure[rpms_id_colname]
+
+            # if mindlamp_id exists in the rpms table
+            if 'mindlamp_id' in df_measure:
+                subject_dict['mindlamp'] = f'mindlamp.{study_name}:' \
+                        + df_measure[f'mindlamp_id']
+
+            if upenn:
+                subject_dict['REDCap'] = \
+                    'redcap.UPENN:' + df_measure[rpms_id_colname]
 
 
-        df_tmp = pd.DataFrame.from_dict(subject_dict, orient='index')
-        df = pd.concat([df, df_tmp.T])
+            df_tmp = pd.DataFrame.from_dict(subject_dict, orient='index')
+            df = pd.concat([df, df_tmp.T])
+
 
     # Each subject may have more than one arms, which will result in more than
     # single item for the subject in the RPMS pulled `content`
