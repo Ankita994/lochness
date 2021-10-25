@@ -25,6 +25,7 @@ import lochness.onlinescoring as OnlineScoring
 from lochness.transfer import lochness_to_lochness_transfer_sftp
 from lochness.transfer import lochness_to_lochness_transfer_rsync
 from lochness.transfer import lochness_to_lochness_transfer_s3
+from lochness.transfer import lochness_to_lochness_transfer_s3_protected
 from lochness.transfer import lochness_to_lochness_transfer_receive_sftp
 import dpanonymize
 
@@ -145,6 +146,7 @@ def do(args, Lochness):
         # for ProNET and PRESCIENT, single REDCap and RPMS repo has
         # information from multiple site
         multiple_site = True if len(args.studies) > 1 else False
+
         lochness.initialize_metadata(Lochness, args,
                                      multiple_site, upenn_redcap)
 
