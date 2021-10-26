@@ -424,17 +424,21 @@ def sync_module(Lochness: 'lochness.config',
                     processed = product.get('processed', False)
 
                     # For DPACC, get processed from the config.yml
-                    output_base = tree.get(
+                    output_dir = tree.get(
                             datatype,
                             output_base,
                             processed=processed,
                             BIDS=Lochness['BIDS'])
 
+                    # keep the source subdirectory structure in PHOENIX
+                    subdir = root.split(bx_head)[1][1:]
+                    output_dir_full = output_dir / subdir
+
                     compress = product.get('compress', False)
 
                     save(box_file_object,
                          (root, box_file_object.name),
-                         output_base, key=key,
+                         output_dir_full, key=key,
                          compress=compress, delete=False,
                          dry=False)
 
@@ -443,7 +447,8 @@ def _find_product(s, products, **kwargs):
     for product in products:
         pattern = product['pattern'].safe_substitute(**kwargs)
         pattern = re.sub(r'\*', '.*', pattern)
-        if re.match(pattern, s):
+
+        if re.match(pattern, s, re.IGNORECASE):
             return product
 
     return None
