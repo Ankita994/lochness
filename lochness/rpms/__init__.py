@@ -119,6 +119,7 @@ def initialize_metadata(Lochness: 'Lochness object',
                 site_code_rpms_id = df_measure[rpms_id_colname][:2]
 
                 # if the subject does not belong to the site, pass it
+                print(site_code_rpms_id)
                 if site_code_rpms_id != site_code_study:
                     continue
 

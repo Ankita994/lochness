@@ -35,21 +35,23 @@ def create_fake_rpms_repo():
         df = pd.DataFrame()
 
         for subject_num in range(0, number_of_subjects):
-            df_tmp = pd.DataFrame({
-                'record_id1': [f'subject_{subject_num}'],
-                'Consent': '1988-09-16',
-                'var1': f'{measure_num}_var1_subject_{subject_num}',
-                'address': f'{measure_num}_var2_subject_{subject_num}',
-                'var3': f'{measure_num}_var3_subject_{subject_num}',
-                'xnat_id': f'StudyA:bwh:var3_subject_{subject_num}',
-                'box_id': f'box.StudyA:var3_subject_{subject_num}',
-                'last_modified': time.time()})
-            if measure_num // 2 >= 1:
-                df_tmp = df_tmp.drop('box_id', axis=1)
-            else:
-                df_tmp = df_tmp.drop('xnat_id', axis=1)
+            for site in 'AD', 'DA':
+                df_tmp = pd.DataFrame({
+                    'subjectkey': [f'{site}{subject_num}'],
+                    'Consent': '1988-09-16',
+                    'var1': f'{measure_num}_var1_subject_{subject_num}',
+                    'address': f'{measure_num}_var2_subject_{subject_num}',
+                    'var3': f'{measure_num}_var3_subject_{subject_num}',
+                    'xnat_id': f'StudyA:bwh:var3_subject_{subject_num}',
+                    'box_id': f'box.StudyA:var3_subject_{subject_num}',
+                    'mindlamp_id': f'box.StudyA:var3_subject_{subject_num}',
+                    'LastModifiedDate': time.time()})
+                if measure_num // 2 >= 1:
+                    df_tmp = df_tmp.drop('box_id', axis=1)
+                else:
+                    df_tmp = df_tmp.drop('xnat_id', axis=1)
 
-            df = pd.concat([df, df_tmp])
+                df = pd.concat([df, df_tmp])
 
         df.to_csv(measure_file, index=False)
 
@@ -71,11 +73,11 @@ def test_initializing_based_on_rpms(Lochness):
     '''
     create_fake_rpms_repo()
     Lochness['RPMS_PATH'] = Path('RPMS_repo').absolute()
-    initialize_metadata(Lochness, 'StudyA', 'record_id1', 'Consent', False)
+    initialize_metadata(Lochness, 'StudyA', 'subjectkey', 'Consent', False)
     df = pd.read_csv('tmp_lochness/PHOENIX/GENERAL/StudyA/StudyA_metadata.csv')
     print(df)
     show_tree_then_delete('tmp_lochness')
-    assert len(df) == 5
+    assert len(df) == 10
 
 
 def test_create_lochness_template(Lochness):
@@ -83,7 +85,7 @@ def test_create_lochness_template(Lochness):
     # create_lochness_template(args)
     study_name = 'StudyA'
     Lochness['RPMS_PATH'] = Path('RPMS_repo').absolute()
-    initialize_metadata(Lochness, study_name, 'record_id1', 'Consent', False)
+    initialize_metadata(Lochness, study_name, 'subjectkey', 'Consent', False)
 
     for subject in lochness.read_phoenix_metadata(Lochness,
                                                   studies=['StudyA']):
@@ -118,19 +120,21 @@ def test_sync_from_empty(args):
     outdir = 'tmp_lochness'
     args.outdir = outdir
     args.sources = ['RPMS']
+    args.studies = ['PrescientAD', 'PrescientDA']
     create_lochness_template(args)
     KeyringAndEncrypt(args.outdir)
     create_fake_rpms_repo()
 
     dry=False
-    study_name = 'StudyA'
+    study_name = 'PrescientAD'
     Lochness = config_load_test(f'{args.outdir}/config.yml', '')
-    print(Lochness)
+    Lochness['RPMS_PATH'] = str(
+            Path(outdir).absolute().parent / 'RPMS_repo')
     initialize_metadata(Lochness, study_name, Lochness['RPMS_id_colname'],
-            'Consent', False)
+            'Consent', True)
 
     for subject in lochness.read_phoenix_metadata(Lochness,
-                                                  studies=['StudyA']):
+                                                  studies=[study_name]):
         sync(Lochness, subject, dry)
 
     # print the structure
