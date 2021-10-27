@@ -16,7 +16,6 @@ from lochness_create_template import create_lochness_template
 
 import pytest
 
-
 xnat_test_dir = test_dir / 'lochness_test/xnat'
 phoenix_root = xnat_test_dir / 'tmp_lochness/PHOENIX'
 protected_root = phoenix_root/ 'PROTECTED'
@@ -28,10 +27,10 @@ class KeyringAndEncrypt(KeyringAndEncrypt):
         token = Tokens()
         url, username, password = token.read_token_or_get_input('xnat')
 
-        self.keyring[f'xnat.hcpep'] = {}
-        self.keyring[f'xnat.hcpep']['URL'] = url
-        self.keyring[f'xnat.hcpep']['USERNAME'] = username
-        self.keyring[f'xnat.hcpep']['PASSWORD'] = password
+        self.keyring[f'xnat.Pronet_ucla'] = {}
+        self.keyring[f'xnat.Pronet_ucla']['URL'] = url
+        self.keyring[f'xnat.Pronet_ucla']['USERNAME'] = username
+        self.keyring[f'xnat.Pronet_ucla']['PASSWORD'] = password
 
         self.write_keyring_and_encrypt()
 
@@ -39,20 +38,27 @@ class KeyringAndEncrypt(KeyringAndEncrypt):
 @pytest.fixture
 def args_and_Lochness():
     args = Args('tmp_lochness')
+    args.studies = ['PronetLA', 'PronetUCLA']
     args.sources = ['xnat']
     create_lochness_template(args)
     keyring = KeyringAndEncrypt(args.outdir)
+
     information_to_add_to_metadata = {'xnat': {
         'subject_id': '1001',
-        'source_id': '2004'}}
+        'source_id': 'Pilot_07222021'}}
 
     for study in args.studies:
         keyring.update_for_xnat(study)
 
         # update box metadata
+        # initialize_metadata_test('tmp_lochness/PHOENIX', study,
+                                 # information_to_add_to_metadata,
+                                 # f'hcpep:HCPEP-BWH')
+
         initialize_metadata_test('tmp_lochness/PHOENIX', study,
                                  information_to_add_to_metadata,
-                                 f'hcpep:HCPEP-BWH')
+                                 f'Pronet_ucla:*')
+        break
 
     lochness_obj = config_load_test('tmp_lochness/config.yml', '')
 
