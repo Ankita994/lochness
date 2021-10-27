@@ -50,7 +50,8 @@ def sync(Lochness, subject, dry=False):
                     yaxil.download(auth, experiment.label,
                                    project=experiment.project,
                                    scan_ids=['ALL'], out_dir=tmpdir,
-                                   in_mem=False, attempts=3)
+                                   in_mem=False, attempts=3,
+                                   out_format='native', progress=True)
                     logger.debug('saving .experiment file')
                     save_experiment_file(tmpdir, auth.url, experiment)
                     os.rename(tmpdir, dst)
