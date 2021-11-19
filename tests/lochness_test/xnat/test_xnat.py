@@ -21,6 +21,7 @@ phoenix_root = xnat_test_dir / 'tmp_lochness/PHOENIX'
 protected_root = phoenix_root/ 'PROTECTED'
 general_root = phoenix_root/ 'GENERAL'
 
+import yaxil
 
 class KeyringAndEncrypt(KeyringAndEncrypt):
     def update_for_xnat(self, study):
@@ -78,6 +79,23 @@ def test_xnat_sync_module_default(args_and_Lochness):
     for subject in lochness.read_phoenix_metadata(Lochness):
         sync(Lochness, subject, dry=False)
 
+
+
+
+def test_on_pronet_server():
+    with open('tmp_to_remove.txt', 'r') as f:
+        url, username, password = [x.strip() for x in f.readlines()]
+
+    auth = yaxil.XnatAuth(url=url, username=username, password=password)
+    xnat_subject = yaxil.subjects(auth, 'WU00007', 'PronetWU_washu')
+    xnat_subject = next(xnat_subject)
+    for experiment in yaxil.experiments(auth, subject=xnat_subject):
+        print(experiment)
+        yaxil.download(auth, experiment.label,
+                       project=experiment.project,
+                       scan_ids=['ALL'], out_dir='test',
+                       in_mem=False, attempts=1,
+                       out_format='native')
 
 
 # def test_box_sync_module_default(args_and_Lochness):
