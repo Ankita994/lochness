@@ -337,7 +337,7 @@ def lochness_to_lochness_transfer_s3_protected(Lochness):
     s3_bucket_name = Lochness['AWS_BUCKET_NAME']
     s3_phoenix_root = Lochness['AWS_BUCKET_ROOT']
 
-    for datatype in Lochness['selective_sync']:
+    for datatype in Lochness['s3_selective_sync']:
         # phoenix_root / PROTECTED / site / raw / subject / datatype
         source_directories = Path(Lochness['phoenix_root']).glob(
                     f'PROTECTED/*/*/*/{datatype}')
