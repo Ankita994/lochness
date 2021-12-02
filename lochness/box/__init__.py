@@ -48,6 +48,18 @@ def base(Lochness, module_name):
                    .get('base', '')
 
 
+class TokenAccessError(Exception):
+    pass
+
+
+class TokenRefreshError(Exception):
+    pass
+
+
+class TokenRefreshMissingError(Exception):
+    pass
+
+
 def get_access_token(client_id: str, client_secret: str, user_id: str) -> str:
     '''Get new access token using Box API
 
@@ -72,9 +84,97 @@ def get_access_token(client_id: str, client_secret: str, user_id: str) -> str:
             "box_subject_id": user_id}
 
     response = requests.post(url, headers=headers, data=data)
-    api_token = response.json()['access_token']
+    try:
+        api_token = response.json()['access_token']
+    except KeyError:
+        raise TokenAccessError(
+                'Error in getting token using client credentials')
 
     return api_token
+
+
+def refresh_access_token(
+        refresh_token_path: Path, client_id: str, client_secret: str) -> str:
+    '''Refresh access token using Box API
+
+    Key Argument:
+        Lochness: refresh_token_path
+        client_id: Client ID from the box app from box dev console, str
+        client_secret: Client secret from the box app from box dev console, str
+        refresh_token: Refresh token, str.
+
+    Returns:
+        api_token: API TOKEN used to pull data, str.
+
+    Notes:
+        To obtain Refresh token, go to 
+        https://account.box.com/ \
+            api/oauth2/authorize?client_id=CLIENTID&response_type=code
+        using a web browser. Once logged in, the address returned on the
+        web-browser contains code.
+
+        Then the curl command below could be used to obtain initial access
+        and refresh token.
+        curl --location --request POST 'https://api.box.com/oauth2/token' \
+            --header 'Content-Type: application/x-www-form-urlencoded' \
+            --data-urlencode 'client_id=CLIENTID' \
+            --data-urlencode 'client_secret=CLIENTSECRET' \
+            --data-urlencode 'grant_type=authorization_code' \
+            --data-urlencode 'code=CODE'
+
+        The refresh token expires when used to refresh access token. 
+        Refreshing token returns a new access and refresh token.
+        
+    '''
+
+    # Access token through refresh token file
+    if refresh_token_path.is_file():
+        with open(refresh_token_path, 'r') as refresh_token_file:
+            refresh_token = refresh_token_file.read().strip()
+    else:
+        try:
+            address = 'https://account.box.com/api/oauth2/authorize?' \
+                    f'client_id={client_id}&response_type=code'
+            code = input(f'Paste code after authorizing the app: {address}')
+
+            url = "https://api.box.com/oauth2/token"
+            headers = {"Content-Type": "application/x-www-form-urlencoded"}
+            data = {
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "grant_type": "authorization_code",
+                "code": code
+                }
+
+            response = requests.post(url, headers=headers, data=data)
+            refresh_token = response.json()['refresh_token']
+        except:
+            raise TokenRefreshMissingError('Cannot refresh')
+
+
+    url = "https://api.box.com/oauth2/token"
+    headers = {"Content-Type": "application/x-www-form-urlencoded"}
+    data = {
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "grant_type": "refresh_token",
+        "refresh_token": refresh_token
+        }
+
+    response = requests.post(url, headers=headers, data=data)
+
+    try:
+        api_token = response.json()['access_token']
+        new_refresh_token = response.json()['refresh_token']
+
+        with open(refresh_token_path, 'w') as refresh_token_file:
+            refresh_token_file.write(new_refresh_token)
+
+    except KeyError:
+        raise TokenRefreshError('Error in refreshing token')
+
+    return api_token
+
 
 
 def get_box_object_based_on_name(client: boxsdk.client,
@@ -110,15 +210,14 @@ def get_box_object_based_on_name(client: boxsdk.client,
 
         # get root object
         root = Path(box_folder_name).parts[0]
-        box_obj = get_box_object_based_on_name(client,
-                                               root,
-                                               box_path_id)
+        box_obj = get_box_object_based_on_name(client, root, box_path_id)
 
         if box_path_id == '0':
             box_obj = get_box_object_based_on_name(
                     client,
                     Path(box_folder_name).relative_to(root),
                     box_obj.id)
+            return box_obj
 
         if box_obj is None:
             return None
@@ -337,7 +436,14 @@ def sync_module(Lochness: 'lochness.config',
         client_id, client_secret, user_id = keyring.box_api_token(
                 Lochness, module_name)
 
-        api_token = get_access_token(client_id, client_secret, user_id)
+        try:
+            api_token = get_access_token(client_id, client_secret, user_id)
+        except TokenAccessError as err:
+            refresh_token_path = Path(Lochness['keyring_file']).parent / \
+                    '.refresh_token'
+            api_token = refresh_access_token(refresh_token_path,
+                                             client_id,
+                                             client_secret)
 
         # box authentication
         auth = OAuth2(
@@ -380,6 +486,7 @@ def sync_module(Lochness: 'lochness.config',
                 # for BIDS root datatype_obj has bx_sid
                 datatype_obj = get_box_object_based_on_name(
                         client, bx_sid, datatype_root_obj.id)
+
             else:
                 subject_obj = get_box_object_based_on_name(
                         client, bx_sid, bx_base_obj.id)
@@ -424,17 +531,21 @@ def sync_module(Lochness: 'lochness.config',
                     processed = product.get('processed', False)
 
                     # For DPACC, get processed from the config.yml
-                    output_base = tree.get(
+                    output_dir = tree.get(
                             datatype,
                             output_base,
                             processed=processed,
                             BIDS=Lochness['BIDS'])
 
+                    # keep the source subdirectory structure in PHOENIX
+                    subdir = root.split(bx_head)[1][1:]
+                    output_dir_full = output_dir / subdir
+
                     compress = product.get('compress', False)
 
                     save(box_file_object,
                          (root, box_file_object.name),
-                         output_base, key=key,
+                         output_dir_full, key=key,
                          compress=compress, delete=False,
                          dry=False)
 
@@ -443,7 +554,8 @@ def _find_product(s, products, **kwargs):
     for product in products:
         pattern = product['pattern'].safe_substitute(**kwargs)
         pattern = re.sub(r'\*', '.*', pattern)
-        if re.match(pattern, s):
+
+        if re.match(pattern, s, re.IGNORECASE):
             return product
 
     return None

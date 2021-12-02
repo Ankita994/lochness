@@ -48,11 +48,11 @@ class KeyringAndEncrypt(KeyringAndEncrypt):
                 "box_subject_type": "user",
                 "box_subject_id": user_id}
 
-        data = {"client_id": client_id,
-                "client_secret": client_secret,
-                "grant_type": "client_credentials",
-                "box_subject_type": "enterprise",
-                "box_subject_id": 799964836}
+        # data = {"client_id": client_id,
+                # "client_secret": client_secret,
+                # "grant_type": "client_credentials",
+                # "box_subject_type": "enterprise",
+                # "box_subject_id": 799964836}
 
         response = requests.post(url, headers=headers, data=data)
         api_token = response.json()['access_token']
@@ -63,6 +63,7 @@ class KeyringAndEncrypt(KeyringAndEncrypt):
 @pytest.fixture
 def args_and_Lochness():
     args = Args('tmp_lochness')
+    args.studies = ['PronetLA', 'PronetAL']
     args.sources = ['box']
     create_lochness_template(args)
     keyring = KeyringAndEncrypt(args.outdir)
@@ -505,3 +506,29 @@ def test_mediaflux_with_given_structure():
 
                         with open(final_dir / file_name, 'w') as f:
                             f.write('')
+
+
+
+def test_box_sync_Phil(args_and_Lochness):
+    '''Test pulling data keeping the structure of the subdirectories in box'''
+    args, Lochness = args_and_Lochness
+
+    # change subject name LA49125 test subject - this data is uploaded to Box
+    # for test
+    keyring = KeyringAndEncrypt(args.outdir)
+    information_to_add_to_metadata = {'box':{
+        'subject_id': 'LA49125',
+        'source_id': 'LA49125'}
+        }
+
+    for study in args.studies:
+        keyring.update_for_box(study)
+
+        # update box metadata
+        initialize_metadata_test('tmp_lochness/PHOENIX', study,
+                                 information_to_add_to_metadata)
+
+    for subject in lochness.read_phoenix_metadata(Lochness):
+        sync(Lochness, subject, dry=False)
+
+    # show_tree_then_delete('tmp_lochness')

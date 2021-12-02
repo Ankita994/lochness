@@ -295,7 +295,7 @@ poll_interval: {args.poll_interval}
 ssh_user: {args.ssh_user}
 ssh_host: {args.ssh_host}
 sender: {args.email}
-mindlamp_days_to_pull: 10
+mindlamp_days_to_pull: 100
 pii_table: {args.pii_csv}
 lochness_sync_history_csv: {args.lochness_sync_history_csv}
 '''
@@ -358,7 +358,7 @@ AWS_BUCKET_ROOT: TEST_PHOENIX_ROOT'''
             interviews:
                    - product: offsite_interview
                      data_dir: Interview_recordings
-                     pattern: '*.mp4'
+                     pattern: '*.(mp4|m4a|m3u|wav)'
               '''
 
             config_example += line_to_add
@@ -392,7 +392,7 @@ AWS_BUCKET_ROOT: TEST_PHOENIX_ROOT'''
             interviews:
                    - product: offsite_interview
                      data_dir: interviews
-                     pattern: '*.mp4'
+                     pattern: '*.(mp4|m4a|m3u|wav)'
              '''
 
             config_example += line_to_add
