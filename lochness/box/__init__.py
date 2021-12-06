@@ -212,8 +212,11 @@ def get_box_object_based_on_name(client: boxsdk.client,
 
         # get root object
         root = Path(box_folder_name).parts[0]
+
+        # catch box object for the root path
         box_obj = get_box_object_based_on_name(client, root, box_path_id)
 
+        # catch box object of the subdirectory of the root path
         box_obj = get_box_object_based_on_name(
                 client,
                 Path(box_folder_name).relative_to(root),
