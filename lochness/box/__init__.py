@@ -202,7 +202,9 @@ def get_box_object_based_on_name(client: boxsdk.client,
     '''
     box_folder_name = str(box_folder_name)
 
-    # if box root is given as path - eg) box_folder_name == 'example/PronetLA'
+    # if box root is given as path
+    # eg) box_folder_name == 'example/PronetLA'
+    #     box_folder_name == 'PronetLA/TEST'
     if '/' in box_folder_name:
         # remove leading '/' from the path string
         box_folder_name = box_folder_name[1:] if box_folder_name[0] == '/' \
@@ -212,12 +214,11 @@ def get_box_object_based_on_name(client: boxsdk.client,
         root = Path(box_folder_name).parts[0]
         box_obj = get_box_object_based_on_name(client, root, box_path_id)
 
-        if box_path_id == '0':
-            box_obj = get_box_object_based_on_name(
-                    client,
-                    Path(box_folder_name).relative_to(root),
-                    box_obj.id)
-            return box_obj
+        box_obj = get_box_object_based_on_name(
+                client,
+                Path(box_folder_name).relative_to(root),
+                box_obj.id)
+        return box_obj
 
         if box_obj is None:
             return None
@@ -429,7 +430,7 @@ def sync_module(Lochness: 'lochness.config',
     logger.debug(f'delete_on_success for {module_basename} is {delete}')
 
     for bx_sid in subject.box[module_name]:
-        logger.debug(f'exploring {subject.study}/{subject.id}')
+        logger.debug(f'exploring subject {subject.study}/{subject.id}')
         _passphrase = keyring.passphrase(Lochness, subject.study)
         enc_key = enc.kdf(_passphrase)
 
@@ -460,7 +461,6 @@ def sync_module(Lochness: 'lochness.config',
             logger.debug('Failed to login to BOX. Please check Box keyrings.')
             return
 
-
         bx_base = base(Lochness, module_basename)
 
         # get the id of the bx_base path in box
@@ -477,10 +477,13 @@ def sync_module(Lochness: 'lochness.config',
 
             if Lochness['BIDS']:
                 datatype_root_obj = get_box_object_based_on_name(
-                        client, datatype, bx_base_obj.id)
+                        client, products[0]['data_dir'], bx_base_obj.id)
 
                 if datatype_root_obj == None:
-                    logger.debug(f'{datatype} is not found under {bx_base_obj}')
+                    logger.debug(f'{subject.study} {datatype} {products} is '
+                                 f'not found under {bx_base_obj}')
+                    for file_or_folder in bx_base_obj.get_items():
+                        print(f'{bx_base_obj}/{file_or_folder}')
                     continue
 
                 # for BIDS root datatype_obj has bx_sid
@@ -496,18 +499,20 @@ def sync_module(Lochness: 'lochness.config',
                     continue
 
                 datatype_obj = get_box_object_based_on_name(
-                        client, datatype, subject_obj.id)
+                        client, products[0]['data_dir'], subject_obj.id)
 
             # full path
             bx_head = join(bx_base,
-                           datatype,
+                           products[0]['data_dir'],
                            bx_sid)
 
             logger.debug('walking %s', bx_head)
 
             # if the directory is empty
+            # if datatype_obj == None:
             if datatype_obj == None:
-                continue
+                logger.debug(f'data directory is empty {datatype_obj}')
+                # continue
 
             # walk through the root directory
             for root, dirs, files in walk_from_folder_object(
