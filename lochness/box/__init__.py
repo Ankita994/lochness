@@ -60,13 +60,15 @@ class TokenRefreshMissingError(Exception):
     pass
 
 
-def get_access_token(client_id: str, client_secret: str, user_id: str) -> str:
+def get_access_token(client_id: str,
+                     client_secret: str,
+                     enterprise_id: str) -> str:
     '''Get new access token using Box API
 
     Key Argument:
         client_id: Client ID from the box app from box dev console, str
         client_secret: Client secret from the box app from box dev console, str
-        user_id: user id from the box app from box dev console, str of digits.
+        enterprise_id: user id from the box app from box dev console, str of digits.
 
     Returns:
         api_token: API TOKEN used to pull data, str.
@@ -80,10 +82,11 @@ def get_access_token(client_id: str, client_secret: str, user_id: str) -> str:
     data = {"client_id": client_id,
             "client_secret": client_secret,
             "grant_type": "client_credentials",
-            "box_subject_type": "user",
-            "box_subject_id": user_id}
+            "box_subject_type": "enterprise",
+            "box_subject_id": enterprise_id}
 
     response = requests.post(url, headers=headers, data=data)
+
     try:
         api_token = response.json()['access_token']
     except KeyError:
@@ -340,8 +343,14 @@ class DeletionError(Exception):
 @hash_retry(3)
 def _save(box_file_object, box_fullpath, local_fullfile, key, compress):
     # request the file from box.com
+    logger.debug(f'Reading content of {box_file_object}')
     try:
-        content = BytesIO(box_file_object.content())
+        with tf.NamedTemporaryFile(prefix='.', delete=True) as fo:
+            box_file_object.download_to(fo)
+            fo.seek(0)
+            content = BytesIO(fo.read())
+
+        logger.debug(f'Reading content of {box_file_object} completed')
     except boxsdk.BoxAPIException as e:
         if e.error.is_path() and e.error.get_path().is_not_found():
             msg = f'error downloading file {box_fullpath}'
@@ -437,11 +446,13 @@ def sync_module(Lochness: 'lochness.config',
         _passphrase = keyring.passphrase(Lochness, subject.study)
         enc_key = enc.kdf(_passphrase)
 
-        client_id, client_secret, user_id = keyring.box_api_token(
+        client_id, client_secret, enterprise_id = keyring.box_api_token(
                 Lochness, module_name)
 
         try:
-            api_token = get_access_token(client_id, client_secret, user_id)
+            api_token = get_access_token(client_id,
+                                         client_secret,
+                                         enterprise_id)
         except TokenAccessError as err:
             refresh_token_path = Path(Lochness['keyring_file']).parent / \
                     '.refresh_token'
@@ -512,15 +523,16 @@ def sync_module(Lochness: 'lochness.config',
             logger.debug('walking %s', bx_head)
 
             # if the directory is empty
-            # if datatype_obj == None:
             if datatype_obj == None:
                 logger.debug(f'data directory is empty {datatype_obj}')
-                # continue
+                continue
 
             # walk through the root directory
             for root, dirs, files in walk_from_folder_object(
                     bx_head, datatype_obj):
                 for box_file_object in files:
+                    logger.info(f'Found a file matching the pattern: '
+                                f'{box_file_object}')
                     bx_tail = join(basename(root), box_file_object.name)
                     product = _find_product(bx_tail, products, subject=bx_sid)
 
