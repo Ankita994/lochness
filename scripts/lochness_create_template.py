@@ -203,11 +203,11 @@ def create_keyring_template(keyring_loc: Path, args: object) -> None:
         if args.enter_passwords:
             client_id = getpass.getpass('BOX CLIENT ID: ')
             client_secret = getpass.getpass('BOX CLIENT SECRET: ')
-            user_id = getpass.getpass('BOX USER ID: ')
+            enterprise_id = getpass.getpass('BOX USER ID: ')
         else:
             client_id = '*****'
             client_secret = '*****'
-            user_id = '*****'
+            enterprise_id = '*****'
 
         for study in args.studies:
             template_dict['lochness']['SECRETS'][study] = 'LOCHNESS_SECRETS'
@@ -216,7 +216,7 @@ def create_keyring_template(keyring_loc: Path, args: object) -> None:
             template_dict[f'box.{study}'] = {
                 'CLIENT_ID': client_id,
                 'CLIENT_SECRET': client_secret,
-                'USER_ID': user_id}
+                'ENTERPRISE_ID': enterprise_id}
 
     if 'mediaflux' in args.sources:
         for study in args.studies:
