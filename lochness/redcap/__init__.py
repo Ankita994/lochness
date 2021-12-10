@@ -11,7 +11,7 @@ import lochness.tree as tree
 from pathlib import Path
 import pandas as pd
 import datetime
-from typing import List
+from typing import List, Union
 import tempfile as tf
 from lochness.redcap.process_piis import process_and_copy_db
 
@@ -178,6 +178,58 @@ def initialize_metadata(Lochness: 'Lochness object',
     df_final.to_csv(metadata_study, index=False)
 
 
+def get_run_sheets_for_datatypes(json_path: Union[Path, str]) -> None:
+    '''Extract run sheet information from REDCap JSON and save as csv file
+
+    For each data types, there should be Run Sheets completed by RAs on REDCap.
+    This information is extracted and saved as a csv flie in the 
+        PHOENIX/PROTECTED/raw/{STUDY}/{DATATYPE}/Run_sheet_{DATATYPE}.csv
+
+    Key Arguments:
+        - json_path: REDCap json path, Path.
+
+    Returns:
+        - None
+    '''
+
+    if not json_path.is_file():
+        return
+
+    with open(json_path, 'r') as f:
+        data = json.load(f)
+
+    if type(data) == list:  # most cases, because U24 has follow up data
+        pass
+    elif type(data) == dict:  # single timepoint cases
+        data = [data]
+    else:
+        raise TypeError(f'Type of the data in {json_path} is not correct')
+
+
+    raw_path = Path(json_path).parent.parent
+
+    modality_fieldname_dict = {'eeg': 'eeg',
+                               'actigraphy': 'axivity',
+                               'mri': 'mri'}
+    for modality, fieldname in modality_fieldname_dict.items():
+        modality_df = pd.DataFrame()
+        raw_modality_path = raw_path / modality
+        for data_num, data_timepoint in enumerate(data):
+            modality_key_names = [x for x in data_timepoint.keys()
+                    if fieldname in x.lower()]
+            for _, modality_key_name in enumerate(modality_key_names):
+                modality_df_tmp = pd.DataFrame({
+                    'data_num': [data_num],
+                    'field name': modality_key_name,
+                    'field value': data_timepoint[modality_key_name]})
+                modality_df = pd.concat([modality_df, modality_df_tmp])
+
+        if not modality_df['field value'].isnull().all():
+            raw_modality_path.mkdir(exist_ok=True, parents=True)
+            modality_df.to_csv(raw_modality_path / f'Run_sheet_{modality}.csv')
+
+
+
 def check_if_modified(subject_id: str,
                       existing_json: str,
                       df: pd.DataFrame) -> bool:
@@ -303,6 +355,7 @@ def sync(Lochness, subject, dry=False):
                 if not os.path.exists(dst):
                     logger.debug(f'saving {dst}')
                     lochness.atomic_write(dst, content)
+                    get_run_sheets_for_datatypes(dst)
                     # process_and_copy_db(Lochness, subject, dst, proc_dst)
                     # update_study_metadata(subject, json.loads(content))
                     
@@ -317,6 +370,9 @@ def sync(Lochness, subject, dry=False):
                         lochness.backup(dst)
                         logger.debug(f'saving {dst}')
                         lochness.atomic_write(dst, content)
+
+                        # Extract run sheet information
+                        get_run_sheets_for_datatypes(dst)
                         # process_and_copy_db(Lochness, subject, dst, proc_dst)
                         # update_study_metadata(subject, json.loads(content))
                     else:
