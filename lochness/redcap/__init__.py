@@ -227,8 +227,10 @@ def get_run_sheets_for_datatypes(json_path: Union[Path, str]) -> None:
         if 'field value' in modality_df.columns:
             if not (modality_df['field value'] == '').all():
                 raw_modality_path.mkdir(exist_ok=True, parents=True)
+                output_name = Path(json_path).name.split('.json')[0]
                 modality_df.to_csv(
-                        raw_modality_path / f'Run_sheet_{modality}.csv')
+                        raw_modality_path / 
+                        f'{output_name}.Run_sheet_{modality}.csv')
 
 
 
