@@ -40,8 +40,8 @@ def box_api_token(Lochness, key):
     '''get box api token from keyring'''
     if key not in Lochness['keyring']:
         raise KeyringError('\'{0}\' not in keyring'.format(key))
-    if 'USER_ID' not in Lochness['keyring'][key]:
-        Lochness['keyring'][key]['USER_ID'] = 'NOTGIVEN'
+    if 'ENTERPRISE_ID' not in Lochness['keyring'][key]:
+        Lochness['keyring'][key]['ENTERPRISE_ID'] = 'NOTGIVEN'
     if 'CLIENT_ID' not in Lochness['keyring'][key]:
         raise KeyringError('\'CLIENT_ID\' not in {0}'.format(key))
     if 'CLIENT_SECRET' not in Lochness['keyring'][key]:
@@ -49,7 +49,7 @@ def box_api_token(Lochness, key):
 
     return (Lochness['keyring'][key]['CLIENT_ID'],
             Lochness['keyring'][key]['CLIENT_SECRET'],
-            Lochness['keyring'][key]['USER_ID'])
+            Lochness['keyring'][key]['ENTERPRISE_ID'])
 
 
 def rsync_token(Lochness, key):
