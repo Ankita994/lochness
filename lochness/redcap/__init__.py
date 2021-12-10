@@ -224,9 +224,11 @@ def get_run_sheets_for_datatypes(json_path: Union[Path, str]) -> None:
                     'field value': data_timepoint[modality_key_name]})
                 modality_df = pd.concat([modality_df, modality_df_tmp])
 
-        if not modality_df['field value'].isnull().all():
-            raw_modality_path.mkdir(exist_ok=True, parents=True)
-            modality_df.to_csv(raw_modality_path / f'Run_sheet_{modality}.csv')
+        if 'field value' in modality_df.columns:
+            if not modality_df['field value'].isnull().all():
+                raw_modality_path.mkdir(exist_ok=True, parents=True)
+                modality_df.to_csv(
+                        raw_modality_path / f'Run_sheet_{modality}.csv')
 
 
 
