@@ -338,23 +338,14 @@ AWS_BUCKET_ROOT: TEST_PHOENIX_ROOT'''
         delete_on_success: False
         file_patterns:
             actigraphy:
-                - vendor: Philips
-                  product: Actiwatch 2
-                  data_dir: Actigraphy
-                  pattern: '*csv'
-                  protect: True
-                - vendor: Activinsights
-                  product: GENEActiv
-                  data_dir: Actigraphy
-                  pattern: '*csv'
                 - vendor: Insights
                   product: GENEActivQC
                   data_dir: Actigraphy
-                  pattern: '*csv'
+                  pattern: '*.(cwa|csv)'
             eeg:
                    - product: eeg
                      data_dir: EEG
-                     pattern: '*.csv'
+                     pattern: '*.(csv|zip)'
             interviews:
                    - product: offsite_interview
                      data_dir: Interview_recordings
