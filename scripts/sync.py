@@ -163,14 +163,14 @@ def do(args, Lochness):
                 lochness.attempt(Module.sync, Lochness, subject, dry=args.dry)
 
     # annonymize PII
-    if Lochness['s3_selective_sync']:
-        dpanonymize.lock_lochness(
-                Lochness,
-                pii_table_loc=Lochness['pii_table'],
-                s3_selective_sync = Lochness['s3_selective_sync'])
-    else:
-        dpanonymize.lock_lochness(
-                Lochness, pii_table_loc=Lochness['pii_table'])
+    # if Lochness['s3_selective_sync']:
+        # dpanonymize.lock_lochness(
+                # Lochness,
+                # pii_table_loc=Lochness['pii_table'],
+                # s3_selective_sync = Lochness['s3_selective_sync'])
+    # else:
+        # dpanonymize.lock_lochness(
+                # Lochness, pii_table_loc=Lochness['pii_table'])
 
     # transfer new files after all sync attempts are done
     if args.lochness_sync_send:

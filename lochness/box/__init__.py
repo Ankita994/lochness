@@ -557,6 +557,9 @@ def sync_module(Lochness: 'lochness.config',
                             processed=processed,
                             BIDS=Lochness['BIDS'])
 
+                    if 'out_dir' in product:
+                        output_dir = output_dir / product['out_dir']
+
                     # keep the source subdirectory structure in PHOENIX
                     subdir = root.split(bx_head)[1][1:]
                     output_dir_full = output_dir / subdir

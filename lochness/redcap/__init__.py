@@ -183,7 +183,8 @@ def get_run_sheets_for_datatypes(json_path: Union[Path, str]) -> None:
 
     For each data types, there should be Run Sheets completed by RAs on REDCap.
     This information is extracted and saved as a csv flie in the 
-        PHOENIX/PROTECTED/raw/{STUDY}/{DATATYPE}/Run_sheet_{DATATYPE}.csv
+        PHOENIX/PROTECTED/raw/
+            {STUDY}/{DATATYPE}/{subject}.{study}.Run_sheet_{DATATYPE}.csv
 
     Key Arguments:
         - json_path: REDCap json path, Path.
@@ -191,7 +192,6 @@ def get_run_sheets_for_datatypes(json_path: Union[Path, str]) -> None:
     Returns:
         - None
     '''
-
     if not json_path.is_file():
         return
 
@@ -225,12 +225,15 @@ def get_run_sheets_for_datatypes(json_path: Union[Path, str]) -> None:
                 modality_df = pd.concat([modality_df, modality_df_tmp])
 
         if 'field value' in modality_df.columns:
-            if not (modality_df['field value'] == '').all():
-                raw_modality_path.mkdir(exist_ok=True, parents=True)
-                output_name = Path(json_path).name.split('.json')[0]
-                modality_df.to_csv(
-                        raw_modality_path / 
-                        f'{output_name}.Run_sheet_{modality}.csv')
+            # if all value is empty, don't load it
+            if (modality_df['field value'] == '').all():
+                continue
+
+            raw_modality_path.mkdir(exist_ok=True, parents=True)
+            output_name = Path(json_path).name.split('.json')[0]
+            modality_df.to_csv(
+                    raw_modality_path / 
+                    f'{output_name}.Run_sheet_{modality}.csv')
 
 
 
@@ -496,7 +499,6 @@ def iterate(subject):
 
 def update_study_metadata(subject, content: List[dict]) -> None:
     '''update metadata csv based on the redcap content: source_id'''
-
 
     sources = ['XNAT', 'Box', 'Mindlamp', 'Mediaflux', 'Daris']
 

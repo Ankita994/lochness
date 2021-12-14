@@ -203,7 +203,7 @@ def create_keyring_template(keyring_loc: Path, args: object) -> None:
         if args.enter_passwords:
             client_id = getpass.getpass('BOX CLIENT ID: ')
             client_secret = getpass.getpass('BOX CLIENT SECRET: ')
-            enterprise_id = getpass.getpass('BOX USER ID: ')
+            enterprise_id = getpass.getpass('BOX ENTERPRISE ID: ')
         else:
             client_id = '*****'
             client_secret = '*****'
@@ -307,14 +307,19 @@ RPMS_consent_colname: Consent
 '''
 
     if args.s3:
-        s3_lines = f'''AWS_BUCKET_NAME: ampscz-dev
-AWS_BUCKET_ROOT: TEST_PHOENIX_ROOT'''
+        if 'rpms' in args.source:
+            s3_lines = f'''AWS_BUCKET_NAME: prescient-test
+AWS_BUCKET_ROOT: TEST_PHOENIX_ROOT_PRESCIENT'''
+        else:
+            s3_lines = f'''AWS_BUCKET_NAME: pronet-test
+AWS_BUCKET_ROOT: TEST_PHOENIX_ROOT_PRONET'''
         config_example += s3_lines
 
     if args.s3_selective_sync:
         # eg)
         # s3_selective_sync: ['mri', 'actigraphy']
-        config_example += f"\ns3_selective_sync: [{','.join(args.s3_selective_sync)}]"
+        config_example += \
+                f"\ns3_selective_sync: [{','.join(args.s3_selective_sync)}]"
 
     
     if 'redcap' in args.sources:
@@ -372,27 +377,23 @@ AWS_BUCKET_ROOT: TEST_PHOENIX_ROOT'''
         delete_on_success: False
         file_patterns:
             actigraphy:
-                - vendor: Philips
-                  product: Actiwatch 2
-                  data_dir: actigraphy
-                  pattern: '*csv'
-                  protect: True
                 - vendor: Activinsights
                   product: GENEActiv
-                  data_dir: actigraphy
-                  pattern: '*csv'
-                - vendor: Insights
-                  product: GENEActivQC
-                  data_dir: actigraphy
-                  pattern: '*csv'
+                  data_dir: {site_name}_Actigraphy
+                  pattern: '*.*'
             eeg:
                    - product: eeg
-                     data_dir: eeg
-                     pattern: '*.csv'
+                     data_dir: {site_name}_EEG
+                     pattern: '*.*'
             interviews:
-                   - product: offsite_interview
-                     data_dir: interviews
-                     pattern: '*.(mp4|m4a|m3u|wav)'
+                   - product: open
+                     data_dir: {site_name}_Interviews/OPEN
+                     out_dir: open
+                     pattern: '*.*'
+                   - product: psychs
+                     data_dir: {site_name}_Interviews/PSYCHS
+                     out_dir: psychs
+                     pattern: '*.*'
              '''
 
             config_example += line_to_add
