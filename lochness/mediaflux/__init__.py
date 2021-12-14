@@ -60,7 +60,8 @@ def sync_module(Lochness: 'lochness.config',
         mf_base = base(Lochness, study_basename)
 
         for datatype, products in \
-            iter(Lochness['mediaflux'][study_basename]['file_patterns'].items()):
+            iter(Lochness['mediaflux'][study_basename][
+                'file_patterns'].items()):
             '''
             file_patterns:
                 actigraphy:
@@ -75,21 +76,21 @@ def sync_module(Lochness: 'lochness.config',
                       pattern: 'GENEActiv/*bin,GENEActiv/*csv'
             
             '''
-
-
             for prod in products:
                 for patt in prod['pattern'].split(','):
-
                     # consider the case with space
                     # pattern: 'GENEActiv/*bin, GENEActiv/*csv'
-                    patt= patt.strip()
+                    patt = patt.strip()
 
                     if '*' not in patt:
-                        raise PatternError('Mediaflux pattern must include an asterisk e.g. *csv or GENEActiv/*csv')
+                        raise PatternError('Mediaflux pattern must include an '
+                            'asterisk e.g. *csv or GENEActiv/*csv')
 
                     # construct mediaflux remote dir
-                    mf_remote_pattern= pjoin(mf_base, prod['data_dir'], mf_subid, patt)
-                    mf_remote_dir = dirname(mf_remote_pattern)
+                    mf_remote_root = pjoin(
+                            mf_base, prod['data_dir'], mf_subid)
+                    mf_remote_pattern= pjoin(
+                            mf_base, prod['data_dir'], mf_subid, patt)
 
                     # obtain mediaflux remote paths
                     with tempfile.TemporaryDirectory() as tmpdir:
@@ -98,28 +99,41 @@ def sync_module(Lochness: 'lochness.config',
                                           '--mf.config', mflux_cfg,
                                           '--nb-retries 5',
                                           '--direction down', tmpdir,
-                                          mf_remote_dir,
+                                          mf_remote_root,
                                           '-o', diff_path])
-
-                        p= Popen(cmd, shell=True)
+                        
+                        p = Popen(cmd, shell=True)
                         p.wait()
 
                         # ENH
                         # if dry: exit()
-
                         if not isfile(diff_path):
                             continue
 
-                        df= pd.read_csv(diff_path)
+                        df = pd.read_csv(diff_path)
                         for remote in df['SRC_PATH'].values:
-
                             if remote is nan:
                                 continue
 
                             if not re.search(patt.replace('*','(.+?)'), remote):
                                 continue
                             else:
-                                remote= remote.split(':')[1]
+                                remote = remote.split(':')[1]
+
+                            # To keep the folder structures of the mediaflux
+                            # subpath of the data under mf_remote_root
+                            # eg) When full remote and mf_remote_root are
+                            # full remote: 
+                            # /projects/proj-5070/
+                            #   PrescientME/Interview_recordings/ME00077/
+                            #       Audio Record/OS_ZZ04139.m4a
+                            # mf_remote_root:
+                            # /projects/proj-5070/
+                            #   PrescientME/Interview_recordings/ME00077/
+                            # Then
+                            # subpath: Audio Records/OS_ZZ04139.m4a
+                            subpath = Path(remote).relative_to(
+                                    Path(mf_remote_root))
 
                             # construct local path
                             protect = prod.get('protect', True)
@@ -128,11 +142,11 @@ def sync_module(Lochness: 'lochness.config',
                             subj_dir = subject.protected_folder \
                                 if protect else subject.general_folder
 
-                            # mf_local= pjoin(subj_dir, datatype, dirname(patt), basename(remote))
                             mf_local = str(tree.get(datatype,
                                                 subj_dir,
                                                 processed=processed,
-                                                BIDS=Lochness['BIDS']))
+                                                BIDS=Lochness['BIDS']) / \
+                                                        subpath.parent)
 
                             # ENH set different permissions
                             # GENERAL: 0o755, PROTECTED: 0700
@@ -141,7 +155,7 @@ def sync_module(Lochness: 'lochness.config',
                             # subprocess call unimelb-mf-download
                             cmd = (' ').join(['unimelb-mf-download',
                                               '--mf.config', mflux_cfg,
-                                              '-o', mf_local,
+                                              '-o ', f'"{mf_local}"',
                                               '--nb-retries 5',
                                               f'\"{remote}\"'])
 
