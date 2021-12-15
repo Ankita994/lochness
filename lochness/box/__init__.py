@@ -220,13 +220,14 @@ def get_box_object_based_on_name(client: boxsdk.client,
         box_obj = get_box_object_based_on_name(client, root, box_path_id)
 
         # catch box object of the subdirectory of the root path
-        box_obj = get_box_object_based_on_name(
-                client,
-                Path(box_folder_name).relative_to(root),
-                box_obj.id)
-        return box_obj
+        if box_obj is not None:
+            box_obj = get_box_object_based_on_name(
+                    client,
+                    Path(box_folder_name).relative_to(root),
+                    box_obj.id)
+            return box_obj
 
-        if box_obj is None:
+        else:
             return None
 
     # get list of files and directories under the top directory
