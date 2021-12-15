@@ -229,6 +229,10 @@ def get_run_sheets_for_datatypes(json_path: Union[Path, str]) -> None:
             if (modality_df['field value'] == '').all():
                 continue
 
+            elif (modality_df[modality_df['field value'] != ''][
+                'field name'].str.contains('sheet_complete').all()):
+                continue
+
             raw_modality_path.mkdir(exist_ok=True, parents=True)
             output_name = Path(json_path).name.split('.json')[0]
             modality_df.to_csv(
