@@ -350,7 +350,7 @@ def lochness_to_lochness_transfer_s3_protected(Lochness):
                                                str(source_directory))
                 command = f'aws s3 sync \
                         {source_directory}/ \
-                        s3://{s3_bucket_name}/{s3_phoenix_root_dtype}'
+                        s3://{s3_bucket_name}/{s3_phoenix_root_dtype} --delete'
 
                 logger.debug('Executing aws s3 sync function for '
                              f'{source_directory}')
