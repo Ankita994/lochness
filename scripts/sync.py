@@ -131,7 +131,7 @@ def main():
         while True:
             do(args, Lochness)
             poll_interval = int(Lochness['poll_interval'])
-            logger.info('sleeping for {0} seconds'.format(poll_interval)
+            logger.info('sleeping for {0} seconds'.format(poll_interval))
             time.sleep(Lochness['poll_interval'])
     else:
         do(args, Lochness)
