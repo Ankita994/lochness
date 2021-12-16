@@ -131,15 +131,15 @@ def get_info_from_post_body(var_name, body):
 
 
 def get_sha(file_loc: str) -> str:
-    '''return sha1 hexdigest of a file'''
+    '''return sha256 hexdigest of a file'''
     BUF_SIZE = 65536
-    sha1 = hashlib.sha1()
+    sha256 = hashlib.sha256()
 
     with open(file_loc, 'rb') as f:
         data = f.read(BUF_SIZE)
-        sha1.update(data)
+        sha256.update(data)
 
-    return sha1.hexdigest()
+    return sha256.hexdigest()
 
 
 def back_up_db(db_location) -> None:
@@ -150,12 +150,12 @@ def back_up_db(db_location) -> None:
 
     if db_backup_file.is_file():
         with open(db_location, 'rb') as f:
-            db_file_sha1 = get_sha(db_location)
+            db_file_sha256 = get_sha(db_location)
 
         with open(db_backup_file, 'rb') as f:
-            back_up_file_sha1 = get_sha(db_backup_file)
+            back_up_file_sha256 = get_sha(db_backup_file)
 
-        if db_file_sha1 == back_up_file_sha1:
+        if db_file_sha256 == back_up_file_sha256:
             print('No back up')
             pass
         else:
