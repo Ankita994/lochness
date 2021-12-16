@@ -489,98 +489,108 @@ def sync_module(Lochness: 'lochness.config',
         # loop through the items defined for the BOX data
         for datatype, products in iter(
                 Lochness['box'][module_basename]['file_patterns'].items()):
+            # eg) products
+            # [{'product': 'open',
+            #   'data_dir': 'PronetYA_Interviews/OPEN',
+            #   'out_dir': 'open', ...}, 
+            #  {'product': 'psychs',
+            #  'data_dir': 'PronetYA_Interviews/PSYCHS',
+            #  'out_dir': 'psychs', ...}]
+            for product in products:
+                if Lochness['BIDS']:
+                    datatype_root_obj = get_box_object_based_on_name(
+                            client, product['data_dir'], bx_base_obj.id)
 
-            if Lochness['BIDS']:
-                datatype_root_obj = get_box_object_based_on_name(
-                        client, products[0]['data_dir'], bx_base_obj.id)
-
-                if datatype_root_obj == None:
-                    logger.debug(f'{subject.study} {datatype} {products} is '
-                                 f'not found under {bx_base_obj}')
-                    for file_or_folder in bx_base_obj.get_items():
-                        print(f'{bx_base_obj}/{file_or_folder}')
-                    continue
-
-                # for BIDS root datatype_obj has bx_sid
-                datatype_obj = get_box_object_based_on_name(
-                        client, bx_sid, datatype_root_obj.id)
-
-            else:
-                subject_obj = get_box_object_based_on_name(
-                        client, bx_sid, bx_base_obj.id)
-
-                if subject_obj == None:
-                    logger.debug(f'{bx_sid} is not found under {bx_base_obj}')
-                    continue
-
-                datatype_obj = get_box_object_based_on_name(
-                        client, products[0]['data_dir'], subject_obj.id)
-
-            # full path
-            bx_head = join(bx_base,
-                           products[0]['data_dir'],
-                           bx_sid)
-
-            logger.debug('walking %s', bx_head)
-
-            # if the directory is empty
-            if datatype_obj == None:
-                logger.debug(f'data directory is empty {datatype_obj}')
-                continue
-
-            # walk through the root directory
-            for root, dirs, files in walk_from_folder_object(
-                    bx_head, datatype_obj):
-                for box_file_object in files:
-                    logger.info(f'Found a file matching the pattern: '
-                                f'{box_file_object}')
-                    bx_tail = join(basename(root), box_file_object.name)
-                    product = _find_product(bx_tail, products, subject=bx_sid)
-
-                    if not product:
+                    if datatype_root_obj == None:
+                        logger.debug(f'{subject.study} {datatype} {product} '
+                                     f'is not found under {bx_base_obj}')
+                        for file_or_folder in bx_base_obj.get_items():
+                            print(f'{bx_base_obj}/{file_or_folder}')
                         continue
 
-                    protect = product.get('protect', True)
+                    # for BIDS root datatype_obj has bx_sid
+                    datatype_obj = get_box_object_based_on_name(
+                            client, bx_sid, datatype_root_obj.id)
 
-                    # GENERAL / STUDY or PROTECTED / STUDY
-                    output_base = subject.protected_folder \
-                        if protect else subject.general_folder
+                else:
+                    subject_obj = get_box_object_based_on_name(
+                            client, bx_sid, bx_base_obj.id)
 
-                    encrypt = product.get('encrypt', False)
-                    key = enc_key if encrypt else None
+                    if subject_obj == None:
+                        logger.debug(f'{bx_sid} is not found under '
+                                     f'{bx_base_obj}')
+                        continue
 
-                    processed = product.get('processed', False)
+                    datatype_obj = get_box_object_based_on_name(
+                            client, product['data_dir'], subject_obj.id)
 
-                    # For DPACC, get processed from the config.yml
-                    output_dir = tree.get(
-                            datatype,
-                            output_base,
-                            processed=processed,
-                            BIDS=Lochness['BIDS'])
+                # full path
+                bx_head = join(bx_base,
+                               product['data_dir'],
+                               bx_sid)
 
-                    if 'out_dir' in product:
-                        output_dir = output_dir / product['out_dir']
+                logger.debug('walking %s', bx_head)
 
-                    # keep the source subdirectory structure in PHOENIX
-                    subdir = root.split(bx_head)[1][1:]
-                    output_dir_full = output_dir / subdir
+                # if the directory is empty
+                if datatype_obj == None:
+                    logger.debug(f'data directory is empty {datatype_obj}')
+                    continue
 
-                    compress = product.get('compress', False)
+                # walk through the root directory
+                for root, dirs, files in walk_from_folder_object(
+                        bx_head, datatype_obj):
+                    for box_file_object in files:
+                        logger.info(f'Found a file matching the pattern: '
+                                    f'{box_file_object}')
+                        bx_tail = join(basename(root), box_file_object.name)
+                        product = _find_product(bx_tail,
+                                                product,
+                                                subject=bx_sid)
 
-                    save(box_file_object,
-                         (root, box_file_object.name),
-                         output_dir_full, key=key,
-                         compress=compress, delete=False,
-                         dry=False)
+                        if not product:
+                            continue
+
+                        protect = product.get('protect', True)
+
+                        # GENERAL / STUDY or PROTECTED / STUDY
+                        output_base = subject.protected_folder \
+                            if protect else subject.general_folder
+
+                        encrypt = product.get('encrypt', False)
+                        key = enc_key if encrypt else None
+
+                        processed = product.get('processed', False)
+
+                        # For DPACC, get processed from the config.yml
+                        output_dir = tree.get(
+                                datatype,
+                                output_base,
+                                processed=processed,
+                                BIDS=Lochness['BIDS'])
+
+                        if 'out_dir' in product:
+                            output_dir = output_dir / product['out_dir']
+
+                        # keep the source subdirectory structure in PHOENIX
+                        subdir = root.split(bx_head)[1][1:]
+                        output_dir_full = output_dir / subdir
+
+                        compress = product.get('compress', False)
+
+                        save(box_file_object,
+                             (root, box_file_object.name),
+                             output_dir_full, key=key,
+                             compress=compress, delete=False,
+                             dry=False)
 
 
-def _find_product(s, products, **kwargs):
-    for product in products:
-        pattern = product['pattern'].safe_substitute(**kwargs)
-        pattern = re.sub(r'\*', '.*', pattern)
+def _find_product(s, product, **kwargs):
+    # for product in products:
+    pattern = product['pattern'].safe_substitute(**kwargs)
+    pattern = re.sub(r'\*', '.*', pattern)
 
-        if re.match(pattern, s, re.IGNORECASE):
-            return product
+    if re.match(pattern, s, re.IGNORECASE):
+        return product
 
     return None
 

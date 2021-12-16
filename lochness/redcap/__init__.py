@@ -129,7 +129,7 @@ def initialize_metadata(Lochness: 'Lochness object',
         try:
             subject_dict['Consent'] = item[redcap_consent_colname]
         except:
-            subject_dict['Consent'] = None
+            subject_dict['Consent'] = '1900-01-01'
 
         # Redcap default information
         subject_dict['REDCap'] = \
@@ -149,7 +149,8 @@ def initialize_metadata(Lochness: 'Lochness object',
                 subject_dict[source_name] = \
                         f"{source}.{study_name}:{source_id}"
             else:
-                subject_dict[source_name] = None  # leave it empty
+                subject_dict[source_name] = \
+                        f"{source}.{study_name}:{source_id}"
 
         df_tmp = pd.DataFrame.from_dict(subject_dict, orient='index')
         df = pd.concat([df, df_tmp.T])
