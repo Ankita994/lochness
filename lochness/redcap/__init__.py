@@ -80,7 +80,7 @@ def initialize_metadata(Lochness: 'Lochness object',
         Lochness, study_name, f'redcap.{project_name}'))
 
     # sources to add to the metadata, apart from REDCap, XNAT, and Box
-    source_source_name_dict = {'mindlamp': 'Mindlamp'}  
+    source_source_name_dict = {'mindlamp': ['Mindlamp', 'chrdig_lamp_id']}
 
     record_query = {'token': api_key,
                     'content': 'record',
@@ -88,9 +88,11 @@ def initialize_metadata(Lochness: 'Lochness object',
                     'fields[0]': redcap_id_colname}
 
     # only pull source_names
+    # mindlamp id is manually added to "chrdig_lamp_id" field
     field_num = 2
-    for source, source_name in source_source_name_dict.items():
-        record_query[f"fields[{field_num}]"] = f"source_id"
+    for source, (source_name, source_field_name) in \
+            source_source_name_dict.items():
+        record_query[f"fields[{field_num}]"] = source_field_name
 
     # pull all records from the project's REDCap repo
     try:
@@ -127,7 +129,7 @@ def initialize_metadata(Lochness: 'Lochness object',
         try:
             subject_dict['Consent'] = item[redcap_consent_colname]
         except:
-            subject_dict['Consent'] = '1988-09-16'
+            subject_dict['Consent'] = None
 
         # Redcap default information
         subject_dict['REDCap'] = \
@@ -139,14 +141,15 @@ def initialize_metadata(Lochness: 'Lochness object',
         subject_dict['Box'] = f'box.{study_name}:{item[redcap_id_colname]}'
         subject_dict['XNAT'] = f'xnat.{study_name}:*:{item[redcap_id_colname]}'
 
-        for source, source_name in source_source_name_dict.items():
-            try:  # if mindlamp_id field is available in REDCap record
-                source_id = item[f'{source}_id']
+        for source, (source_name, source_field_name) \
+                in source_source_name_dict.items():
+            # if mindlamp_id field is available in REDCap record
+            source_id = item[source_field_name]
+            if source_id != '':
                 subject_dict[source_name] = \
                         f"{source}.{study_name}:{source_id}"
-            except:
-                subject_dict[source_name] = \
-                        f"{source}.{study_name}:{item[redcap_id_colname]}"
+            else:
+                subject_dict[source_name] = None  # leave it empty
 
         df_tmp = pd.DataFrame.from_dict(subject_dict, orient='index')
         df = pd.concat([df, df_tmp.T])
@@ -162,7 +165,9 @@ def initialize_metadata(Lochness: 'Lochness object',
     for _, table in df.groupby(['Subject ID']):
         pad_filled = table.fillna(
                 method='ffill').fillna(method='bfill').iloc[0]
+
         df_final = pd.concat([df_final, pad_filled], axis=1)
+
     df_final = df_final.T
 
     # register all of the lables as active
