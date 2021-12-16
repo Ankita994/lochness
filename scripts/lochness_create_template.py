@@ -377,10 +377,10 @@ AWS_BUCKET_ROOT: TEST_PHOENIX_ROOT_PRONET'''
         delete_on_success: False
         file_patterns:
             actigraphy:
-                - vendor: Activinsights
-                  product: GENEActiv
-                  data_dir: {site_name}_Actigraphy
-                  pattern: '*.*'
+                   - vendor: Activinsights
+                     product: GENEActiv
+                     data_dir: {site_name}_Actigraphy
+                     pattern: '*.*'
             eeg:
                    - product: eeg
                      data_dir: {site_name}_EEG
@@ -393,6 +393,11 @@ AWS_BUCKET_ROOT: TEST_PHOENIX_ROOT_PRONET'''
                    - product: psychs
                      data_dir: {site_name}_Interviews/PSYCHS
                      out_dir: psychs
+                     pattern: '*.*'
+                   - product: transcripts
+                     processed: True
+                     data_dir: {site_name}_Interviews/transcripts/Approved
+                     out_dir: transcripts
                      pattern: '*.*'
              '''
 
