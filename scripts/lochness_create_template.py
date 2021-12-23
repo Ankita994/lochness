@@ -395,7 +395,6 @@ AWS_BUCKET_ROOT: TEST_PHOENIX_ROOT_PRONET'''
                      out_dir: psychs
                      pattern: '*.*'
                    - product: transcripts
-                     processed: True
                      data_dir: {site_name}_Interviews/transcripts/Approved
                      out_dir: transcripts
                      pattern: '*.*'
