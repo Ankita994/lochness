@@ -28,7 +28,7 @@ from lochness.transfer import lochness_to_lochness_transfer_s3
 from lochness.transfer import lochness_to_lochness_transfer_s3_protected
 from lochness.transfer import lochness_to_lochness_transfer_receive_sftp
 from datetime import datetime
-import dpanonymize
+# import dpanonymize
 
 SOURCES = {
     'xnat': XNAT,
