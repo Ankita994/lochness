@@ -307,7 +307,7 @@ RPMS_consent_colname: Consent
 '''
 
     if args.s3:
-        if 'rpms' in args.source:
+        if 'rpms' in args.sources:
             s3_lines = f'''AWS_BUCKET_NAME: prescient-test
 AWS_BUCKET_ROOT: TEST_PHOENIX_ROOT_PRESCIENT'''
         else:
@@ -379,23 +379,23 @@ AWS_BUCKET_ROOT: TEST_PHOENIX_ROOT_PRONET'''
             actigraphy:
                    - vendor: Activinsights
                      product: GENEActiv
-                     data_dir: {site_name}_Actigraphy
+                     data_dir: {study}_Actigraphy
                      pattern: '*.*'
             eeg:
                    - product: eeg
-                     data_dir: {site_name}_EEG
+                     data_dir: {study}_EEG
                      pattern: '*.*'
             interviews:
                    - product: open
-                     data_dir: {site_name}_Interviews/OPEN
+                     data_dir: {study}_Interviews/OPEN
                      out_dir: open
                      pattern: '*.*'
                    - product: psychs
-                     data_dir: {site_name}_Interviews/PSYCHS
+                     data_dir: {study}_Interviews/PSYCHS
                      out_dir: psychs
                      pattern: '*.*'
                    - product: transcripts
-                     data_dir: {site_name}_Interviews/transcripts/Approved
+                     data_dir: {study}_Interviews/transcripts/Approved
                      out_dir: transcripts
                      pattern: '*.*'
              '''
