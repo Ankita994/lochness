@@ -373,7 +373,7 @@ AWS_BUCKET_ROOT: TEST_PHOENIX_ROOT_PRONET'''
         for study in args.studies:
             line_to_add = f'''
     {study}:
-        base: /example_box_root/{study}
+        base: ProNET/{study}
         delete_on_success: False
         file_patterns:
             actigraphy:
