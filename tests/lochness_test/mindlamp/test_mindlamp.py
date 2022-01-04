@@ -86,6 +86,22 @@ class KeyringAndEncryptMindlampAdmin(KeyringAndEncrypt):
         self.write_keyring_and_encrypt()
 
 
+class KeyringAndEncryptMindlampAdminIP(KeyringAndEncrypt):
+    def __init__(self, tmp_dir):
+        super().__init__(tmp_dir)
+        token = Tokens()
+        mindlamp_token, access_key, secret_key, api_url = \
+                token.read_token_or_get_input('mindlamp_admin_ip')
+                # token.get_mindlamp_token()
+
+        self.keyring['mindlamp.StudyA'] = {}
+        self.keyring['mindlamp.StudyA']['ACCESS_KEY'] = access_key
+        self.keyring['mindlamp.StudyA']['SECRET_KEY'] = secret_key
+        self.keyring['mindlamp.StudyA']['URL'] = api_url
+
+        self.write_keyring_and_encrypt()
+
+
 class KeyringAndEncryptMindlampYoon(KeyringAndEncrypt):
     def __init__(self, tmp_dir):
         super().__init__(tmp_dir)
@@ -405,6 +421,31 @@ def test_sync_skip_for_the_day(args):
 
     create_lochness_template(args)
     syncArgs.config = args.outdir / 'config.yml'
+    _ = KeyringAndEncryptMindlampAdmin(args.outdir)
+    # _ = KeyringAndEncryptMindlampYoon(args.outdir)
+
+    phoenix_root = args.outdir / 'PHOENIX'
+    information_to_add_to_metadata = {'mindlamp': [
+        {'subject_id': '1001', 'source_id': 'U2862696942'},
+        {'subject_id': '1002', 'source_id': 'U5891709819'}
+        ]}
+    
+    initialize_metadata_test(phoenix_root, 'StudyA',
+                             information_to_add_to_metadata)
+    Lochness = config_load_test(syncArgs.config)
+    for subject in lochness.read_phoenix_metadata(Lochness, syncArgs.studies):
+        sync(Lochness, subject, False)
+
+
+def test_sync_skip_for_the_day_ip(args):
+    syncArgs = SyncArgs(args.outdir)
+    syncArgs.studies = ['StudyA']
+    sources = ['mindlamp']
+    syncArgs.update_source(sources)
+
+    create_lochness_template(args)
+    syncArgs.config = args.outdir / 'config.yml'
+    # _ = KeyringAndEncryptMindlampAdminIP(args.outdir)
     _ = KeyringAndEncryptMindlampAdmin(args.outdir)
     # _ = KeyringAndEncryptMindlampYoon(args.outdir)
 

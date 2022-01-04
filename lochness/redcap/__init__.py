@@ -11,7 +11,7 @@ import lochness.tree as tree
 from pathlib import Path
 import pandas as pd
 import datetime
-from typing import List
+from typing import List, Union
 import tempfile as tf
 from lochness.redcap.process_piis import process_and_copy_db
 
@@ -80,7 +80,7 @@ def initialize_metadata(Lochness: 'Lochness object',
         Lochness, study_name, f'redcap.{project_name}'))
 
     # sources to add to the metadata, apart from REDCap, XNAT, and Box
-    source_source_name_dict = {'mindlamp': 'Mindlamp'}  
+    source_source_name_dict = {'mindlamp': ['Mindlamp', 'chrdig_lamp_id']}
 
     record_query = {'token': api_key,
                     'content': 'record',
@@ -88,9 +88,11 @@ def initialize_metadata(Lochness: 'Lochness object',
                     'fields[0]': redcap_id_colname}
 
     # only pull source_names
+    # mindlamp id is manually added to "chrdig_lamp_id" field
     field_num = 2
-    for source, source_name in source_source_name_dict.items():
-        record_query[f"fields[{field_num}]"] = f"source_id"
+    for source, (source_name, source_field_name) in \
+            source_source_name_dict.items():
+        record_query[f"fields[{field_num}]"] = source_field_name
 
     # pull all records from the project's REDCap repo
     try:
@@ -127,7 +129,7 @@ def initialize_metadata(Lochness: 'Lochness object',
         try:
             subject_dict['Consent'] = item[redcap_consent_colname]
         except:
-            subject_dict['Consent'] = '1988-09-16'
+            subject_dict['Consent'] = '1900-01-01'
 
         # Redcap default information
         subject_dict['REDCap'] = \
@@ -139,14 +141,16 @@ def initialize_metadata(Lochness: 'Lochness object',
         subject_dict['Box'] = f'box.{study_name}:{item[redcap_id_colname]}'
         subject_dict['XNAT'] = f'xnat.{study_name}:*:{item[redcap_id_colname]}'
 
-        for source, source_name in source_source_name_dict.items():
-            try:  # if mindlamp_id field is available in REDCap record
-                source_id = item[f'{source}_id']
+        for source, (source_name, source_field_name) \
+                in source_source_name_dict.items():
+            # if mindlamp_id field is available in REDCap record
+            source_id = item[source_field_name]
+            if source_id != '':
                 subject_dict[source_name] = \
                         f"{source}.{study_name}:{source_id}"
-            except:
+            else:
                 subject_dict[source_name] = \
-                        f"{source}.{study_name}:{item[redcap_id_colname]}"
+                        f"{source}.{study_name}:{source_id}"
 
         df_tmp = pd.DataFrame.from_dict(subject_dict, orient='index')
         df = pd.concat([df, df_tmp.T])
@@ -162,7 +166,9 @@ def initialize_metadata(Lochness: 'Lochness object',
     for _, table in df.groupby(['Subject ID']):
         pad_filled = table.fillna(
                 method='ffill').fillna(method='bfill').iloc[0]
+
         df_final = pd.concat([df_final, pad_filled], axis=1)
+
     df_final = df_final.T
 
     # register all of the lables as active
@@ -176,6 +182,69 @@ def initialize_metadata(Lochness: 'Lochness object',
     general_path = Path(Lochness['phoenix_root']) / 'GENERAL'
     metadata_study = general_path / study_name / f"{study_name}_metadata.csv"
     df_final.to_csv(metadata_study, index=False)
+
+
+def get_run_sheets_for_datatypes(json_path: Union[Path, str]) -> None:
+    '''Extract run sheet information from REDCap JSON and save as csv file
+
+    For each data types, there should be Run Sheets completed by RAs on REDCap.
+    This information is extracted and saved as a csv flie in the 
+        PHOENIX/PROTECTED/raw/
+            {STUDY}/{DATATYPE}/{subject}.{study}.Run_sheet_{DATATYPE}.csv
+
+    Key Arguments:
+        - json_path: REDCap json path, Path.
+
+    Returns:
+        - None
+    '''
+    if not json_path.is_file():
+        return
+
+    with open(json_path, 'r') as f:
+        data = json.load(f)
+
+    if type(data) == list:  # most cases, because U24 has follow up data
+        pass
+    elif type(data) == dict:  # single timepoint cases
+        data = [data]
+    else:
+        raise TypeError(f'Type of the data in {json_path} is not correct')
+
+
+    raw_path = Path(json_path).parent.parent
+
+    modality_fieldname_dict = {'eeg': 'eeg',
+                               'actigraphy': 'axivity',
+                               'mri': 'mri'}
+    for modality, fieldname in modality_fieldname_dict.items():
+        modality_df = pd.DataFrame()
+        raw_modality_path = raw_path / modality
+        for data_num, data_timepoint in enumerate(data):
+            modality_key_names = [x for x in data_timepoint.keys()
+                    if fieldname in x.lower()]
+            for _, modality_key_name in enumerate(modality_key_names):
+                modality_df_tmp = pd.DataFrame({
+                    'data_num': [data_num],
+                    'field name': modality_key_name,
+                    'field value': data_timepoint[modality_key_name]})
+                modality_df = pd.concat([modality_df, modality_df_tmp])
+
+        if 'field value' in modality_df.columns:
+            # if all value is empty, don't load it
+            if (modality_df['field value'] == '').all():
+                continue
+
+            elif (modality_df[modality_df['field value'] != ''][
+                'field name'].str.contains('sheet_complete').all()):
+                continue
+
+            raw_modality_path.mkdir(exist_ok=True, parents=True)
+            output_name = Path(json_path).name.split('.json')[0]
+            modality_df.to_csv(
+                    raw_modality_path / 
+                    f'{output_name}.Run_sheet_{modality}.csv')
+
 
 
 def check_if_modified(subject_id: str,
@@ -303,6 +372,7 @@ def sync(Lochness, subject, dry=False):
                 if not os.path.exists(dst):
                     logger.debug(f'saving {dst}')
                     lochness.atomic_write(dst, content)
+                    get_run_sheets_for_datatypes(dst)
                     # process_and_copy_db(Lochness, subject, dst, proc_dst)
                     # update_study_metadata(subject, json.loads(content))
                     
@@ -317,6 +387,9 @@ def sync(Lochness, subject, dry=False):
                         lochness.backup(dst)
                         logger.debug(f'saving {dst}')
                         lochness.atomic_write(dst, content)
+
+                        # Extract run sheet information
+                        get_run_sheets_for_datatypes(dst)
                         # process_and_copy_db(Lochness, subject, dst, proc_dst)
                         # update_study_metadata(subject, json.loads(content))
                     else:
@@ -436,7 +509,6 @@ def iterate(subject):
 
 def update_study_metadata(subject, content: List[dict]) -> None:
     '''update metadata csv based on the redcap content: source_id'''
-
 
     sources = ['XNAT', 'Box', 'Mindlamp', 'Mediaflux', 'Daris']
 

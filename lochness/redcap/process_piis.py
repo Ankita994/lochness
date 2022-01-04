@@ -92,11 +92,12 @@ def get_shuffle_dict_for_type(string_type: string, input_str: str) -> dict:
     Returns
         input_str: randomised str
     '''
+    system_random = random.SystemRandom()
 
     from_alphabet = ''.join(
-            random.choice(string_type) for i in range(26))
+            system_random.choice(string_type) for i in range(26))
     to_alphabet = ''.join(
-            random.choice(string_type) for i in range(26))
+            system_random.choice(string_type) for i in range(26))
     old_2_new_dict = dict(zip(from_alphabet,
                               to_alphabet))
 
@@ -154,9 +155,10 @@ def process_pii_string(pii_string: str, process: str, subject_id: str) -> str:
         return get_shuffle_dict_for_type(letters, pii_string.upper())
 
     elif process == 'random_string':
+        system_random = random.SystemRandom()
         letters = string.ascii_lowercase
         new_string = ''.join(
-            random.choice(letters) for i in range(len(pii_string)))
+            system_random.choice(letters) for i in range(len(pii_string)))
         return new_string
 
     elif process == 'replace_with_subject_id':

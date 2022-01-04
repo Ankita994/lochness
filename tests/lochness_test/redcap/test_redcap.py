@@ -5,6 +5,7 @@ from lochness import tree
 from pathlib import Path
 
 from lochness.redcap import sync, initialize_metadata
+from lochness.redcap import get_run_sheets_for_datatypes
 from lochness.redcap.data_trigger_capture import save_post_from_redcap
 from lochness.redcap.data_trigger_capture import back_up_db
 
@@ -273,3 +274,6 @@ def test_sync_det_update_while_diff_file_leads_to_data_overwrite(
     assert {'test': 'test'} != new_content_dict
     rmtree('tmp_lochness')
 
+
+def test_get_run_sheets_for_datatypes():
+    get_run_sheets_for_datatypes('/opt/software/Pronet_data_sync/PHOENIX/PROTECTED/PronetYA/raw/YA00009/surveys/YA00009.Pronet.json')
