@@ -166,6 +166,7 @@ def do(args, Lochness):
                 lochness.attempt(Module.sync, Lochness, subject, dry=args.dry)
 
     # annonymize PII
+
     # if Lochness['s3_selective_sync']:
         # dpanonymize.lock_lochness(
                 # Lochness,

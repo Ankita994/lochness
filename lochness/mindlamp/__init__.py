@@ -125,7 +125,6 @@ def sync(Lochness: 'lochness.config',
 
         # date string to be used in the file name
         date_str = time_utc_00.strftime("%Y_%m_%d")
-        print(date_str)
 
         logger.debug(f'Mindlamp {subject_id} {date_str} data pull - start')
 
