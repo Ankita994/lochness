@@ -119,7 +119,6 @@ def initialize_metadata(Lochness: 'Lochness object',
                 site_code_rpms_id = df_measure[rpms_id_colname][:2]
 
                 # if the subject does not belong to the site, pass it
-                print(site_code_rpms_id)
                 if site_code_rpms_id != site_code_study:
                     continue
 
@@ -146,10 +145,13 @@ def initialize_metadata(Lochness: 'Lochness object',
                 subject_dict['REDCap'] = \
                     'redcap.UPENN:' + df_measure[rpms_id_colname]
 
-
             df_tmp = pd.DataFrame.from_dict(subject_dict, orient='index')
             df = pd.concat([df, df_tmp.T])
 
+
+    # if there is no data for the study, return without saving metadata
+    if len(df) == 0:
+        return
 
     # Each subject may have more than one arms, which will result in more than
     # single item for the subject in the RPMS pulled `content`
