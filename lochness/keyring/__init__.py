@@ -41,7 +41,7 @@ def box_api_token(Lochness, key):
     if key not in Lochness['keyring']:
         raise KeyringError('\'{0}\' not in keyring'.format(key))
     if 'ENTERPRISE_ID' not in Lochness['keyring'][key]:
-        Lochness['keyring'][key]['ENTERPRISE_ID'] = 'NOTGIVEN'
+        raise KeyringError('\'ENTERPRISE_ID\' not in {0}'.format(key))
     if 'CLIENT_ID' not in Lochness['keyring'][key]:
         raise KeyringError('\'CLIENT_ID\' not in {0}'.format(key))
     if 'CLIENT_SECRET' not in Lochness['keyring'][key]:
