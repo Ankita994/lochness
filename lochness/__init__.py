@@ -378,10 +378,14 @@ def listdir(Lochness, d):
 
 def attempt(f, Lochness, *args, **kwargs):
     '''attempt a function call'''
-    # if len(attempt.warnings) >= 5:
-        # # lochness.email.attempts_error(Lochness, attempt)
-        # attempt.warnings = []
-        # raise AttemptsError('too many attempt warnings')
+
+    '''
+    if len(attempt.warnings) >= 5:
+        # lochness.email.attempts_error(Lochness, attempt)
+        attempt.warnings = []
+        raise AttemptsError('too many attempt warnings')
+    '''
+
     try:
         f(Lochness, *args, **kwargs)
     except Exception as e:
