@@ -1,21 +1,27 @@
 from distutils.core import setup
 import setuptools
-import sys
+import os
 from os.path import join
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
+here = os.path.abspath(os.path.dirname(__file__))
+
+about = dict()
+with open(os.path.join(here, 'lochness', '__version__.py'), 'r') as f:
+    exec(f.read(), about)
+
 setup(
-    name='ampscz-lochness',
-    version='v0.1.2',
-    description='AMP-SCZ lochness',
+    name=about['__title__'],
+    version=about['__version__'],
+    description=about['__description__'],
+    author=about['__author__'],
+    author_email=about['__author_email__'],
+    url=about['__url__'],
     long_description=long_description,
     long_description_content_type="text/markdown",
-    author='DPACC',
-    author_email='kevincho@bwh.harvard.edu',
-    url='https://github.com/AMP-SCZ/lochness',
-    download_url='https://github.com/AMP-SCZ/lochness/archive/refs/tags/v0.1.0.zip',
+    download_url='https://github.com/AMP-SCZ/lochness/archive/refs/tags/v0.1.2.zip',
     keywords=['data', 'dataflow', 'download', 'datalake', 'U24'],
     packages=setuptools.find_packages(),
     classifiers=[
