@@ -122,9 +122,9 @@ def main():
 
     # pause execution until
     if args.until:
-        until = datetime.strptime('2017-01-01T15:00:00', '%Y-%m-%dT%H:%M:%S')
+        until = datetime.strptime('args.until', '%Y-%m-%dT%H:%M:%S')
         logger.info('pausing execution until {0}'.format(until))
-        scheduler.until(args.until)
+        scheduler.until(until)
 
     # run downloader once, or continuously
     if args.continuous:
