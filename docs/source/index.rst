@@ -6,20 +6,63 @@
 Welcome to AMP-SCZ Lochness's documentation!
 ====================================
 
-Lochness is a data management tool designed to periodically poll and download
+.. image:: images/amp_scz_logo.png
+   :width: 150
+
+
+Introduction
+------------
+
+Lochness is a data management tool designed to periodically pull and download
 data from various data archives into a local directory. This is often referred
 to as building a "data lake" (hence the name). This repository is a fork from
 `harvard-nrg lochness <https://github.com/harvard-nrg/lochness>`_, updated and
 maintained by DPACC for U24 project.
 
 
+AMP-SCZ Lochness has a number of extra functions, many of which are specific
+to PRONET and PRESCIENT research networks within the U24 study. However, extra
+data sources such as `Box <https://box.com/>`_, `Mediaflux
+<https://www.arcitecta.com/mediaflux/features/>`_,
+`RPMS <https://data.orygen.org.au/>`_, and
+`Mindlamp <https://www.digitalpsych.org/lamp.html>`_ could be useful for other
+studies as well.
+
+
+The main difference of the AMP-SCZ Lochness, from the original harvard-nrg 
+Lochness, is that AMP-SCZ requies database of unique subject IDs in one of
+``REDCap`` or ``RPMS`` to make a list of subject IDs to be used with Lochness
+(``metadata.csv``), which will be used in searching for any data to download.
+
+
+Therefore, required and supported data sources are
+
+    - Required
+        - REDCap or
+        - RPMS
+
+    - Supported
+        - XNAT
+        - Box
+        - Mediaflux
+        - Mindlamp
+
+Please report any bug or issue to our 
+`github repository <https://github.com/AMP-SCZ/lochness/issues>`_. Thanks!
+
+Contents
+--------
+
 .. toctree::
    :maxdepth: 2
 
-   quick_start
+   installation
+   setting_up_lochness
+   running_lochness
+   phoenix_bids_example
    sync_in_detail
    data_sources
-   phoenix
+   ..phoenix
    configuration_file
 
 
