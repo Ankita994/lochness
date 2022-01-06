@@ -1,7 +1,6 @@
 from distutils.core import setup
 import setuptools
 import os
-from os.path import join
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
