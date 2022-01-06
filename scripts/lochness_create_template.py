@@ -320,6 +320,11 @@ lochness_sync_history_csv: {args.lochness_sync_history_csv}
 RPMS_id_colname: subjectkey
 RPMS_consent_colname: Consent
 '''
+    if 'redcap' in args.sources:
+        config_example += '''redcap_id_colname: chric_record_id
+redcap_consent_colname: chric_consent_date
+'''
+
 
     if args.s3:
         if 'rpms' in args.sources:

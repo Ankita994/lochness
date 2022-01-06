@@ -245,41 +245,113 @@ Or you could run `2_sync_command.sh`, which contains the same command ::
     $ vim config.yml
 
 
+REDCap or RPMS database column names
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Update names of the ``REDCap`` or ``RPMS`` columns that contain unique subject
+ID and consent date of each stubject.
+
+For RPMS ::
+
+    RPMS_PATH: /mnt/prescient/RPMS_incoming
+    RPMS_id_colname: subjectkey
+    RPMS_consent_colname: Consent
+
+.. note ::
+
+   ``RPMS_PATH`` is the directory where ``RPMS`` exports database as multiple
+   csv files.
+
+
+For REDCap ::
+
+    redcap_id_colname: chric_record_id
+    redcap_consent_colname: chric_consent_date
+
+
+Amazon Web Services S3 bucket
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 Update AWS s3 bucket name to your s3 bucket name and root directory ::
 
     AWS_BUCKET_NAME: pronet-test
     AWS_BUCKET_ROOT: TEST_PHOENIX_ROOT_PRONET
 
 
-Edit ``base`` field for Box structure ::
+Box
+~~~
+
+Planned data structure on Box account (the source itself) looks like below ::
+
+    ProNET
+    ├── PronetAB
+    │   ├── PronetAB_Interviews
+    │   │   ├── OPEN
+    │   │   │   └── AB00001
+    │   │   │       └── 2021-12-10 16.01.56 Kevin Cho's Zoom Meeting
+    │   │   │           ├── video2515225130.mp4
+    │   │   │           ├── video1515225130.mp4
+    │   │   │           ├── audio2515225130.mp4
+    │   │   │           ├── audio1515225130.mp4
+    │   │   │           └── Audio Record
+    │   │   │               └── Audio Record
+    │   │   │                   ├── audioKevinCho42515225130.m4a
+    │   │   │                   ├── audioKevinCho21515225130.m4a
+    │   │   │                   ├── audioAnotherPerson11515225130.m4a
+    │   │   │                   └── audioAnotherPerson32515225130.m4a
+    │   │   ├── PSYCHS
+    │   │   │   ├── AB00001
+    │   │   │   └── ...
+    │   │   └── transcripts
+    │   │       ├── Approved
+    │   │       │   ├── AB00001
+    │   │       │   │   ├── PronetAB_AB00001_interviewAudioTranscript_open_day00001_session001.txt
+    │   │       │   │   └── PronetAB_AB00001_interviewAudioTranscript_open_day00001_session002.txt
+    │   │       │   └── ...
+    │   │       └── For_review
+    │   │           ├── AB00001
+    │   │           │   ├── PronetAB_AB00001_interviewAudioTranscript_open_day00001_session001.txt
+    │   │           │   └── PronetAB_AB00001_interviewAudioTranscript_open_day00001_session002.txt
+    │   │           └── ...
+    │   ├── PronetAB_EEG
+    │   │       └── AB00001
+    │   │           └── AB00001_eeg_20220101.zip
+    │   └── PronetAB_Actigraphy
+    │   │       └── AB00001
+    │   │           └── ...
+    └── ...
+
+
+Then, configure box part as below ::
 
     box:
-        PronetLA:
-            base: ProNET/PronetLA
+        PronetAB:
+            base: ProNET/PronetAB
             delete_on_success: False
             file_patterns:
                 actigraphy:
                        - vendor: Activinsights
                          product: GENEActiv
-                         data_dir: PronetLA_Actigraphy
+                         data_dir: PronetAB_Actigraphy
                          pattern: '*.*'
                 eeg:
                        - product: eeg
-                         data_dir: PronetLA_EEG
+                         data_dir: PronetAB_EEG
                          pattern: '*.*'
                 interviews:
                        - product: open
-                         data_dir: PronetLA_Interviews/OPEN
+                         data_dir: PronetAB_Interviews/OPEN
                          out_dir: open
                          pattern: '*.*'
                        - product: psychs
-                         data_dir: PronetLA_Interviews/PSYCHS
+                         data_dir: PronetAB_Interviews/PSYCHS
                          out_dir: psychs
                          pattern: '*.*'
                        - product: transcripts
-                         data_dir: PronetLA_Interviews/transcripts/Approved
+                         data_dir: PronetAB_Interviews/transcripts/Approved
                          out_dir: transcripts
                          pattern: '*.*'
+
 
 
 Now, configuration step is complete!

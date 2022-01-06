@@ -29,7 +29,7 @@ Amazon Web Service (AWS) commandline tool
 -----------------------------------------
 
 AMP-SCZ can also push the downloaded data to Amazon Web Service (AWS) s3
-bukcet. To use this function, AWS commandline tool needs be installed and 
+bukcet. To use this functionality, AWS commandline tool needs be installed and 
 configured. Install ``awscli`` using ``apt-get`` ::
 
    $ sudo apt-get install awscli
