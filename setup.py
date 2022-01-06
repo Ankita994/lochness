@@ -21,7 +21,8 @@ setup(
     url=about['__url__'],
     long_description=long_description,
     long_description_content_type="text/markdown",
-    download_url='https://github.com/AMP-SCZ/lochness/archive/refs/tags/v0.1.2.zip',
+    download_url='https://github.com/AMP-SCZ/lochness/archive/refs/tags/'
+                 '{}.zip'.format(about['__version__']),
     keywords=['data', 'dataflow', 'download', 'datalake', 'U24'],
     packages=setuptools.find_packages(),
     classifiers=[
