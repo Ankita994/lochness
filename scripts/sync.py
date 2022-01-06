@@ -165,7 +165,7 @@ def do(args, Lochness):
             for Module in args.source:
                 lochness.attempt(Module.sync, Lochness, subject, dry=args.dry)
 
-    #annonymize PII
+    # anonymize PII
 
     #if Lochness['s3_selective_sync']:
     #    dpanonymize.lock_lochness(
