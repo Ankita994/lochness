@@ -130,7 +130,7 @@ def sync(Lochness: 'lochness.config',
 
         logger.debug(f'Mindlamp {subject_id} {date_str} data pull - start')
 
-        # for both type of data
+        # store both data types
         for data_name in ['activity', 'sensor']:
             dst = os.path.join(
                     dst_folder,
@@ -159,7 +159,7 @@ def sync(Lochness: 'lochness.config',
                                  '- not downloading')
                     continue
 
-            # pull data
+            # pull data from mindlamp
             begin = time.time()
             data_dict = function_to_execute(
                     LAMP, subject_id,
