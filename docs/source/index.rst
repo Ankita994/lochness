@@ -8,9 +8,10 @@ Welcome to AMP-SCZ Lochness's documentation!
 
 Lochness is a data management tool designed to periodically poll and download
 data from various data archives into a local directory. This is often referred
-to as building a "data lake" (hence the name). This repository is a fork from
-`harvard-nrg lochness <https://github.com/harvard-nrg/lochness>`_, updated and
-maintained by DPACC for U24 project.
+to as building a "data lake". This repository was originally forked from
+`harvard-nrg/lochness <https://github.com/harvard-nrg/lochness>`_ in 2020.
+But since then, it has been greatly enhanced and actively maintained by DPACC for 
+the AMP-SCZ project.
 
 
 .. toctree::
