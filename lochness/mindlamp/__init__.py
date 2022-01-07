@@ -17,6 +17,8 @@ import re
 
 logger = logging.getLogger(__name__)
 
+LIMIT = 1000000
+
 
 def get_days_to_pull(Lochness):
     '''Reads mindlamp_days_to_pull from Lochness loaded from the config.yml
@@ -282,7 +284,7 @@ def get_activities_lamp(lamp: LAMP, subject_id: str,
         activity_dicts: activity records, list of dict.
     '''
     activity_dicts = lamp.Activity.all_by_participant(
-            subject_id, _from=from_ts, to=to_ts, _limit=1000000)['data']
+            subject_id, _from=from_ts, to=to_ts, _limit=LIMIT)['data']
 
     return activity_dicts
 
@@ -325,7 +327,7 @@ def get_activity_events_lamp(
     '''
     activity_events_dicts = lamp.ActivityEvent.all_by_participant(
                     subject_id, _from=from_ts, to=to_ts,
-                    _limit=1000000)['data']
+                    _limit=LIMIT)['data']
     return activity_events_dicts
 
 
@@ -347,8 +349,8 @@ def get_sensor_events_lamp(
     if from_ts is not None:
         sensor_event_dicts = lamp.SensorEvent.all_by_participant(
                         subject_id, _from=from_ts, to=to_ts,
-                        _limit=1000000)['data']
+                        _limit=LIMIT)['data']
     else:
         sensor_event_dicts = lamp.SensorEvent.all_by_participant(
-                        subject_id, _limit=1000000)['data']
+                        subject_id, _limit=LIMIT)['data']
     return sensor_event_dicts
