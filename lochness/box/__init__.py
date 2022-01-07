@@ -132,8 +132,9 @@ def refresh_access_token(
             --data-urlencode 'grant_type=authorization_code' \
             --data-urlencode 'code=CODE'
 
-        The refresh token expires when used to refresh access token. 
-        Refreshing token returns a new access and refresh token.
+        The refresh token expires in 60 days, and also when used to refresh
+        access token. Refreshing token returns an access token with a new
+        refresh token, which is saved by lochness to carry on the process.
         
     '''
 
