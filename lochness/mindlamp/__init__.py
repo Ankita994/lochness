@@ -166,7 +166,7 @@ def sync(Lochness: 'lochness.config',
                     from_ts=time_utc_00_ts, to_ts=time_utc_24_ts)
             end = time.time()
             logger.debug(f'Mindlamp {subject_id} {date_str} {data_name}'
-                         'data pull - complete in ({end - begin} seconds)')
+                         'data pull - completed in ({end - begin} seconds)')
 
             # separate out audio data from the activity dictionary
             if data_name == 'activity' and data_dict:
