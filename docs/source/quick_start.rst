@@ -303,8 +303,8 @@ execute these functions again after ``poll_interval`` stated in the
 ``config.yml``.
 
 
-``lochness_create_template.py`` creates a template bash script that could be
-used. ::
+Instead of the above ``sync.py`` command, one that is created by 
+``lochness_create_template.py`` could also be used as follows: ::
 
     bash 2_sync_command.sh
 
