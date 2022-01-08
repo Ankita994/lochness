@@ -76,8 +76,7 @@ For Prescient network ::
 
 
 
-Running ``lochness_create_template.py`` will create a This will create a
-directory which will look like this ::
+Running ``lochness_create_template.py`` will create a directory like ::
 
     /data/pronet/data_sync_pronet
     ├── 1_encrypt_command.sh
@@ -104,7 +103,7 @@ directory which will look like this ::
    vim lochness.json
 
 
-``lochness.json`` file looks like below. Add information to field labelled with
+``lochness.json`` file looks like below. Add information to fields labelled with
 ``*****`` ::
 
     {
