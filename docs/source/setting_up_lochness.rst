@@ -1,7 +1,18 @@
 Setting up Lochness
 ===================
 
-Follow the steps below to semi-automatically setup the lochness environment.
+The following items below are the step by step instructions to
+semi-automatically setup the lochness environment. It is specific for
+AMP-SCZ project, but it could also work for any other projects, if their main
+subject database is maintained with a ``REDCap`` or ``RPMS`` system.
+
+If you would like to set up your environment from scratch, please see the pages
+for 
+
+* :doc:`configuration file<configuration_file>`
+* :doc:`keyring file<keyring_file>`
+* :doc:`setting up data sources<data_sources>`
+
 
 1. Create a template directory
 ------------------------------
@@ -211,7 +222,6 @@ Example of completed ``lochness.json`` ::
     }
 
 
-
 3. Encrypt ``lochness.json`` to make a keyring file
 ---------------------------------------------------
 
@@ -237,6 +247,7 @@ Or you could run `2_sync_command.sh`, which contains the same command ::
    possible.
 
 
+.. _edit_config ::
 
 4. Edit ``config.yml``
 ----------------------
@@ -354,5 +365,5 @@ Then, configure box part as below ::
 
 
 
-Now, configuration step is complete!
+Now, your Lochness configuration is complete and ready to run!
 

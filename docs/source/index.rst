@@ -4,7 +4,7 @@
    contain the root `toctree` directive.
 
 Welcome to AMP-SCZ Lochness's documentation!
-====================================
+============================================
 
 .. image:: images/amp_scz_logo.png
    :width: 150
@@ -17,11 +17,11 @@ Lochness is a data management tool designed to periodically pull and download
 data from various data archives into a local directory. This is often referred
 to as building a "data lake" (hence the name). This repository is a fork from
 `harvard-nrg lochness <https://github.com/harvard-nrg/lochness>`_, updated and
-maintained by DPACC for U24 project.
+maintained by DPACC for AMP-SCZ project.
 
 
 AMP-SCZ Lochness has a number of extra functions, many of which are specific
-to PRONET and PRESCIENT research networks within the U24 study. However, extra
+to PRONET and PRESCIENT research networks within the AMP-SCZ. However, extra
 data sources such as `Box <https://box.com/>`_, `Mediaflux
 <https://www.arcitecta.com/mediaflux/features/>`_,
 `RPMS <https://data.orygen.org.au/>`_, and
@@ -71,9 +71,9 @@ Contents
    running_lochness
    phoenix_bids_example
    sync_in_detail
+   configuration_file
    data_sources
    ..phoenix
-   configuration_file
 
 
 Indices and tables
