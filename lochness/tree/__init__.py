@@ -94,28 +94,24 @@ def get(data_type, base, **kwargs):
         if 'raw' in Templates[data_type]:
             # restructure root
             base = Path(base).parent.parent / study / 'raw'
-            sub_folder = Templates[data_type]['raw'].substitute(
-                    base='', **kwargs)[1:]
+            sub_folder = Templates[data_type]['raw'].substitute(base='')[1:]
             sub_folder = re.sub('/(raw|processed)', '', sub_folder)
             raw_folder = base / phoenix_id / sub_folder
 
         if 'processed' in Templates[data_type]:
             # restructure root
             base = Path(base).parent.parent / study / 'processed'
-            sub_folder = Templates[data_type]['processed'].substitute(
-                    base='', **kwargs)[1:]
+            sub_folder = Templates[data_type]['processed'].substitute(base='')[1:]
 
             sub_folder = re.sub('/(raw|processed)', '', sub_folder)
             processed_folder = base / phoenix_id / sub_folder
 
     else:
         if 'raw' in Templates[data_type]:
-            raw_folder = Templates[data_type]['raw'].substitute(
-                    base=base, **kwargs)
+            raw_folder = Templates[data_type]['raw'].substitute(base=base)
 
         if 'processed' in Templates[data_type]:
-            processed_folder = Templates[data_type]['processed'].substitute(
-                    base=base, **kwargs)
+            processed_folder = Templates[data_type]['processed'].substitute(base=base)
 
     if kwargs.get('processed', True):
         if kwargs.get('makedirs', True) and \
