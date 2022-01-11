@@ -54,12 +54,86 @@ class KeyringAndEncryptMindlamp(KeyringAndEncrypt):
         self.write_keyring_and_encrypt()
 
 
+class KeyringAndEncryptMindlampOrygen(KeyringAndEncrypt):
+    def __init__(self, tmp_dir):
+        super().__init__(tmp_dir)
+        token = Tokens()
+        mindlamp_token, access_key, secret_key, api_url = \
+                token.read_token_or_get_input('mindlamp_orygen')
+                # token.get_mindlamp_token()
+
+        self.keyring['mindlamp.StudyA'] = {}
+        self.keyring['mindlamp.StudyA']['ACCESS_KEY'] = access_key
+        self.keyring['mindlamp.StudyA']['SECRET_KEY'] = secret_key
+        self.keyring['mindlamp.StudyA']['URL'] = api_url
+
+        self.write_keyring_and_encrypt()
+
+
+class KeyringAndEncryptMindlampAdmin(KeyringAndEncrypt):
+    def __init__(self, tmp_dir):
+        super().__init__(tmp_dir)
+        token = Tokens()
+        mindlamp_token, access_key, secret_key, api_url = \
+                token.read_token_or_get_input('mindlamp_admin')
+                # token.get_mindlamp_token()
+
+        self.keyring['mindlamp.StudyA'] = {}
+        self.keyring['mindlamp.StudyA']['ACCESS_KEY'] = access_key
+        self.keyring['mindlamp.StudyA']['SECRET_KEY'] = secret_key
+        self.keyring['mindlamp.StudyA']['URL'] = api_url
+
+        self.write_keyring_and_encrypt()
+
+
+class KeyringAndEncryptMindlampAdminIP(KeyringAndEncrypt):
+    def __init__(self, tmp_dir):
+        super().__init__(tmp_dir)
+        token = Tokens()
+        mindlamp_token, access_key, secret_key, api_url = \
+                token.read_token_or_get_input('mindlamp_admin_ip')
+                # token.get_mindlamp_token()
+
+        self.keyring['mindlamp.StudyA'] = {}
+        self.keyring['mindlamp.StudyA']['ACCESS_KEY'] = access_key
+        self.keyring['mindlamp.StudyA']['SECRET_KEY'] = secret_key
+        self.keyring['mindlamp.StudyA']['URL'] = api_url
+
+        self.write_keyring_and_encrypt()
+
+
+class KeyringAndEncryptMindlampYoon(KeyringAndEncrypt):
+    def __init__(self, tmp_dir):
+        super().__init__(tmp_dir)
+        token = Tokens()
+        mindlamp_token, access_key, secret_key, api_url = \
+                token.read_token_or_get_input('mindlamp_yoon')
+                # token.get_mindlamp_token()
+
+        self.keyring['mindlamp.StudyA'] = {}
+        self.keyring['mindlamp.StudyA']['ACCESS_KEY'] = access_key
+        self.keyring['mindlamp.StudyA']['SECRET_KEY'] = secret_key
+        self.keyring['mindlamp.StudyA']['URL'] = api_url
+
+        self.write_keyring_and_encrypt()
+
 @pytest.fixture
 def get_lamp():
     token = Tokens()
     mindlamp_token, access_key, secret_key, api_url = \
             token.read_token_or_get_input('mindlamp')
     LAMP.connect(access_key, secret_key)
+
+    return LAMP
+
+
+@pytest.fixture
+def get_lamp_orygen():
+    token = Tokens()
+    mindlamp_token, access_key, secret_key, api_url = \
+            token.read_token_or_get_input('mindlamp_admin')
+    
+    LAMP.connect(access_key, secret_key, api_url)
 
     return LAMP
 
@@ -245,3 +319,144 @@ def test_sync_mindlamp(args):
     show_tree_then_delete('tmp_lochness')
 
 
+def test_sync_mindlamp_orygen_Yoon(args):
+    syncArgs = SyncArgs(args.outdir)
+    syncArgs.studies = ['StudyA']
+    sources = ['mindlamp']
+    syncArgs.update_source(sources)
+
+    create_lochness_template(args)
+    syncArgs.config = args.outdir / 'config.yml'
+    _ = KeyringAndEncryptMindlampOrygen(args.outdir)
+
+    phoenix_root = args.outdir / 'PHOENIX'
+    information_to_add_to_metadata = {'mindlamp': {'subject_id': '1001',
+                                                   'source_id': 'U2862696942'}}
+    
+    initialize_metadata_test(phoenix_root, 'StudyA',
+                             information_to_add_to_metadata)
+    Lochness = config_load_test(syncArgs.config)
+    for subject in lochness.read_phoenix_metadata(Lochness, syncArgs.studies):
+        sync(Lochness, subject, False)
+
+    show_tree_then_delete('tmp_lochness')
+
+
+def test_sync_mindlamp_orygen_admin(args):
+    # for mindlamp_id in ['U2862696942', 'U5891709819']:
+    # args.outdir = 'tmp_lochness'
+    syncArgs = SyncArgs(args.outdir)
+    syncArgs.studies = ['StudyA']
+    sources = ['mindlamp']
+    syncArgs.update_source(sources)
+
+    create_lochness_template(args)
+    syncArgs.config = args.outdir / 'config.yml'
+    _ = KeyringAndEncryptMindlampAdmin(args.outdir)
+    # _ = KeyringAndEncryptMindlampYoon(args.outdir)
+
+    phoenix_root = args.outdir / 'PHOENIX'
+    information_to_add_to_metadata = {'mindlamp': {'subject_id': '1001',
+                                                   'source_id': 'U2862696942'}}
+                                                   # 'source_id': 'U5891709819'}}
+                                                   # 'source_id': 'U3025891176'}}
+    
+    initialize_metadata_test(phoenix_root, 'StudyA',
+                             information_to_add_to_metadata)
+    Lochness = config_load_test(syncArgs.config)
+    for subject in lochness.read_phoenix_metadata(Lochness, syncArgs.studies):
+        sync(Lochness, subject, False)
+
+
+
+def test_pulling_timestamp_from_to(get_lamp_orygen):
+    LAMP = get_lamp_orygen
+    subject_ids = ['U2862696942', 'U5891709819']
+    subject_id = subject_ids[0]
+    ts_set = 1636347600192
+    data_dict = get_sensor_events_lamp(
+            LAMP, subject_id,
+            from_ts=ts_set, to_ts=ts_set)[0]
+
+    # print(data_dict[0])
+    test_json_loc = '/Users/kc244/lochness/tests/lochness_test/mindlamp/tmp_lochness/PHOENIX/PROTECTED/StudyA/raw/1001/phone/U2862696942_StudyA_sensor_2021_11_08.json'
+    with open(test_json_loc, 'r') as fp:
+        new_data = json.load(fp)[-1]
+
+    print()
+    # print(new_data)
+
+    j1 = json.dumps(data_dict, sort_keys=True)
+    j2 = json.dumps(new_data, sort_keys=True)
+
+    print(j1)
+    print(j2)
+    print(j1 == j2)
+
+    # for subject_id in subject_ids:
+        # activity_dicts = get_activity_events_lamp(LAMP, subject_id)
+        # sensor_dicts = get_sensor_events_lamp(LAMP, subject_id)
+
+        # with open(f'{subject_id}_activity_data.json', 'w') as f:
+            # json.dump(activity_dicts, f)
+
+        # with open(f'{subject_id}_sensor_data.json', 'w') as f:
+            # json.dump(sensor_dicts, f)
+
+        # with open(f'{subject_id}_activity_data.json', 'r') as f:
+            # pretty_print_dict(json.load(f))
+
+        # with open(f'{subject_id}_sensor_data.json', 'r') as f:
+            # pretty_print_dict(json.load(f))
+
+        # os.remove(f'{subject_id}_sensor_data.json')
+        # os.remove(f'{subject_id}_activity_data.json')
+
+
+def test_sync_skip_for_the_day(args):
+    syncArgs = SyncArgs(args.outdir)
+    syncArgs.studies = ['StudyA']
+    sources = ['mindlamp']
+    syncArgs.update_source(sources)
+
+    create_lochness_template(args)
+    syncArgs.config = args.outdir / 'config.yml'
+    _ = KeyringAndEncryptMindlampAdmin(args.outdir)
+    # _ = KeyringAndEncryptMindlampYoon(args.outdir)
+
+    phoenix_root = args.outdir / 'PHOENIX'
+    information_to_add_to_metadata = {'mindlamp': [
+        {'subject_id': '1001', 'source_id': 'U2862696942'},
+        {'subject_id': '1002', 'source_id': 'U5891709819'}
+        ]}
+    
+    initialize_metadata_test(phoenix_root, 'StudyA',
+                             information_to_add_to_metadata)
+    Lochness = config_load_test(syncArgs.config)
+    for subject in lochness.read_phoenix_metadata(Lochness, syncArgs.studies):
+        sync(Lochness, subject, False)
+
+
+def test_sync_skip_for_the_day_ip(args):
+    syncArgs = SyncArgs(args.outdir)
+    syncArgs.studies = ['StudyA']
+    sources = ['mindlamp']
+    syncArgs.update_source(sources)
+
+    create_lochness_template(args)
+    syncArgs.config = args.outdir / 'config.yml'
+    # _ = KeyringAndEncryptMindlampAdminIP(args.outdir)
+    _ = KeyringAndEncryptMindlampAdmin(args.outdir)
+    # _ = KeyringAndEncryptMindlampYoon(args.outdir)
+
+    phoenix_root = args.outdir / 'PHOENIX'
+    information_to_add_to_metadata = {'mindlamp': [
+        {'subject_id': '1001', 'source_id': 'U2862696942'},
+        {'subject_id': '1002', 'source_id': 'U5891709819'}
+        ]}
+    
+    initialize_metadata_test(phoenix_root, 'StudyA',
+                             information_to_add_to_metadata)
+    Lochness = config_load_test(syncArgs.config)
+    for subject in lochness.read_phoenix_metadata(Lochness, syncArgs.studies):
+        sync(Lochness, subject, False)

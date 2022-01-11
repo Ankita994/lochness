@@ -17,6 +17,8 @@ import re
 
 logger = logging.getLogger(__name__)
 
+LIMIT = 1000000
+
 
 def get_days_to_pull(Lochness):
     '''Reads mindlamp_days_to_pull from Lochness loaded from the config.yml
@@ -78,6 +80,8 @@ def sync(Lochness: 'lochness.config',
       ids, but there is no mapping of which id corresponds to which subject.
     - Above information has to be added to the metadata.csv file.
     - Add ApiExceptions
+    - This function is downloading X days of previous data, regardless of
+      existence of the destination data
     '''
     logger.debug(f'exploring {subject.study}/{subject.id}')
     deidentify = deidentify_flag(Lochness, subject.study)
@@ -99,48 +103,70 @@ def sync(Lochness: 'lochness.config',
     # set the cut off point as UTC 00:00:00.00
     ct_utc_00 = ct_utc.replace(hour=0, minute=0, second=0, microsecond=0)
 
-    for days_from_ct in range(days_to_check):
-        # n day before current time
+    # Extra information for future version
+    # study_id, study_name = get_study_lamp(LAMP)
+    # subject_ids = get_participants_lamp(LAMP, study_id)
+    subject_id = subject.mindlamp[f'mindlamp.{subject.study}'][0]
+
+    # set destination folder
+    dst_folder = tree.get('mindlamp',
+                          subject.protected_folder,
+                          processed=False,
+                          BIDS=Lochness['BIDS'])
+
+    # the loop below downloads all data from mindlamp from the current date
+    # to (current date - 100 days), overwriting pre-downloaded files.
+    for days_from_ct in reversed(range(days_to_check)):
+        # get time range: n days before current date
+        # 1000 has been multiplied to match timestamp format
         time_utc_00 = ct_utc_00 - timedelta(days=days_from_ct)
         time_utc_00_ts = time.mktime(time_utc_00.timetuple()) * 1000
         time_utc_24 = time_utc_00 + timedelta(hours=24)
         time_utc_24_ts = time.mktime(time_utc_24.timetuple()) * 1000
 
+
         # date string to be used in the file name
         date_str = time_utc_00.strftime("%Y_%m_%d")
 
-        # Extra information for future version
-        # study_id, study_name = get_study_lamp(LAMP)
-        # subject_ids = get_participants_lamp(LAMP, study_id)
-        subject_id = subject.mindlamp[f'mindlamp.{subject.study}'][0]
         logger.debug(f'Mindlamp {subject_id} {date_str} data pull - start')
 
-        # pull data from mindlamp
-        begin = time.time()
-        activity_dicts = get_activity_events_lamp(
-                LAMP, subject_id,
-                from_ts=time_utc_00_ts, to_ts=time_utc_24_ts)
-
-        sensor_dicts = get_sensor_events_lamp(
-                LAMP, subject_id,
-                from_ts=time_utc_00_ts, to_ts=time_utc_24_ts)
-        end = time.time()
-        logger.debug(f'Mindlamp {subject_id} {date_str} data pull - complete')
-
-        # set destination folder
-        dst_folder = tree.get('mindlamp',
-                              subject.protected_folder,
-                              processed=False,
-                              BIDS=Lochness['BIDS'])
-
         # store both data types
-        for data_name, data_dict in zip(['activity', 'sensor'],
-                                        [activity_dicts, sensor_dicts]):
-
+        for data_name in ['activity', 'sensor']:
             dst = os.path.join(
                     dst_folder,
                     f'{subject_id}_{subject.study}_{data_name}_'
                     f'{date_str}.json')
+
+            function_to_execute = get_activity_events_lamp \
+                if data_name == 'activity' else get_sensor_events_lamp
+
+            # confirm it's a new file
+            if Path(dst).is_file():
+                with open(dst, 'r') as existing_file:
+                    # [-1] at the end -> last timepoint data
+                    existing_data = json.load(existing_file)[-1]
+
+                new_data = function_to_execute(
+                    LAMP, subject_id,
+                    from_ts=existing_data['timestamp'],
+                    to_ts=existing_data['timestamp'])[0]
+
+                existing_data_json = json.dumps(existing_data, sort_keys=True)
+                new_data_json = json.dumps(new_data, sort_keys=True)
+
+                if existing_data_json == new_data_json:
+                    logger.debug(f'{data_name} data exist for {date_str} '
+                                 '- not downloading')
+                    continue
+
+            # pull data from mindlamp
+            begin = time.time()
+            data_dict = function_to_execute(
+                    LAMP, subject_id,
+                    from_ts=time_utc_00_ts, to_ts=time_utc_24_ts)
+            end = time.time()
+            logger.debug(f'Mindlamp {subject_id} {date_str} {data_name}'
+                         'data pull - completed in ({end - begin} seconds)')
 
             # separate out audio data from the activity dictionary
             if data_name == 'activity' and data_dict:
@@ -165,11 +191,6 @@ def sync(Lochness: 'lochness.config',
                         f'{subject_id} {date_str} (took {end-begin} s)')
 
 
-def separate_out_audio_from_json(json: str):
-    '''Separated json from the audio'''
-    pass
-
-
 def deidentify_flag(Lochness, study):
     ''' get study specific deidentify flag with a safe default '''
     value = Lochness.get('mindlamp', dict()) \
@@ -187,6 +208,7 @@ def mindlamp_projects(Lochness: 'lochness.config',
     Keyring = Lochness['keyring']
 
     key_name = list(mindlamp_instance.keys())[0]  # mindlamp.StudyA
+
     # Assertations
     # check for mandatory keyring items
 
@@ -262,7 +284,7 @@ def get_activities_lamp(lamp: LAMP, subject_id: str,
         activity_dicts: activity records, list of dict.
     '''
     activity_dicts = lamp.Activity.all_by_participant(
-            subject_id, _from=from_ts, to=to_ts)['data']
+            subject_id, _from=from_ts, to=to_ts, _limit=LIMIT)['data']
 
     return activity_dicts
 
@@ -282,7 +304,8 @@ def get_sensors_lamp(lamp: LAMP, subject_id: str,
         sensor_dicts: activity records, list of dict.
     '''
     sensor_dicts = lamp.Sensor.all_by_participant(
-                        subject_id, _from=from_ts, to=to_ts)['data']
+                        subject_id, _from=from_ts, to=to_ts,
+                        _limit=1000000)['data']
 
     return sensor_dicts
 
@@ -303,7 +326,8 @@ def get_activity_events_lamp(
         activity_events_dicts: activity records, list of dict.
     '''
     activity_events_dicts = lamp.ActivityEvent.all_by_participant(
-                    subject_id, _from=from_ts, to=to_ts)['data']
+                    subject_id, _from=from_ts, to=to_ts,
+                    _limit=LIMIT)['data']
     return activity_events_dicts
 
 
@@ -324,8 +348,9 @@ def get_sensor_events_lamp(
     '''
     if from_ts is not None:
         sensor_event_dicts = lamp.SensorEvent.all_by_participant(
-                        subject_id, _from=from_ts, to=to_ts)['data']
+                        subject_id, _from=from_ts, to=to_ts,
+                        _limit=LIMIT)['data']
     else:
         sensor_event_dicts = lamp.SensorEvent.all_by_participant(
-                        subject_id)['data']
+                        subject_id, _limit=LIMIT)['data']
     return sensor_event_dicts

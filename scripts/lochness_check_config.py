@@ -3,6 +3,7 @@
 import argparse as ap
 from lochness import config
 from lochness import keyring
+from pathlib import Path
 import os
 import json
 
@@ -44,7 +45,8 @@ def check_lochness_configurations():
         check_keyring(keyring_dict)
 
     if args.keyring:
-        with open(args.keyring, 'r') as f:
+        keyring_path = Path(args.keyring)
+        with open(keyring_path, 'r') as f:
             keyring_dict = json.load(f)
         check_keyring(keyring_dict)
 

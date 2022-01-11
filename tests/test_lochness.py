@@ -345,35 +345,38 @@ def initialize_metadata_test(phoenix_root: 'phoenix root',
         phoenix_root: Root of the PHOENIX, str.
         study_name: Name of the study, str.
         sources_id_dict: Source information to test, dict of dict
-                         eg. {'xnat': {'subject_id':1001,
-                                       'source_id':'1001'}}
+                         eg. {'xnat': [
+                         {'subject_id':1001, 'source_id':'1001'},
+                         {'subject_id':1002, 'source_id':'1002'},
+                         ]}
     '''
     df = pd.DataFrame()
 
     # for each record in pulled information, extract subject ID and source IDs
-    for source, id_dict in sources_id_dict.items():
-        subject_dict = {'Subject ID': id_dict['subject_id']}
+    for source, id_dicts in sources_id_dict.items():
+        for id_dict in id_dicts:
+            subject_dict = {'Subject ID': id_dict['subject_id']}
 
-        # Consent date
-        subject_dict['Consent'] = '1988-09-16'
+            # Consent date
+            subject_dict['Consent'] = '1988-09-16'
 
-        if source.capitalize() == 'Xnat':
-            if v_study_name != None:
-                subject_dict['XNAT'] = \
-                        f'xnat.{v_study_name}:{id_dict["source_id"]}'
+            if source.capitalize() == 'Xnat':
+                if v_study_name != None:
+                    subject_dict['XNAT'] = \
+                            f'xnat.{v_study_name}:{id_dict["source_id"]}'
+                else:
+                    subject_dict['XNAT'] = \
+                            f'xnat.{study_name}:{id_dict["source_id"]}'
             else:
-                subject_dict['XNAT'] = \
-                        f'xnat.{study_name}:{id_dict["source_id"]}'
-        else:
-            if v_study_name != None:
-                subject_dict[source.capitalize()] = \
-                        f'{source}.{v_study_name}:{id_dict["source_id"]}'
-            else:
-                subject_dict[source.capitalize()] = \
-                        f'{source}.{study_name}:{id_dict["source_id"]}'
+                if v_study_name != None:
+                    subject_dict[source.capitalize()] = \
+                            f'{source}.{v_study_name}:{id_dict["source_id"]}'
+                else:
+                    subject_dict[source.capitalize()] = \
+                            f'{source}.{study_name}:{id_dict["source_id"]}'
 
-        df_tmp = pd.DataFrame.from_dict(subject_dict, orient='index')
-        df = pd.concat([df, df_tmp.T])
+            df_tmp = pd.DataFrame.from_dict(subject_dict, orient='index')
+            df = pd.concat([df, df_tmp.T])
 
     # Each subject may have more than one arms, which will result in more than
     # single item for the subject in the RPMS pulled `content`

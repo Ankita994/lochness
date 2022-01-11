@@ -98,7 +98,7 @@ def initialize_metadata(Lochness, args,
                     multiple_site_in_a_repo, upenn_redcap)
 
         elif 'redcap' in args.input_sources:
-            id_fieldname = 'chric_subject_id'
+            id_fieldname = 'chric_record_id'
             consent_fieldname = 'chric_consent_date'
             REDCap.initialize_metadata(
                     Lochness, study_name, id_fieldname, consent_fieldname,
@@ -378,10 +378,14 @@ def listdir(Lochness, d):
 
 def attempt(f, Lochness, *args, **kwargs):
     '''attempt a function call'''
+
+    '''
     if len(attempt.warnings) >= 5:
         # lochness.email.attempts_error(Lochness, attempt)
         attempt.warnings = []
         raise AttemptsError('too many attempt warnings')
+    '''
+
     try:
         f(Lochness, *args, **kwargs)
     except Exception as e:

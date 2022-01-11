@@ -25,8 +25,10 @@ import lochness.onlinescoring as OnlineScoring
 from lochness.transfer import lochness_to_lochness_transfer_sftp
 from lochness.transfer import lochness_to_lochness_transfer_rsync
 from lochness.transfer import lochness_to_lochness_transfer_s3
+from lochness.transfer import lochness_to_lochness_transfer_s3_protected
 from lochness.transfer import lochness_to_lochness_transfer_receive_sftp
-import dpanonymize
+from datetime import datetime
+# import dpanonymize
 
 SOURCES = {
     'xnat': XNAT,
@@ -120,14 +122,16 @@ def main():
 
     # pause execution until
     if args.until:
-        logger.info('pausing execution until {0}'.format(args.until))
-        scheduler.until(args.until)
+        until = datetime.strptime(args.until, '%Y-%m-%dT%H:%M:%S')
+        logger.info('pausing execution until {0}'.format(until))
+        scheduler.until(until)
 
     # run downloader once, or continuously
     if args.continuous:
         while True:
             do(args, Lochness)
-            logger.info('sleeping for {0} seconds'.format(Lochness['poll_interval']))
+            poll_interval = int(Lochness['poll_interval'])
+            logger.info('sleeping for {0} seconds'.format(poll_interval))
             time.sleep(Lochness['poll_interval'])
     else:
         do(args, Lochness)
@@ -145,6 +149,7 @@ def do(args, Lochness):
         # for ProNET and PRESCIENT, single REDCap and RPMS repo has
         # information from multiple site
         multiple_site = True if len(args.studies) > 1 else False
+
         lochness.initialize_metadata(Lochness, args,
                                      multiple_site, upenn_redcap)
 
@@ -160,8 +165,16 @@ def do(args, Lochness):
             for Module in args.source:
                 lochness.attempt(Module.sync, Lochness, subject, dry=args.dry)
 
-    # annonymize PII
-    dpanonymize.lock_lochness(Lochness, pii_table_loc=Lochness['pii_table'])
+    # anonymize PII
+
+    #if Lochness['s3_selective_sync']:
+    #    dpanonymize.lock_lochness(
+    #            Lochness,
+    #            pii_table_loc=Lochness['pii_table'],
+    #            s3_selective_sync = Lochness['s3_selective_sync'])
+    #else:
+    #    dpanonymize.lock_lochness(
+    #            Lochness, pii_table_loc=Lochness['pii_table'])
 
     # transfer new files after all sync attempts are done
     if args.lochness_sync_send:

@@ -310,7 +310,7 @@ def lochness_to_lochness_transfer_s3(Lochness, general_only: bool = True):
 
     command = f'aws s3 sync \
             {source_directory}/ \
-            s3://{s3_bucket_name}/{s3_phoenix_root}'
+            s3://{s3_bucket_name}/{s3_phoenix_root} --delete'
 
     logger.debug('Executing aws s3 sync function')
     logger.debug(os.popen(command).read())
@@ -337,7 +337,7 @@ def lochness_to_lochness_transfer_s3_protected(Lochness):
     s3_bucket_name = Lochness['AWS_BUCKET_NAME']
     s3_phoenix_root = Lochness['AWS_BUCKET_ROOT']
 
-    for datatype in Lochness['selective_sync']:
+    for datatype in Lochness['s3_selective_sync']:
         # phoenix_root / PROTECTED / site / raw / subject / datatype
         source_directories = Path(Lochness['phoenix_root']).glob(
                     f'PROTECTED/*/*/*/{datatype}')
@@ -350,7 +350,7 @@ def lochness_to_lochness_transfer_s3_protected(Lochness):
                                                str(source_directory))
                 command = f'aws s3 sync \
                         {source_directory}/ \
-                        s3://{s3_bucket_name}/{s3_phoenix_root_dtype}'
+                        s3://{s3_bucket_name}/{s3_phoenix_root_dtype} --delete'
 
                 logger.debug('Executing aws s3 sync function for '
                              f'{source_directory}')
