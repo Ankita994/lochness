@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import string
 import smtplib
 from email.mime.text import MIMEText
@@ -8,6 +9,7 @@ from typing import List
 import getpass
 import socket
 import subprocess
+import pandas as pd
 
 __dir__ = os.path.dirname(__file__)
 
@@ -28,7 +30,8 @@ def send(recipients, sender, subject, message):
 
 def send_detail_google(Lochness,
                        title: str, subtitle: str, first_message: str,
-                       second_message: str, code: List[str]) -> None:
+                       second_message: str, code: List[str],
+                       test: bool = False) -> None:
     '''Send email using gmail account which has it's "Less secure app" allowed
 
     Set up an google account to send out emails using its SMTP server. You need
@@ -84,27 +87,54 @@ def send_detail_google(Lochness,
     s.starttls()
     s.ehlo()
     s.login(sender, sender_pw)
-    s.sendmail(sender, recipients, msg.as_string())
+    if not test:
+        s.sendmail(sender, recipients, msg.as_string())
+    else:
+        print(html_str)
+
     s.quit()
 
 
-def send_out_daily_updates(Lochness):
+def send_out_daily_updates(Lochness, test: bool = False):
     '''Send daily updates from Lochness'''
-    command = f"tree {Lochness['phoenix_root']} -L 3"  # the shell command
-    process = subprocess.Popen(command, stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE, shell=True)
-    output, _ = process.communicate()
-    list_of_lines_from_tree = output.decode("utf-8").split('\n')
 
-    list_of_datatypes_and_subject_updated = ['a', 'b']
+    s3_log = Path(Lochness['phoenix_root']) / 's3_log.csv'
+    if s3_log.is_file():
+        s3_df = pd.read_csv(s3_log)
+        s3_df['timestamp'] = pd.to_datetime(s3_df['timestamp'])
+        s3_df_today = s3_df[s3_df['timestamp'] > pd.Timestamp(date.today())]
 
-    print(output.decode("utf-8"))
-    send_detail_google(
-        Lochness,
-        'Lochness', f'Daily updates {date.today}',
-        'List of data types updated today',
-        list_of_datatypes_and_subject_updated,
-        list_of_lines_from_tree)
+        s3_df_today = s3_df_today[~s3_df_today.filename.str.contains(
+            'metadata.csv')][['timestamp', 'filename', 'protected', 'study',
+                              'processed', 'subject', 'datatypes']]
+
+        count_df = s3_df_today.groupby(['protected', 'study', 'processed',
+                                        'subject', 'datatypes']).count()[
+                                                ['filename']]
+        count_df.columns = ['file count']
+        count_df = count_df.reset_index()
+
+    else:
+        s3_df_today = pd.DataFrame()
+        count_df = pd.DataFrame()
+
+    list_of_lines_from_tree = ['']
+
+    if len(count_df) == 0:
+        send_detail_google(
+            Lochness,
+            'Lochness', f'Daily updates {date.today}',
+            'There is no update today!', '',
+            list_of_lines_from_tree,
+            test)
+    else:
+        send_detail_google(
+            Lochness,
+            'Lochness', f'Daily updates {date.today}',
+            'Summary of files sent to NDA today' + count_df.to_html(),
+            'Each file in detail' + s3_df_today.to_html(),
+            list_of_lines_from_tree,
+            test)
 
 
 def attempts_error(Lochness, attempt):
