@@ -36,8 +36,6 @@ Lochness, is that AMP-SCZ requies database of unique subject IDs in one of
 So, as long as your projects also have ``REDCap`` or ``RPMS`` linked, AMP-SCZ
 Lochness could also be used for your project!
 
-
-
 Therefore, required and supported data sources are
 
     - Required

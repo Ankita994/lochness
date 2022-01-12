@@ -98,7 +98,14 @@ def get_access_token(client_id: str,
 
 def refresh_access_token(
         refresh_token_path: Path, client_id: str, client_secret: str) -> str:
-    '''Refresh access token using Box API
+    '''Refresh access token using Box API.
+
+    When the box app in use is not authorized by your institution, getting an
+    access token with client ID, secret, and enterprise_id will not work. This
+    function is a workaround for the situation. For this workaround, you need
+    a refresh token, which you can obtain by following the instructions in the
+    notes below, and saving it to `.refresh_token` file, in the same directory
+    as your keyring file.
 
     Key Argument:
         Lochness: refresh_token_path
@@ -125,8 +132,9 @@ def refresh_access_token(
             --data-urlencode 'grant_type=authorization_code' \
             --data-urlencode 'code=CODE'
 
-        The refresh token expires when used to refresh access token. 
-        Refreshing token returns a new access and refresh token.
+        The refresh token expires in 60 days, and also when used to refresh
+        access token. Refreshing token returns an access token with a new
+        refresh token, which is saved by lochness to carry on the process.
         
     '''
 
@@ -454,6 +462,7 @@ def sync_module(Lochness: 'lochness.config',
             api_token = get_access_token(client_id,
                                          client_secret,
                                          enterprise_id)
+        # error get_access_token may occur when your box app is not authorized
         except TokenAccessError as err:
             refresh_token_path = Path(Lochness['keyring_file']).parent / \
                     '.refresh_token'

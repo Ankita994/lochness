@@ -17,7 +17,6 @@ this file is loaded first, when ``sync.py`` is executed.
 
 Please see the configuration file section for more information.
 
-
 The encrypted keyring file, location of should have been included in
 the configuration file, is also loaded by ``sync.py``.
 
@@ -106,7 +105,6 @@ List of data sources focused in AMP-SCZ
    Lochness. In another words, any data that belong to a subject who are
    missing from ``REDCap`` or ``RPMS`` will not be downloaded by Lochness.
 
-
 .. _transfer_selected_data_to_s3_bucket:
 
 Transfer selected data to s3 bucket
@@ -120,4 +118,3 @@ If any raw data types is okay to be be transferred, as they were downloaded
 from their data source, ``--selective_sync`` option can be used to select these
 data types. Then all the data under both ``GENERAL`` and ``PROTECTED`` will be
 transferred to s3 bucket.
-
