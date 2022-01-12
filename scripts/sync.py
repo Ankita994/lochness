@@ -95,6 +95,8 @@ def main():
                         default=False,
                         help='Enable lochness to lochness transfer on the '
                              'server side')
+    parser.add_argument('-ds', '--daily_summary', action='store_true',
+                        help='Enable daily summary email function')
     parser.add_argument('--debug', action='store_true',
                         help='Enable debug messages')
     args = parser.parse_args()
@@ -137,7 +139,8 @@ def main():
         while True:
             do(args, Lochness)
 
-            if date.today() not in dates_email_sent:  # daily email
+            # daily email
+            if args.daily_summary and date.today() not in dates_email_sent:
                 send_out_daily_updates(Lochness)
                 dates_email_sent.append(date.today())
 
@@ -148,7 +151,8 @@ def main():
         do(args, Lochness)
 
         # email
-        send_out_daily_updates(Lochness)
+        if args.daily_summary:
+            send_out_daily_updates(Lochness)
 
 
 def do(args, Lochness):
