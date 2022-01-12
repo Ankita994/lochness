@@ -23,16 +23,6 @@ def args_and_Lochness_BIDS():
     args = Args('tmp_lochness')
     args.sources = ['box']
     create_lochness_template(args)
-    keyring = KeyringAndEncrypt(args.outdir)
-    information_to_add_to_metadata = {'box': {
-        'subject_id': '1001',
-        'source_id': 'LA123456'}}
-
-    # for study in args.studies:
-        # update box metadata
-        # initialize_metadata_test('tmp_lochness/PHOENIX', study,
-                                 # information_to_add_to_metadata)
-
     lochness_obj = config_load_test('tmp_lochness/config.yml', '')
 
     # change protect to true for all actigraphy
@@ -50,4 +40,7 @@ def test_box_sync_module_no_redownload(args_and_Lochness_BIDS):
     token = Tokens()
     (email_sender_pw,) = token.read_token_or_get_input('email')
     Lochness['keyring']['lochness']['email_sender_pw'] = email_sender_pw
+
+    Lochness['notify']['test'] = ['sky8671@gmail.com']
+    # send_out_daily_updates(Lochness, test=True)
     send_out_daily_updates(Lochness)

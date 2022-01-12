@@ -26,8 +26,10 @@ from lochness.transfer import lochness_to_lochness_transfer_sftp
 from lochness.transfer import lochness_to_lochness_transfer_rsync
 from lochness.transfer import lochness_to_lochness_transfer_s3
 from lochness.transfer import lochness_to_lochness_transfer_s3_protected
+from lochness.transfer import create_s3_transfer_table
 from lochness.transfer import lochness_to_lochness_transfer_receive_sftp
-from datetime import datetime
+from lochness.email import send_out_daily_updates
+from datetime import datetime, date
 # import dpanonymize
 
 SOURCES = {
@@ -114,6 +116,9 @@ def main():
     # load the lochness configuration file and keyring
     Lochness = config.load(args.config, args.archive_base)
 
+    # register log-file path
+    Lochness['log_file'] = str(args.log_file)
+
     # fork the current process if necessary
     if args.fork:
         logger.info('forking the current process')
@@ -128,13 +133,22 @@ def main():
 
     # run downloader once, or continuously
     if args.continuous:
+        dates_email_sent = []
         while True:
             do(args, Lochness)
+
+            if date.today() not in dates_email_sent:  # daily email
+                send_out_daily_updates(Lochness)
+                dates_email_sent.append(date.today())
+
             poll_interval = int(Lochness['poll_interval'])
             logger.info('sleeping for {0} seconds'.format(poll_interval))
             time.sleep(Lochness['poll_interval'])
     else:
         do(args, Lochness)
+
+        # email
+        send_out_daily_updates(Lochness)
 
 
 def do(args, Lochness):
@@ -185,11 +199,15 @@ def do(args, Lochness):
             # for data under PROTECTED (for selected datatypes)
             if 's3_selective_sync' in Lochness:
                 lochness_to_lochness_transfer_s3_protected(Lochness)
+
+            # save details of transferred files under PHOENIX/s3_log.csv
+            create_s3_transfer_table(Lochness)
                 
         elif args.rsync:
             lochness_to_lochness_transfer_rsync(Lochness)
         else:
             lochness_to_lochness_transfer_sftp(Lochness)
+
 
 
 if __name__ == '__main__':
