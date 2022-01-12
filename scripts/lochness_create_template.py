@@ -151,7 +151,11 @@ def create_keyring_template(keyring_loc: Path, args: object) -> None:
             upenn_api_token = '*****'
 
         template_dict['lochness']['REDCAP'] = {}
+
         template_dict['lochness']['SECRETS'] = {}
+        template_dict['lochness']["email_sender_pw"] = "*****"
+        
+
         for study in args.studies:
             project_name = study[:-2]
             if 'upenn' in args.sources and 'redcap' in args.sources:
@@ -298,6 +302,7 @@ sender: {args.email}
 mindlamp_days_to_pull: 100
 pii_table: {args.pii_csv}
 lochness_sync_history_csv: {args.lochness_sync_history_csv}
+
 '''
 
     if 'rpms' in args.sources:
@@ -399,6 +404,9 @@ hdd:
         base: /PHOENIX
 admins:
     - {args.email}
+
+sender: {args.email}
+
 notify:
     __global__:
         - {args.email}

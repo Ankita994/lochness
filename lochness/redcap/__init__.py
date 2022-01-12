@@ -68,12 +68,9 @@ def initialize_metadata(Lochness: 'Lochness object',
         multistudy: True if the redcap repo contains multisite data, bool.
         upenn: True if upenn redcap is included in the source list, bool.
     '''
-    if multistudy:
-        # specific to DPACC project
-        site_code_study = study_name[-2:]  # 'LA'
-        project_name = study_name.split(site_code_study)[0]  # 'Pronet'
-    else:
-        project_name = study_name
+    # specific to DPACC project
+    site_code_study = study_name[-2:]  # 'LA'
+    project_name = study_name.split(site_code_study)[0]  # 'Pronet'
 
     # use redcap_project function to load the redcap keyrings for the project
     _, api_url, api_key = next(redcap_projects(
