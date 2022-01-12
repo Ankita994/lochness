@@ -155,7 +155,7 @@ def sync_module(Lochness: 'lochness.config',
                             # subprocess call unimelb-mf-download
                             cmd = (' ').join(['unimelb-mf-download',
                                               '--mf.config', mflux_cfg,
-                                              '-o ', f'"{mf_local}"',
+                                              '-o', f'"{mf_local}"',
                                               '--nb-retries 5',
                                               f'\"{remote}\"'])
 

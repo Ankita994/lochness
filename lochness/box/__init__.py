@@ -60,13 +60,15 @@ class TokenRefreshMissingError(Exception):
     pass
 
 
-def get_access_token(client_id: str, client_secret: str, user_id: str) -> str:
+def get_access_token(client_id: str,
+                     client_secret: str,
+                     enterprise_id: str) -> str:
     '''Get new access token using Box API
 
     Key Argument:
         client_id: Client ID from the box app from box dev console, str
         client_secret: Client secret from the box app from box dev console, str
-        user_id: user id from the box app from box dev console, str of digits.
+        enterprise_id: user id from the box app from box dev console, str of digits.
 
     Returns:
         api_token: API TOKEN used to pull data, str.
@@ -80,10 +82,11 @@ def get_access_token(client_id: str, client_secret: str, user_id: str) -> str:
     data = {"client_id": client_id,
             "client_secret": client_secret,
             "grant_type": "client_credentials",
-            "box_subject_type": "user",
-            "box_subject_id": user_id}
+            "box_subject_type": "enterprise",
+            "box_subject_id": enterprise_id}
 
     response = requests.post(url, headers=headers, data=data)
+
     try:
         api_token = response.json()['access_token']
     except KeyError:
@@ -95,7 +98,14 @@ def get_access_token(client_id: str, client_secret: str, user_id: str) -> str:
 
 def refresh_access_token(
         refresh_token_path: Path, client_id: str, client_secret: str) -> str:
-    '''Refresh access token using Box API
+    '''Refresh access token using Box API.
+
+    When the box app in use is not authorized by your institution, getting an
+    access token with client ID, secret, and enterprise_id will not work. This
+    function is a workaround for the situation. For this workaround, you need
+    a refresh token, which you can obtain by following the instructions in the
+    notes below, and saving it to `.refresh_token` file, in the same directory
+    as your keyring file.
 
     Key Argument:
         Lochness: refresh_token_path
@@ -122,8 +132,9 @@ def refresh_access_token(
             --data-urlencode 'grant_type=authorization_code' \
             --data-urlencode 'code=CODE'
 
-        The refresh token expires when used to refresh access token. 
-        Refreshing token returns a new access and refresh token.
+        The refresh token expires in 60 days, and also when used to refresh
+        access token. Refreshing token returns an access token with a new
+        refresh token, which is saved by lochness to carry on the process.
         
     '''
 
@@ -217,13 +228,14 @@ def get_box_object_based_on_name(client: boxsdk.client,
         box_obj = get_box_object_based_on_name(client, root, box_path_id)
 
         # catch box object of the subdirectory of the root path
-        box_obj = get_box_object_based_on_name(
-                client,
-                Path(box_folder_name).relative_to(root),
-                box_obj.id)
-        return box_obj
+        if box_obj is not None:
+            box_obj = get_box_object_based_on_name(
+                    client,
+                    Path(box_folder_name).relative_to(root),
+                    box_obj.id)
+            return box_obj
 
-        if box_obj is None:
+        else:
             return None
 
     # get list of files and directories under the top directory
@@ -340,8 +352,14 @@ class DeletionError(Exception):
 @hash_retry(3)
 def _save(box_file_object, box_fullpath, local_fullfile, key, compress):
     # request the file from box.com
+    logger.debug(f'Reading content of {box_file_object}')
     try:
-        content = BytesIO(box_file_object.content())
+        with tf.NamedTemporaryFile(prefix='.', delete=True) as fo:
+            box_file_object.download_to(fo)
+            fo.seek(0)
+            content = BytesIO(fo.read())
+
+        logger.debug(f'Reading content of {box_file_object} completed')
     except boxsdk.BoxAPIException as e:
         if e.error.is_path() and e.error.get_path().is_not_found():
             msg = f'error downloading file {box_fullpath}'
@@ -437,11 +455,14 @@ def sync_module(Lochness: 'lochness.config',
         _passphrase = keyring.passphrase(Lochness, subject.study)
         enc_key = enc.kdf(_passphrase)
 
-        client_id, client_secret, user_id = keyring.box_api_token(
+        client_id, client_secret, enterprise_id = keyring.box_api_token(
                 Lochness, module_name)
 
         try:
-            api_token = get_access_token(client_id, client_secret, user_id)
+            api_token = get_access_token(client_id,
+                                         client_secret,
+                                         enterprise_id)
+        # error get_access_token may occur when your box app is not authorized
         except TokenAccessError as err:
             refresh_token_path = Path(Lochness['keyring_file']).parent / \
                     '.refresh_token'
@@ -477,94 +498,108 @@ def sync_module(Lochness: 'lochness.config',
         # loop through the items defined for the BOX data
         for datatype, products in iter(
                 Lochness['box'][module_basename]['file_patterns'].items()):
+            # eg) products
+            # [{'product': 'open',
+            #   'data_dir': 'PronetYA_Interviews/OPEN',
+            #   'out_dir': 'open', ...}, 
+            #  {'product': 'psychs',
+            #  'data_dir': 'PronetYA_Interviews/PSYCHS',
+            #  'out_dir': 'psychs', ...}]
+            for product in products:
+                if Lochness['BIDS']:
+                    datatype_root_obj = get_box_object_based_on_name(
+                            client, product['data_dir'], bx_base_obj.id)
 
-            if Lochness['BIDS']:
-                datatype_root_obj = get_box_object_based_on_name(
-                        client, products[0]['data_dir'], bx_base_obj.id)
-
-                if datatype_root_obj == None:
-                    logger.debug(f'{subject.study} {datatype} {products} is '
-                                 f'not found under {bx_base_obj}')
-                    for file_or_folder in bx_base_obj.get_items():
-                        print(f'{bx_base_obj}/{file_or_folder}')
-                    continue
-
-                # for BIDS root datatype_obj has bx_sid
-                datatype_obj = get_box_object_based_on_name(
-                        client, bx_sid, datatype_root_obj.id)
-
-            else:
-                subject_obj = get_box_object_based_on_name(
-                        client, bx_sid, bx_base_obj.id)
-
-                if subject_obj == None:
-                    logger.debug(f'{bx_sid} is not found under {bx_base_obj}')
-                    continue
-
-                datatype_obj = get_box_object_based_on_name(
-                        client, products[0]['data_dir'], subject_obj.id)
-
-            # full path
-            bx_head = join(bx_base,
-                           products[0]['data_dir'],
-                           bx_sid)
-
-            logger.debug('walking %s', bx_head)
-
-            # if the directory is empty
-            # if datatype_obj == None:
-            if datatype_obj == None:
-                logger.debug(f'data directory is empty {datatype_obj}')
-                # continue
-
-            # walk through the root directory
-            for root, dirs, files in walk_from_folder_object(
-                    bx_head, datatype_obj):
-                for box_file_object in files:
-                    bx_tail = join(basename(root), box_file_object.name)
-                    product = _find_product(bx_tail, products, subject=bx_sid)
-
-                    if not product:
+                    if datatype_root_obj == None:
+                        logger.debug(f'{subject.study} {datatype} {product} '
+                                     f'is not found under {bx_base_obj}')
+                        for file_or_folder in bx_base_obj.get_items():
+                            print(f'{bx_base_obj}/{file_or_folder}')
                         continue
 
-                    protect = product.get('protect', True)
+                    # for BIDS root datatype_obj has bx_sid
+                    datatype_obj = get_box_object_based_on_name(
+                            client, bx_sid, datatype_root_obj.id)
 
-                    # GENERAL / STUDY or PROTECTED / STUDY
-                    output_base = subject.protected_folder \
-                        if protect else subject.general_folder
+                else:
+                    subject_obj = get_box_object_based_on_name(
+                            client, bx_sid, bx_base_obj.id)
 
-                    encrypt = product.get('encrypt', False)
-                    key = enc_key if encrypt else None
+                    if subject_obj == None:
+                        logger.debug(f'{bx_sid} is not found under '
+                                     f'{bx_base_obj}')
+                        continue
 
-                    processed = product.get('processed', False)
+                    datatype_obj = get_box_object_based_on_name(
+                            client, product['data_dir'], subject_obj.id)
 
-                    # For DPACC, get processed from the config.yml
-                    output_dir = tree.get(
-                            datatype,
-                            output_base,
-                            processed=processed,
-                            BIDS=Lochness['BIDS'])
+                # full path
+                bx_head = join(bx_base,
+                               product['data_dir'],
+                               bx_sid)
 
-                    # keep the source subdirectory structure in PHOENIX
-                    subdir = root.split(bx_head)[1][1:]
-                    output_dir_full = output_dir / subdir
+                logger.debug('walking %s', bx_head)
 
-                    compress = product.get('compress', False)
+                # if the directory is empty
+                if datatype_obj == None:
+                    logger.debug(f'data directory is empty {datatype_obj}')
+                    continue
 
-                    save(box_file_object,
-                         (root, box_file_object.name),
-                         output_dir_full, key=key,
-                         compress=compress, delete=False,
-                         dry=False)
+                # walk through the root directory
+                for root, dirs, files in walk_from_folder_object(
+                        bx_head, datatype_obj):
+                    for box_file_object in files:
+                        logger.info(f'Found a file matching the pattern: '
+                                    f'{box_file_object}')
+                        bx_tail = join(basename(root), box_file_object.name)
+                        product = _find_product(bx_tail,
+                                                product,
+                                                subject=bx_sid)
+
+                        if not product:
+                            continue
+
+                        protect = product.get('protect', True)
+
+                        # GENERAL / STUDY or PROTECTED / STUDY
+                        output_base = subject.protected_folder \
+                            if protect else subject.general_folder
+
+                        encrypt = product.get('encrypt', False)
+                        key = enc_key if encrypt else None
+
+                        processed = product.get('processed', False)
+
+                        # For DPACC, get processed from the config.yml
+                        output_dir = tree.get(
+                                datatype,
+                                output_base,
+                                processed=processed,
+                                BIDS=Lochness['BIDS'])
+
+                        if 'out_dir' in product:
+                            output_dir = output_dir / product['out_dir']
+
+                        # keep the source subdirectory structure in PHOENIX
+                        subdir = root.split(bx_head)[1][1:]
+                        output_dir_full = output_dir / subdir
+
+                        compress = product.get('compress', False)
+
+                        save(box_file_object,
+                             (root, box_file_object.name),
+                             output_dir_full, key=key,
+                             compress=compress, delete=False,
+                             dry=False)
 
 
-def _find_product(s, products, **kwargs):
-    for product in products:
-        pattern = product['pattern'].safe_substitute(**kwargs)
-        pattern = re.sub(r'\*', '.*', pattern)
+def _find_product(s, product, **kwargs):
+    # for product in products:
+    pattern = product['pattern'].safe_substitute(**kwargs)
+    pattern = re.sub(r'\*', '.*', pattern)
 
-        if re.match(pattern, s, re.IGNORECASE):
-            return product
+    if re.match(pattern, s, re.IGNORECASE):
+        return product
 
     return None
 

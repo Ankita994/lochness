@@ -1,7 +1,6 @@
-__title__ = 'lochness'
+__title__ = 'Lochness'
 __description__ = 'Data aggregator'
-__url__ = 'https://github.com/harvard-nrg/lochness'
-__version__ = '0.15a0'
-__author__ = 'Neuroinformatics Research Group'
-__author_email__ = 'info@neuroinfo.org'
-
+__url__ = 'https://github.com/AMP-SCZ/lochness'
+__version__ = 'v0.1.2'
+__author__ = 'DPACC'
+__author_email__ = 'kevincho@bwh.harvard.edu'

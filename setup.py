@@ -1,27 +1,11 @@
+from distutils.core import setup
+import setuptools
 import os
-from setuptools import setup, find_packages
+
+with open("README.md", "r") as fh:
+    long_description = fh.read()
 
 here = os.path.abspath(os.path.dirname(__file__))
-
-requires = [
-    'dropbox',
-    'boxsdk',
-    'LAMP-core',
-    'paramiko',
-    'pyyaml',
-    'mano',
-    'yaxil',
-    'six',
-    'pytz',
-    'pandas',
-    'jsonpath_ng',
-    'dpanonymize@git+https://github.com/AMP-SCZ/dpanonymize.git'
-]
-
-test_requirements = [
-    'pytest',
-    'vcrpy'
-]
 
 about = dict()
 with open(os.path.join(here, 'lochness', '__version__.py'), 'r') as f:
@@ -34,17 +18,34 @@ setup(
     author=about['__author__'],
     author_email=about['__author_email__'],
     url=about['__url__'],
-    packages=find_packages(),
-    package_data={
-        '': ['*.yaml', '*.html']
-    },
-    scripts=[
-        'scripts/sync.py',
-        'scripts/phoenix_generator.py',
-        'scripts/listen_to_redcap.py',
-        'scripts/lochness_check_config.py',
-        'scripts/lochness_create_template.py',
+    long_description=long_description,
+    long_description_content_type="text/markdown",
+    download_url='https://github.com/AMP-SCZ/lochness/archive/refs/tags/'
+                 '{}.zip'.format(about['__version__']),
+    keywords=['data', 'dataflow', 'download', 'datalake', 'U24'],
+    packages=setuptools.find_packages(),
+    classifiers=[
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: MIT License",
     ],
-    install_requires=requires,
-    tests_require=test_requirements
+    python_requires='>=3.7',
+    install_requires=['yaxil>=0.5.2',
+                      'paramiko>=2.7.2',
+                      'boxsdk>=2.11.0',
+                      'jsonpath_ng>=1.5.2',
+                      'cryptease>=0.2.0',
+                      'pytz>=2021.1',
+                      'requests>=2.26.0',
+                      'six>=1.16.0',
+                      'pandas>=1.3.2',
+                      'pytest>=6.2.4',
+                      'numpy>=1.20.3',
+                      'mano>=0.5.1',
+                      'LAMP>=0.0.1',
+                      'PyYAML>=6.0'],
+    scripts=['scripts/listen_to_redcap.py',
+             'scripts/lochness_create_template.py',
+             'scripts/phoenix_generator.py',
+             'scripts/lochness_check_config.py',
+             'scripts/sync.py']
 )
