@@ -301,7 +301,6 @@ stdout: {args.outdir}/lochness.stdout
 poll_interval: {args.poll_interval}
 ssh_user: {args.ssh_user}
 ssh_host: {args.ssh_host}
-sender: {args.email}
 mindlamp_days_to_pull: 100
 pii_table: {args.pii_csv}
 lochness_sync_history_csv: {args.lochness_sync_history_csv}
@@ -409,7 +408,6 @@ admins:
     - {args.email}
 
 sender: {args.email}
-
 notify:
     __global__:
         - {args.email}
