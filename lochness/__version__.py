@@ -1,6 +1,6 @@
-__title__ = 'Lochness'
+__title__ = 'ampscz-lochness'
 __description__ = 'Data aggregator'
 __url__ = 'https://github.com/AMP-SCZ/lochness'
-__version__ = 'v0.1.3'
+__version__ = 'v0.1.4'
 __author__ = 'DPACC'
 __author_email__ = 'kevincho@bwh.harvard.edu'
