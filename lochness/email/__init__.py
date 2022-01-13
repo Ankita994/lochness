@@ -98,7 +98,7 @@ def send_detail_google(Lochness,
     s.quit()
 
 
-def send_out_daily_updates(Lochness, test: bool = False):
+def send_out_daily_updates(Lochness, days: int = 1, test: bool = False):
     '''Send daily updates from Lochness'''
 
     s3_log = Path(Lochness['phoenix_root']) / 's3_log.csv'
@@ -106,29 +106,33 @@ def send_out_daily_updates(Lochness, test: bool = False):
         s3_df = pd.read_csv(s3_log)
         s3_df['timestamp'] = pd.to_datetime(s3_df['timestamp'])
 
-        s3_df_today = s3_df[s3_df['timestamp'] > pd.Timestamp(datetime.now(tz).date())]
+        # get the timestamp to check the dataflow from
+        date_to_check_from = datetime.now(tz).date() - timedelta(days)
+        timestamp_to_check_from = pd.Timestamp(date_to_check_from)
 
-        s3_df_today = s3_df_today.fillna('_')
+        s3_df_selected = s3_df[s3_df['timestamp'] > timestamp_to_check_from]
 
-        s3_df_today = s3_df_today[~s3_df_today.filename.str.contains(
+        s3_df_selected = s3_df_selected.fillna('_')
+
+        s3_df_selected = s3_df_selected[~s3_df_selected.filename.str.contains(
             'metadata.csv')][['timestamp', 'filename', 'protected', 'study',
                               'processed', 'subject', 'datatypes']]
 
-        s3_df_today['date'] = s3_df_today['timestamp'].apply(
+        s3_df_selected['date'] = s3_df_selected['timestamp'].apply(
                 lambda x: x.date())
-        count_df = s3_df_today.groupby(['date', 'protected', 'study',
+        count_df = s3_df_selected.groupby(['date', 'protected', 'study',
                 'processed', 'subject', 'datatypes']).count()[['filename']]
         count_df.columns = ['file count']
         count_df = count_df.reset_index()
-        s3_df_today.drop('date', axis=1, inplace=True)
+        s3_df_selected.drop('date', axis=1, inplace=True)
 
     else:
-        s3_df_today = pd.DataFrame()
+        s3_df_selected = pd.DataFrame()
         count_df = pd.DataFrame()
 
     list_of_lines_from_tree = ['']
 
-    if len(s3_df_today) == 0:
+    if len(s3_df_selected) == 0:
         send_detail_google(
             Lochness,
             'Lochness', f'Daily updates {datetime.now(tz).date()}',
@@ -140,7 +144,7 @@ def send_out_daily_updates(Lochness, test: bool = False):
             Lochness,
             'Lochness', f'Daily updates {datetime.now(tz).date()}',
             'Summary of files sent to NDA today' + count_df.to_html(),
-            'Each file in detail' + s3_df_today.to_html(),
+            'Each file in detail' + s3_df_selected.to_html(),
             list_of_lines_from_tree,
             test)
 

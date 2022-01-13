@@ -12,9 +12,12 @@ def parse_args(argv):
     parser = ap.ArgumentParser(description='PHOENIX data syncer')
     parser.add_argument('-c', '--config', required=True,
                         help='Configuration file')
-    parser.add_argument('-l', '--log_file', help='Log file')
+    parser.add_argument('-d', '--days', type=int,
+                        help='Number of days to summarize dataflow')
     parser.add_argument('-rd', '--recreate_db', action='store_true',
-                        help='Log file')
+                        help='Recreate s3_log database based on the log file')
+    parser.add_argument('-l', '--log_file', help='Log file, only used when '
+                        '--recreate_db option is used')
 
     args = parser.parse_args(argv)
     return args
@@ -35,6 +38,7 @@ if __name__ == '__main__':
             sys.exit('No log_file')
         else:
             create_s3_transfer_table(Lochness, True)
+    else:
+        create_s3_transfer_table(Lochness)
 
-    create_s3_transfer_table(Lochness)
-    send_out_daily_updates(Lochness)
+    send_out_daily_updates(Lochness, args.days)
