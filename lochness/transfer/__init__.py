@@ -384,7 +384,8 @@ def create_s3_transfer_table(Lochness, rewrite=False) -> None:
                     pass
 
     if len(df) == 0:
-        print('No new data')
+        print('No new data has been transferred to s3 bucket since last'
+              's3 sync according to the s3_log database')
         return
 
     # register datatypes, study and subject

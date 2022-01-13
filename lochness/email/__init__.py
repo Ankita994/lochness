@@ -132,18 +132,21 @@ def send_out_daily_updates(Lochness, days: int = 1, test: bool = False):
 
     list_of_lines_from_tree = ['']
 
+    day_days = 'days' if days > 1 else 'day'
+
     if len(s3_df_selected) == 0:
         send_detail_google(
             Lochness,
             'Lochness', f'Daily updates {datetime.now(tz).date()}',
-            'There is no update today!', '',
+            'There is no update!', '',
             list_of_lines_from_tree,
             test)
     else:
         send_detail_google(
             Lochness,
-            'Lochness', f'Daily updates {datetime.now(tz).date()}',
-            'Summary of files sent to NDA today' + count_df.to_html(),
+            'Lochness', f'Daily updates {datetime.now(tz).date()} '
+                        f'(for the past {days} {day_days})',
+            'Summary of files sent to NDA' + count_df.to_html(),
             'Each file in detail' + s3_df_selected.to_html(),
             list_of_lines_from_tree,
             test)
