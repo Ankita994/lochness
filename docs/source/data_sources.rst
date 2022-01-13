@@ -1,57 +1,9 @@
 Data sources
 ============
 Lochness supports pulling data from a number of data sources. This page will 
-show you how to configure these data sources both in the `keyring <quick_start.html#setup>`_ 
-and in the PHOENIX `metadata files <phoenix.html#metadata-files>`_.
+show you how to configure these data sources both in the source, keyring, 
+and configuration file. 
 
-Beiwe
------
-For each Beiwe instance you will be pulling data from, add a new connection 
-details section to the root of your ``keyring``. This name of this section 
-can be whatever you like as long as it is valid JSON. Under your new section, 
-you must add the ``URL``, ``ACCESS_KEY``, and ``SECRET_KEY`` fields ::
-
-    {
-      "beiwe.example": {
-        "URL": "https://beiwe.example.org",
-        "ACCESS_KEY": "...",
-        "SECRET_KEY": "..."
-      }
-    }
-
-metadata file entry
-~~~~~~~~~~~~~~~~~~~
-A valid metadata file entry for ``Beiwe`` should look as follows ::
-
-    Active,...,Beiwe,...
-    1,...,beiwe.example:STUDY:SUBJECT,...
-
-The ``beiwe.example`` should be a valid ``keyring`` section name, ``STUDY`` 
-should be the first few characters from the 24-character Study ID, and 
-``SUBJECT`` should be a valid Beiwe subject.
-
-.. attention::
-   The ``STUDY`` component of the Beiwe metadata file entry should be the 
-   Study ID, **not** the Study Name. You do not need to enter all 24 
-   characters of the Study ID either. You only need enough characters 
-   (e.g., the first 5 or so) to make it uniquely identifiable.
-
-
-backfilling
-~~~~~~~~~~~
-There is always the chance that you're deploying Lochness well after you've 
-started capturing data with Beiwe. Lochness will not attempt to download 
-*all* of your data in one enormous payload. That could be on the order of 
-many gigabytes and you will likely run into issues. Instead, Lochness will 
-request your data in day or week-sized chunks from some starting point up to 
-the current date. This process is called *backfilling*.
-
-While Lochness will politely download your data in these digestible chunks, 
-one detail it cannot easily predict is what date to start the backfill. The 
-user is expected to set this using the ``backfill_start`` field within the 
-Lochness configuration file. Please refer to the 
-configuration file `backfill_start documentation <configuration_file.html#backfill-start>`_ 
-for more details.
 
 REDCap
 ------

@@ -69,6 +69,7 @@ Contents
    running_lochness
    phoenix_bids_example
    sync_in_detail
+   other_shell_functions
    configuration_file
    data_sources
    ..phoenix
