@@ -54,5 +54,13 @@ Your s3 bucket should be available from your shell environment ::
     $ aws s3 ls YourBucketName
 
 
+Google account
+--------------
+
+In order to use the email update functionalities, a google account is required.
+You will need to set the "Less secure app access" under the "Account settings"
+to "ON". You do not need an google account if you don't need the email
+functions.
+
 
 Installation complete!

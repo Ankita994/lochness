@@ -129,6 +129,7 @@ with ``*****`` ::
           "PronetLA": "LOCHNESS_SECRETS",
           ...,
         }
+        email_sender_pw: "*****"
       },
       "redcap.UPENN": {
         "URL": "*****",
@@ -188,6 +189,7 @@ Example of completed ``lochness.json`` ::
           "PronetLA": "LOCHNESS_SECRETS",
           ...,
         }
+        email_sender_pw: "aaoiweytyEfhag189e7"
       },
       "redcap.UPENN": {
         "URL": "https://redcap.med.upenn.edu",
@@ -363,6 +365,23 @@ Then, configure box part as below ::
                          out_dir: transcripts
                          pattern: '*.*'
 
+
+
+Email function
+~~~~~~~~~~~~~~
+
+Update ``sender`` and ``notify`` fields. ``sender`` should be the google email
+configured for sending emails with its relevant credentials in the keyring
+file. List of emails, to which lochness should send the email should be added
+under ``__global__`` field with ``-`` marking each email. ::
+
+
+    sender: kevincho.lochness@gmail.com
+    notify:
+        __global__:
+            - kevincho@bwh.harvard.edu
+            - another.person.to.receive.email.1@u24.com
+            - another.person.to.receive.email.2@u24.com
 
 
 Now, your Lochness configuration is complete and ready to run!

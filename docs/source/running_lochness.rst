@@ -17,7 +17,9 @@ Execute ``sync.py`` script to have lochness sync data
                   PronetSH PronetSL \
         --source redcap upenn box xnat mindlamp \
         --lochness_sync_send --s3 \
-        --debug --continuous
+        --log-file /data/pronet/data_sync_pronet/log.txt \
+        --daily_summary \
+        --debug --continuous 
 
 
 **For Prescient network** ::
@@ -31,6 +33,8 @@ Execute ``sync.py`` script to have lochness sync data
                   PronetSH PronetSL \
         --source rpms upenn mediaflux mindlamp \
         --lochness_sync_send --s3 \
+        --log-file /data/prescient/data_sync_prescient/log.txt \
+        --daily_summary \
         --debug --continuous
 
 
