@@ -5,15 +5,17 @@ Installation
 AMP-SCZ Lochness
 ----------------
 
-Install ``AMP-SCZ Lochness`` using ``pip`` ::
+Install ``AMP-SCZ Lochness`` and ``AMP-SCZ`` Yaxil using ``pip`` ::
 
     $ pip install ampscz-lochness
+    $ pip install --upgrade git+https://github.com/AMP-SCZ/yaxil
 
 .. note ::
    For the most recent AMP-SCZ lochness verion for debugging,  it might be
    better off to pull most recent commits directly from github ::
 
       $ git clone https://github.com/AMP-SCZ/lochness
+      $ pip install --upgrade git+https://github.com/AMP-SCZ/yaxil
       $ echo "export PATH=${PATH}:lochness/scripts" >> ~/.bashrc
       $ source ~/.bashrc
 
