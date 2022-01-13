@@ -107,7 +107,7 @@ def send_out_daily_updates(Lochness, days: int = 1, test: bool = False):
         s3_df['timestamp'] = pd.to_datetime(s3_df['timestamp'])
 
         # get the timestamp to check the dataflow from
-        date_to_check_from = datetime.now(tz).date() - timedelta(days)
+        date_to_check_from = datetime.now(tz).date() - timedelta(days=days)
         timestamp_to_check_from = pd.Timestamp(date_to_check_from)
 
         s3_df_selected = s3_df[s3_df['timestamp'] > timestamp_to_check_from]

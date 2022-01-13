@@ -12,7 +12,7 @@ def parse_args(argv):
     parser = ap.ArgumentParser(description='PHOENIX data syncer')
     parser.add_argument('-c', '--config', required=True,
                         help='Configuration file')
-    parser.add_argument('-d', '--days', type=int,
+    parser.add_argument('-d', '--days', type=int, default=1,
                         help='Number of days to summarize dataflow')
     parser.add_argument('-rd', '--recreate_db', action='store_true',
                         help='Recreate s3_log database based on the log file')
