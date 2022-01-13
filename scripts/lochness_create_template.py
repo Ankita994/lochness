@@ -114,7 +114,10 @@ def write_commands_needed(args: 'argparse',
                        --studies {' '.join(args.studies)} \
                        --source {' '.join(args.sources)} \
                        --lochness_sync_send --s3 \
-                       --debug --continuous\n"
+                       --debug --continuous \
+                       --log-file {args.outdir}/log.txt \
+                       --daily_summary
+                       \n"
             elif args.rsync:
                 command = f"sync.py -c {config_loc} \
                         --studies {' '.join(args.studies)} \

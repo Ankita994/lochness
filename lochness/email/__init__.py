@@ -4,12 +4,14 @@ import string
 import smtplib
 from email.mime.text import MIMEText
 from jinja2 import Environment, FileSystemLoader
-from datetime import date
+from datetime import datetime, date, timedelta
 from typing import List
 import getpass
 import socket
 import subprocess
 import pandas as pd
+from pytz import timezone
+tz = timezone('EST')
 
 __dir__ = os.path.dirname(__file__)
 
@@ -79,9 +81,9 @@ def send_detail_google(Lochness,
                                username=getpass.getuser())
 
     msg = MIMEText(html_str, 'html')
-    msg['Subject'] = f'Lochness update {date.today()}'
+    msg['Subject'] = f'Lochness update {datetime.now(tz).date()}'
     msg['From'] = sender
-    msg['To'] = ', '.join(recipients)
+    msg['To'] = recipients[0]
     s = smtplib.SMTP('smtp.gmail.com', 587)
     s.ehlo()
     s.starttls()
@@ -89,6 +91,7 @@ def send_detail_google(Lochness,
     s.login(sender, sender_pw)
     if not test:
         s.sendmail(sender, recipients, msg.as_string())
+        print('Email sent')
     else:
         print(html_str)
 
@@ -102,17 +105,22 @@ def send_out_daily_updates(Lochness, test: bool = False):
     if s3_log.is_file():
         s3_df = pd.read_csv(s3_log)
         s3_df['timestamp'] = pd.to_datetime(s3_df['timestamp'])
-        s3_df_today = s3_df[s3_df['timestamp'] > pd.Timestamp(date.today())]
+
+        s3_df_today = s3_df[s3_df['timestamp'] > pd.Timestamp(datetime.now(tz).date())]
+
+        s3_df_today = s3_df_today.fillna('_')
 
         s3_df_today = s3_df_today[~s3_df_today.filename.str.contains(
             'metadata.csv')][['timestamp', 'filename', 'protected', 'study',
                               'processed', 'subject', 'datatypes']]
 
-        count_df = s3_df_today.groupby(['protected', 'study', 'processed',
-                                        'subject', 'datatypes']).count()[
-                                                ['filename']]
+        s3_df_today['date'] = s3_df_today['timestamp'].apply(
+                lambda x: x.date())
+        count_df = s3_df_today.groupby(['date', 'protected', 'study',
+                'processed', 'subject', 'datatypes']).count()[['filename']]
         count_df.columns = ['file count']
         count_df = count_df.reset_index()
+        s3_df_today.drop('date', axis=1, inplace=True)
 
     else:
         s3_df_today = pd.DataFrame()
@@ -120,17 +128,17 @@ def send_out_daily_updates(Lochness, test: bool = False):
 
     list_of_lines_from_tree = ['']
 
-    if len(count_df) == 0:
+    if len(s3_df_today) == 0:
         send_detail_google(
             Lochness,
-            'Lochness', f'Daily updates {date.today}',
+            'Lochness', f'Daily updates {datetime.now(tz).date()}',
             'There is no update today!', '',
             list_of_lines_from_tree,
             test)
     else:
         send_detail_google(
             Lochness,
-            'Lochness', f'Daily updates {date.today}',
+            'Lochness', f'Daily updates {datetime.now(tz).date()}',
             'Summary of files sent to NDA today' + count_df.to_html(),
             'Each file in detail' + s3_df_today.to_html(),
             list_of_lines_from_tree,

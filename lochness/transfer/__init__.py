@@ -317,8 +317,12 @@ def lochness_to_lochness_transfer_s3(Lochness, general_only: bool = True):
     logger.debug('aws rsync completed')
 
 
-def create_s3_transfer_table(Lochness) -> None:
+def create_s3_transfer_table(Lochness, rewrite=False) -> None:
     '''Extract s3 transfer information from the lochness log file
+
+    Key arguments:
+        Lochness: lochness object
+        rewrite: rewrite s3_log.csv if True, bool
 
     Uses timestamp in the Lochness logfile to saves a s3_log.csv file under
     PHOENIX root. This csv file has columns such as
@@ -339,12 +343,16 @@ def create_s3_transfer_table(Lochness) -> None:
     log_file = Lochness['log_file']
     out_file = Path(Lochness['phoenix_root']) / 's3_log.csv'
 
-    if Path(out_file).is_file():
-        df_prev = pd.read_csv(out_file, index_col=0)
-        max_ts_prev_df = pd.to_datetime(df_prev['timestamp']).max()
-    else:
+    if rewrite:
         df_prev = pd.DataFrame()
         max_ts_prev_df = pd.to_datetime('2000-01-01')
+    else:
+        if Path(out_file).is_file():
+            df_prev = pd.read_csv(out_file, index_col=0)
+            max_ts_prev_df = pd.to_datetime(df_prev['timestamp']).max()
+        else:
+            df_prev = pd.DataFrame()
+            max_ts_prev_df = pd.to_datetime('2000-01-01')
 
     df = pd.DataFrame()
     with open(log_file, 'r') as fp:
@@ -360,6 +368,10 @@ def create_s3_transfer_table(Lochness) -> None:
 
                 try:
                     source = re.search(r'upload: (\S+)', line).group(1)
+                     # do not save metadata.csv update since it
+                     # gets updated every pull
+                    if 'metadata.csv' in source:
+                        continue
                     target = re.search(r'upload: (\S+) to (\S+)',
                                        line).group(2)
 
@@ -384,6 +396,12 @@ def create_s3_transfer_table(Lochness) -> None:
                                        if len(x.parts) > 4 else '')
     df['datatypes'] = df['source'].apply(lambda x: x.parts[5]
                                          if len(x.parts) > 5 else '')
+
+    # add ctime
+    df['ctime'] = df['source'].apply(lambda x: \
+            datetime.fromtimestamp(
+                os.path.getctime(Path(Lochness['phoenix_root']).parent / x)))
+    df['ctime'] = pd.to_datetime(df['ctime'])
 
     # clean up rows for metadata.csv
     df.loc[df[df['processed'].str.contains('metadata.csv')].index,

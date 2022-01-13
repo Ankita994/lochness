@@ -428,11 +428,11 @@ def redcap_projects(Lochness, phoenix_study, redcap_instance):
     # part 2 - check for study under 'REDCAP' field
     if phoenix_study not in Keyring['lochness']['REDCAP']:
         raise KeyringError(f'lochness > REDCAP > {phoenix_study}'
-                     'not found in keyring')
+                           'not found in keyring')
 
     if redcap_instance not in Keyring['lochness']['REDCAP'][phoenix_study]:
         raise KeyringError(f'lochness > REDCAP > {phoenix_study} '
-                     f'> {redcap_instance} not found in keyring')
+                           f'> {redcap_instance} not found in keyring')
 
     # part 3 - checking for redcap_instance
     if redcap_instance not in Keyring:
