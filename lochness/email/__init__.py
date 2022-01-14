@@ -33,6 +33,7 @@ def send(recipients, sender, subject, message):
 def send_detail_google(Lochness,
                        title: str, subtitle: str, first_message: str,
                        second_message: str, code: List[str],
+                       in_mail_footer: str,
                        test: bool = False) -> None:
     '''Send email using gmail account which has it's "Less secure app" allowed
 
@@ -76,6 +77,7 @@ def send_detail_google(Lochness,
                                first_message=first_message,
                                second_message=second_message,
                                code=code,
+                               in_mail_footer=in_mail_footer,
                                footer=footer,
                                server=socket.gethostname(),
                                username=getpass.getuser())
@@ -105,9 +107,11 @@ def send_out_daily_updates(Lochness, days: int = 1, test: bool = False):
     if s3_log.is_file():
         s3_df = pd.read_csv(s3_log)
         s3_df['timestamp'] = pd.to_datetime(s3_df['timestamp'])
+        s3_df['ctime'] = pd.to_datetime(s3_df['ctime']).apply(
+                lambda x: x.replace(microsecond=0))
 
         # get the timestamp to check the dataflow from
-        date_to_check_from = datetime.now(tz).date() - timedelta(days=days)
+        date_to_check_from = datetime.now(tz).date() - timedelta(days=days-1)
         timestamp_to_check_from = pd.Timestamp(date_to_check_from)
 
         s3_df_selected = s3_df[s3_df['timestamp'] > timestamp_to_check_from]
@@ -116,7 +120,7 @@ def send_out_daily_updates(Lochness, days: int = 1, test: bool = False):
 
         s3_df_selected = s3_df_selected[~s3_df_selected.filename.str.contains(
             'metadata.csv')][['timestamp', 'filename', 'protected', 'study',
-                              'processed', 'subject', 'datatypes']]
+                              'processed', 'subject', 'datatypes', 'ctime']]
 
         s3_df_selected['date'] = s3_df_selected['timestamp'].apply(
                 lambda x: x.date())
@@ -140,8 +144,15 @@ def send_out_daily_updates(Lochness, days: int = 1, test: bool = False):
             'Lochness', f'Daily updates {datetime.now(tz).date()}',
             'There is no update!', '',
             list_of_lines_from_tree,
+            '',
             test)
     else:
+        s3_df_selected.columns = ['Transfer time (UTC)', 'File name',
+                'Protected', 'Study', 'Processed', 'Subject',
+                'Datatype', 'Download time (UTC)']
+        s3_df_selected.reset_index().drop('index', axis=1, inplace=True)
+        in_mail_footer = 'Note that only S3 transferred files are included.'
+
         send_detail_google(
             Lochness,
             'Lochness', f'Daily updates {datetime.now(tz).date()} '
@@ -149,6 +160,7 @@ def send_out_daily_updates(Lochness, days: int = 1, test: bool = False):
             'Summary of files sent to NDA' + count_df.to_html(),
             'Each file in detail' + s3_df_selected.to_html(),
             list_of_lines_from_tree,
+            in_mail_footer,
             test)
 
 
