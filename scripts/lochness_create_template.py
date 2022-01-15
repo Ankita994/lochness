@@ -347,15 +347,15 @@ AWS_BUCKET_ROOT: TEST_PHOENIX_ROOT_PRONET'''
             actigraphy:
                 - vendor: Insights
                   product: GENEActivQC
-                  data_dir: Actigraphy
+                  data_dir: {study}_Actigraphy
                   pattern: '*'
             eeg:
                    - product: eeg
-                     data_dir: EEG
+                     data_dir: {study}_EEG
                      pattern: '*'
             mri:
                    - product: mri
-                     data_dir: MRI
+                     data_dir: {study}_MRI
                      pattern: '*'
             interviews:
                    - product: open
