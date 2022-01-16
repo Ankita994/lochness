@@ -4,88 +4,47 @@ Lochness supports pulling data from a number of data sources. This page will
 show you how to configure these data sources both in the source, keyring, 
 and configuration file. 
 
+As a reminder, to have AMPSCZ-Lochness download any data from given sources,
+it requires either REDCap or RPMS linked to Lochness. Lochness loads list of
+unique IDs from the chosen database, as well as the corresponding mindlamp IDs
+for each subject.
+
+AMP-SCZ subject ID follow the pattern of ``XX00000``, where
+
+* The first two capital letters represent unique site.
+* The five unique digits for each subject.
+
 
 REDCap
 ------
-To have Lochness download data from REDCap, you need a few things.
 
-redcap keyring section
-~~~~~~~~~~~~~~~~~~~~~~
-First you need to create a section at the root of your ``keyring`` for your 
-REDCap connection details. You can name this section whatever you like as 
-long as it is valid JSON. Within this section you'll need to add a ``URL`` 
-field and a subsection named ``API_TOKEN`` where you will store all of your 
-REDCap Project API tokens ::
+REDCap project settings
+~~~~~~~~~~~~~~~~~~~~~~~
+On the REDCap project, the following fields are required.
 
-    {
-      "redcap.demo": {
-        "URL": "https://redcap.demo.org",
-          "API_TOKEN": {
-            "Project 1": "...",
-            "Project 2": "..."
-          }
-      }
-    }
+- ID
+- Date of consent
+- Mediaflux ID
 
-.. note::
-   To generate a REDCap Project API Token, use the ``API`` section under your
-   REDCap Project Settings page. You must generate an API Token for each 
-   project.
+You need to have the exact the name of each field, which you can find out by
+clinking 'H' button next to the field on the dictionary view page.
 
-lochness keyring subsection
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Within the ``keyring`` file, add a ``REDCAP`` subsection to the primary 
-``lochness`` section ::
+.. image:: images/redcap_field_name.png
+   :width: 600
 
-    {
-      "lochness": {
-        "REDCAP": {
-        }
-    }
 
-Within this new ``REDCAP`` section, add a subsection for each PHOENIX 
-study name. In the following example, we'll assume the study name is 
-``StudyA`` ::
+Also, REDCap data entry trigger should be enabled to send a POST signal to the
+same server hosting AMP-SCZ Lochness. This server should have a open port
+available to listen to the POST signal from REDCap. Tick the box under 
+"Project Setup" >> "Additional customizations" >> "Data Entry Trigger" and give
+it a address:port to the "URL of website" ::
 
-    {
-      "lochness": {
-        "REDCAP": {
-          "StudyA": {
-          }
-        }
-      }
-    }
+    https://<IP address of the data aggregate server>:9999
 
-Within the new ``StudyA`` section, create yet another section with the 
-name of your REDCap keyring section (e.g., ``redcap.example``) followed 
-by a list of REDCap projects you want Lochness to search and pull data 
-from ::
 
-    {
-      "lochness": {
-        "REDCAP": {
-          "StudyA": {
-            "redcap.example": [
-              "Project 1",
-              "Project 2"
-            ]
-          }
-        }
-      }
-    }
 
-metadata file entry
-~~~~~~~~~~~~~~~~~~~
-A valid metadata file entry should look as follows ::
-
-    Active,...,REDCap,...
-    1,...,redcap.example:SUBJECT,...
-
-Where ``redcap.example`` would be a valid ``keyring`` section and ``SUBJECT`` 
-would be a valid REDCap subject.
-
-de-identification
-~~~~~~~~~~~~~~~~~
+REDCap De-identification
+~~~~~~~~~~~~~~~~~~~~~~~~
 For each PHOENIX study, you may add an entry to the Lochness configuration 
 file indicating that data from REDCap should be *de-identified* before being
 saved to the filesystem. Please refer to the 
@@ -93,9 +52,69 @@ saved to the filesystem. Please refer to the
 for more details.
 
 
+REDCap keyring settings
+~~~~~~~~~~~~~~~~~~~~~~~
+First you need to create a section at the root of your ``keyring`` for your 
+REDCap connection details. You can name this section whatever you like as 
+long as it is valid JSON. Within this section you'll need to add a ``URL`` 
+field and a subsection named ``API_TOKEN`` where you will store all of your 
+REDCap Project API tokens. There are two parts required for the REDCap.
+
+
+Part 1 at the top will link each site to ``redcap.Pronet`` credentials ::
+
+    {"lochness" : 
+        {"REDCAP": 
+            {"PronetXX": {"redcap.Pronet": [ "Pronet" ]},
+             "PronetAA": {"redcap.Pronet": [ "Pronet" ]}}
+         }
+     }
+
+
+Part 2 will have the actual credentials of the ``redcap.Pronet`` REDCap
+project ::
+
+    {"redcap.Pronet": 
+        {"URL": "https://redcapynh-p11.ynhh.org",
+         "API_TOKEN": {"Pronet": "EAXBWERAAWETYZXCGOAWERY"}}
+    }
+
+
+.. note::
+   To generate a REDCap Project API Token, use the ``API`` section under your
+   REDCap Project Settings page.
+
+
+
+REDCap settings in the configuration file
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+::
+
+    pii_table: {args.pii_csv}
+    lochness_sync_history_csv: {args.lochness_sync_history_csv}
+    redcap_id_colname: chric_record_id
+    redcap_consent_colname: chric_consent_date
+
+    redcap:
+        PronetXX:
+            deidentify: True
+            data_entry_trigger_csv: {args.det_csv}
+            update_metadata: True
+        PronetAA:
+            deidentify: True
+            data_entry_trigger_csv: {args.det_csv}
+            update_metadata: True
+
+
+Location of table to be used in deidentifying redcap fields
+Lochness sync history database csv path
+Redcap data entry trigger database csv path
+
+
 
 RPMS
---------
+----
 To have Lochness download data automatically from RPMS, you need a few
 things.
 
@@ -118,17 +137,6 @@ Within your new section, you must add your RPMS RPMS_PATH ::
         "RPMS_PATH": "..."
         }
     }
-
-metadata file entry
-~~~~~~~~~~~~~~~~~~~
-A valid metadata file entry should look as follows ::
-
-    Active,...,RPMS,...
-    1,...,rpms.xxxxx:SUBJECT,...
-
-Where ``rpms.xxxxx`` would be a valid ``keyring`` section and ``SUBJECT`` 
-would be a valid Subject raw in RPMS measures. This folder name does not 
-necessarily have to match the PHOENIX subject.
 
 
 
@@ -161,54 +169,6 @@ be a valid XNAT project, and ``SUBJECT`` would be a valid XNAT Subject.
    The ``SUBJECT`` component of this metadata entry should be a valid XNAT 
    Subject, not just a MR Session. All MR Sessions for that XNAT Subject 
    will be downloaded. 
-
-Dropbox
--------
-To have Lochness download data automatically from Dropbox, you need a few
-things.
-
-create access token
-~~~~~~~~~~~~~~~~~~~
-First, you need to create an Access Token using the
-`Dropbox App Console <dropbox.com/developers/apps>`_. The token should be a
-64-character alphanumeric string.
-
-create keyring section
-~~~~~~~~~~~~~~~~~~~~~~
-Next, you need to create a new ``keyring`` section for your Dropbox instance. 
-This section must be named ``dropbox.xxxxx`` where ``xxxxx`` can be any 
-string that is both valid JSON *and* valid as a Python module name. Behind the 
-scenes, Lochness will use this string to import a module. Within your new 
-section, you must add your Dropbox Acsess Token to an ``API_TOKEN`` field ::
-
-    {
-      "dropbox.xxxxx": {
-        "API_TOKEN": "..."
-      }
-    }
-
-metadata file entry
-~~~~~~~~~~~~~~~~~~~
-A valid metadata file entry should look as follows ::
-
-    Active,...,Dropbox,...
-    1,...,dropbox.xxxxx:SUBJECT,...
-
-Where ``dropbox.example`` would be a valid ``keyring`` section and ``SUBJECT`` 
-would be a valid Subject folder name in Dropbox. This folder name does not 
-necessarily have to match the PHOENIX subject.
-
-delete on success
-~~~~~~~~~~~~~~~~~
-You can configure Lochness to delete files from Dropbox on successful download. 
-For details, please refer to the 
-`dropbox delete_on_success configuration file documentation <configuration_file.html#delete-on-success>`_
-
-dropbox base
-~~~~~~~~~~~~
-You can configure Lochness to begin searching your Dropbox account starting from 
-a specific subdirectory. For details, please refer to the
-`dropbox base configuration file documentation <configuration_file.html#dropbox-base>`_.
 
 
 Box
@@ -264,6 +224,7 @@ a specific subdirectory. For details, please refer to the
 `box base configuration file documentation <configuration_file.html#box-base>`_.
 
 
+
 Mediaflux
 ---------
 A standalone documentation for the interaction between Mediaflux and lochness is available `here <./mediaflux.md>`_.
@@ -271,6 +232,7 @@ Specifically, you can take a look at `mediaflux#keyring-file <./mediaflux.md#key
 `mediaflux#metadata-file <./mediaflux.md#metadata-file>`_. Learn about login credentials necessary for the keyring file
 from `https://wiki-rcs.unimelb.edu.au/display/RCS/Configuration+File <https://wiki-rcs.unimelb.edu.au/display/RCS/Configuration+File>`_.
 You may authenticate with Mediaflux using your credentials or a secure token as mentioned in the above Wiki.
+
 
 
 Mindlamp
@@ -310,46 +272,3 @@ A valid metadata file entry should look as follows ::
 Where ``mindlamp.xxxxx`` would be a valid ``keyring`` section and ``SUBJECT`` 
 would be a valid Subject folder name in Mindlamp. This folder name does not 
 necessarily have to match the PHOENIX subject.
-
-
-
-DaRIS
---------
-To have Lochness download data automatically from Daris, you need a few
-things.
-
-Get URL, TOKEN and PROJECT_CID
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-First, you need to get URL, TOKEN and PROJECT_CID from the DaRIS.
-
-
-Create keyring section
-~~~~~~~~~~~~~~~~~~~~~~
-Next, you need to create a new ``keyring`` section for your DaRIS instance. 
-This section must be named ``daris.xxxxx`` where ``xxxxx`` can be any 
-string that is both valid JSON *and* match `daris` column values in the
-metadata.csv. 
-Within your new section, you must add your DaRIS URL, TOKEN and
-PROJECT_CID  ::
-
-    {
-      "daris.xxxxx": {
-        "URL": "...",
-        "TOKEN": "...",
-        "PROJECT_CID": "..."
-        }
-    }
-
-metadata file entry
-~~~~~~~~~~~~~~~~~~~
-A valid metadata file entry should look as follows ::
-
-    Active,...,Daris,...
-    1,...,daris.xxxxx:SUBJECT,...
-
-Where ``daris.xxxxx`` would be a valid ``keyring`` section and ``SUBJECT`` 
-would be a valid Subject folder name in Daris. This folder name does not 
-necessarily have to match the PHOENIX subject.
-
-
-
