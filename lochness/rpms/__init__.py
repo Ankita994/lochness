@@ -13,6 +13,7 @@ from typing import List, Dict
 import pandas as pd
 import re
 from lochness.redcap.process_piis import process_and_copy_db
+pd.set_option('mode.chained_assignment', None)
 
 
 yaml.SafeDumper.add_representer(
@@ -227,13 +228,16 @@ def sync(Lochness, subject, dry=False):
         else:
             latest_pull_mtime = 0
 
+        if len(source_df) == 0:  # do not save if the dataframe is empty
+            continue
+
         # if last_modified date > latest_pull_mtime, pull the data
         source_df['LastModifiedDate'] = pd.to_datetime(
                 source_df['LastModifiedDate'])
-        if not source_df['LastModifiedDate'].max() > \
+        if source_df['LastModifiedDate'].max() <= \
                 pd.to_datetime(latest_pull_mtime):
             print('No new updates')
-            break
+            continue
 
         if not dry:
             Path(dirname).mkdir(exist_ok=True)
