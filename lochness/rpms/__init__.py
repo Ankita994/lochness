@@ -234,7 +234,7 @@ def sync(Lochness, subject, dry=False):
         # if last_modified date > latest_pull_mtime, pull the data
         source_df['LastModifiedDate'] = pd.to_datetime(
                 source_df['LastModifiedDate'])
-        if not source_df['LastModifiedDate'].max() > \
+        if source_df['LastModifiedDate'].max() <= \
                 pd.to_datetime(latest_pull_mtime):
             print('No new updates')
             continue
