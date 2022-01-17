@@ -68,7 +68,7 @@ def sync_module(Lochness: 'lochness.config',
                     - vendor: Activinsights
                       product: GENEActiv
                       data_dir: PrescientXX_Actigraphy
-                      pattern: '*.*'
+                      pattern: '*'
                 interviews:
                     - product: open
                       data_dir: PrescientXX_Interviews/OPEN
@@ -142,14 +142,14 @@ def sync_module(Lochness: 'lochness.config',
                             subj_dir = subject.protected_folder \
                                 if protect else subject.general_folder
 
-                            mf_local = str(tree.get(datatype,
-                                                subj_dir,
-                                                processed=processed,
-                                                BIDS=Lochness['BIDS']) / \
-                                                        subpath.parent)
+                            mf_local = tree.get(datatype,
+                                            subj_dir,
+                                            processed=processed,
+                                            BIDS=Lochness['BIDS']) / \
+                                                    subpath.parent
 
-                            mf_local = str(Path(mf_local) / prod['out_dir']) \
-                                    if 'out_dir' in prod else mf_local
+                            mf_local = str(mf_local / prod['out_dir'] \
+                                    if 'out_dir' in prod else mf_local)
 
                             # ENH set different permissions
                             # GENERAL: 0o755, PROTECTED: 0700
