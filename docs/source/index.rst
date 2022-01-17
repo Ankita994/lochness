@@ -22,41 +22,43 @@ maintained by DPACC for AMP-SCZ project.
 
 AMP-SCZ Lochness has a number of extra functions, many of which are specific
 to PRONET and PRESCIENT research networks within the AMP-SCZ. However, extra
-data sources such as `Box <https://box.com/>`_, `Mediaflux
-<https://www.arcitecta.com/mediaflux/features/>`_,
+functions to pull from the additional data sources such as
+`Box <https://box.com/>`_,
+`Mediaflux <https://www.arcitecta.com/mediaflux/features/>`_,
 `RPMS <https://data.orygen.org.au/>`_, and
 `Mindlamp <https://www.digitalpsych.org/lamp.html>`_ could be useful for other
 studies as well.
 
 
-The main difference of the AMP-SCZ Lochness, from the original harvard-nrg 
-Lochness, is that AMP-SCZ requies database of unique subject IDs in one of
-``REDCap`` or ``RPMS`` to make a list of subject IDs to be used with Lochness
-(``metadata.csv``), which will be used in searching for any data to download. 
-So, as long as your projects also have ``REDCap`` or ``RPMS`` linked, AMP-SCZ
-Lochness could also be used for your project!
+The main difference between the AMP-SCZ Lochness verses the original
+harvard-nrg Lochness, is that AMP-SCZ Lochness requies a database of unique
+subject IDs in either ``REDCap`` or ``RPMS``, for lochness to automatically
+create a list of subject IDs to be used with further down mechanisms of 
+Lochness (``metadata.csv``, which will be used in searching for any data to
+download). So, if your project also has either ``REDCap`` or ``RPMS`` as the
+main database for keeping the list of subjects involved in the study, AMP-SCZ
+Lochness could also be useful and linked to your project!
 
-Therefore, required and supported data sources are
 
-    - Required
-        - REDCap or
-        - RPMS
+List of supported data sources are
+    - REDCap or
+    - RPMS
+    - XNAT
+    - Box
+    - Mediaflux
+    - Mindlamp
 
-    - Supported
-        - XNAT
-        - Box
-        - Mediaflux
-        - Mindlamp
 
 .. note ::
 
    Currently, REDCap or RPMS data sources are the requirements for using
    lochness, but future update will allow AMP-SCZ Lochness to pull data without
-   them, by manually creating ``metadata.csv`` files.
+   them, by allowing manual creation of the ``metadata.csv`` file.
 
 
 Please report any bug or issue to our 
 `github repository <https://github.com/AMP-SCZ/lochness/issues>`_. Thanks!
+
 
 Contents
 --------

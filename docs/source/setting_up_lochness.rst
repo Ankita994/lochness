@@ -20,7 +20,9 @@ for
 lochness. ``config.yml``, ``PHOENIX``, and keyring files, as well as two bash
 scripts for encrypting the keyring file and running the sync, will be created.
 
-**For Pronet network** ::
+**For Pronet network**
+
+.. code-block:: shell
 
    $ lochness_create_template.py \
        --outdir /data/pronet/data_sync_pronet \
