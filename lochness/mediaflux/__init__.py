@@ -68,7 +68,7 @@ def sync_module(Lochness: 'lochness.config',
                     - vendor: Activinsights
                       product: GENEActiv
                       data_dir: PrescientXX_Actigraphy
-                      pattern: '*.*
+                      pattern: '*.*'
                 interviews:
                     - product: open
                       data_dir: PrescientXX_Interviews/OPEN
