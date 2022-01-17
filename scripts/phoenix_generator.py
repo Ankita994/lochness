@@ -41,7 +41,6 @@ def create_example_meta_file(metadata: str) -> None:
     # example metadata file row
     example = [
         ['Active', 'Consent', 'Subject ID', 'Beiwe'],
-        ['1', '1979-01-01', 'EXAMPLE', 'beiwe:5432:abcde']
     ]
 
     # write metadata file
