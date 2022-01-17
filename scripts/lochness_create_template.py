@@ -114,18 +114,21 @@ def write_commands_needed(args: 'argparse',
                        --studies {' '.join(args.studies)} \
                        --source {' '.join(args.sources)} \
                        --lochness_sync_send --s3 \
+                       --log-file {args.outdir}/log.txt \
                        --debug --continuous\n"
             elif args.rsync:
                 command = f"sync.py -c {config_loc} \
                         --studies {' '.join(args.studies)} \
                         --source {' '.join(args.sources)} \
                         --lochness_sync_send --rsync \
+                        --log-file {args.outdir}/log.txt \
                         --debug --continuous\n"
             else:
                 command = f"sync.py -c {config_loc} \
                         --studies {' '.join(args.studies)} \
                         --source {' '.join(args.sources)} \
                         --lochness_sync_send --s3 \
+                        --log-file {args.outdir}/log.txt \
                         --debug --continuous\n"
         
         command = re.sub('\s\s+', ' \\\n\t', command)
@@ -365,16 +368,29 @@ AWS_BUCKET_ROOT: TEST_PHOENIX_ROOT_PRONET'''
             actigraphy:
                 - vendor: Insights
                   product: GENEActivQC
-                  data_dir: Actigraphy
-                  pattern: '*.(cwa|csv)'
+                  data_dir: {study}_Actigraphy
+                  pattern: '*'
             eeg:
                    - product: eeg
-                     data_dir: EEG
-                     pattern: '*.(csv|zip)'
+                     data_dir: {study}_EEG
+                     pattern: '*'
+            mri:
+                   - product: mri
+                     data_dir: {study}_MRI
+                     pattern: '*'
             interviews:
-                   - product: offsite_interview
-                     data_dir: Interview_recordings
-                     pattern: '*.(mp4|m4a|m3u|wav)'
+                   - product: open
+                     data_dir: {study}_Interviews/OPEN
+                     out_dir: open
+                     pattern: '*'
+                   - product: psychs
+                     data_dir: {study}_Interviews/PSYCHS
+                     out_dir: psychs
+                     pattern: '*'
+                   - product: transcripts
+                     data_dir: {study}_Interviews/transcripts/Approved
+                     out_dir: transcripts
+                     pattern: '*'
               '''
 
             config_example += line_to_add
