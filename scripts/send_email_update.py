@@ -12,7 +12,7 @@ def parse_args(argv):
     parser = ap.ArgumentParser(description='PHOENIX data syncer')
     parser.add_argument('-c', '--config', required=True,
                         help='Configuration file')
-    parser.add_argument('-d', '--days', type=int,
+    parser.add_argument('-d', '--days', type=int, default=1,
                         help='Number of days to summarize dataflow')
     parser.add_argument('-rd', '--recreate_db', action='store_true',
                         help='Recreate s3_log database based on the log file')
@@ -23,13 +23,16 @@ def parse_args(argv):
                         default=False,
                         help='List of recipients - with this option the '
                              'recipients in the config file will be ignored')
+    parser.add_argument('-t', '--test', action='store_true',
+                        help='Dry run of email functionality')
 
     args = parser.parse_args(argv)
     return args
 
 
 def send_email_update(config_file: str, days: int, recreate_db: bool,
-                      log_file: str, recipients: List[str]) -> None:
+                      log_file: str, recipients: List[str],
+                      test: bool) -> None:
     '''Send email update of previous s3 data sync
 
     Key arguments:
@@ -72,10 +75,10 @@ def send_email_update(config_file: str, days: int, recreate_db: bool,
     else:
         create_s3_transfer_table(Lochness)
 
-    send_out_daily_updates(Lochness, days)
+    send_out_daily_updates(Lochness, days, test)
 
 
 if __name__ == '__main__':
     args = parse_args(sys.argv[1:])
     send_email_update(args.config, args.days, args.recreate_db,
-                      args.log_file, args.recipients)
+                      args.log_file, args.recipients, args.test)
