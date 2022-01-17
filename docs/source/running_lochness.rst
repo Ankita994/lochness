@@ -6,7 +6,9 @@ Run ``sync.py``
 
 Execute ``sync.py`` script to have lochness sync data
 
-**For Pronet network** ::
+**For Pronet network**
+
+.. code-block:: shell
 
     sync.py \
         --config /data/pronet/data_sync_pronet/config.yml \
@@ -22,7 +24,9 @@ Execute ``sync.py`` script to have lochness sync data
         --debug --continuous 
 
 
-**For Prescient network** ::
+**For Prescient network**
+
+.. code-block:: shell
 
     sync.py \
         --config /data/prescient/data_sync_prescient/config.yml \
@@ -38,24 +42,26 @@ Execute ``sync.py`` script to have lochness sync data
         --debug --continuous
 
 
-When you invoke this command, you will be prompted for the passphrase that
-you used to encrypt your `keyring <#setup>`_. To sidestep the password prompt,
-you can use an environment variable ``NRG_KEYRING_PASS``.
+When you execute this command, you will be prompted for the passphrase that
+you used to encrypt your `keyring <#setup>`_. 
 
 This will run lochness sync function for each site (``studies``) for all
-measures (``source``). It will upload newly downloaded data to the s3 bucket
-after each data sweep for all sources. Then, this ``sync.py`` function will
-execute these functions again after ``poll_interval`` stated in the
-``config.yml``.
+measures (``source``) given to ``--source`` argument. The downloaded data will
+be saved under the PHOENIX directory defined in the ``config.yml`` file.
+``--lochness_sync_send`` with ``--s3`` argument, will make lochness upload
+the newly downloaded data to the s3 bucket after each data sweep for all
+sources and sites. Then, this ``sync.py`` function will execute these functions
+again after the ``poll_interval`` stated in the ``config.yml``.
 
 
-``lochness_create_template.py`` creates a template bash script that could be
-used. ::
+.. note ::
 
-    bash 2_sync_command.sh
+    ``lochness_create_template.py`` creates a template bash script that could be
+    used.
 
+    .. code-block:: shell
 
-The downloaded data will be saved under the PHOENIX directory defined in the
-``config.yml`` file.
+        bash 2_sync_command.sh
+
 
 Good luck!

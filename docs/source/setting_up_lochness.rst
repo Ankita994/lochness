@@ -42,7 +42,9 @@ scripts for encrypting the keyring file and running the sync, will be created.
        --enter_password
 
 
-**For Prescient network** ::
+**For Prescient network**
+
+.. code-block:: shell
 
     $ lochness_create_template.py \
         --outdir /data/prescient/data_sync_prescient \
@@ -367,6 +369,85 @@ Then, configure box part as below ::
                          out_dir: transcripts
                          pattern: '*.*'
 
+
+Mediaflux
+~~~~~~~~~
+
+Planned data structure on Mediaflux account (the source itself) looks like
+below
+
+.. code-block:: shell
+
+    Prescient
+    ├── PrescientAB
+    │   ├── PrescientAB_Interviews
+    │   │   ├── OPEN
+    │   │   │   └── AB00001
+    │   │   │       └── 2021-12-10 16.01.56 Kevin Cho's Zoom Meeting
+    │   │   │           ├── video2515225130.mp4
+    │   │   │           ├── video1515225130.mp4
+    │   │   │           ├── audio2515225130.mp4
+    │   │   │           ├── audio1515225130.mp4
+    │   │   │           └── Audio Record
+    │   │   │               └── Audio Record
+    │   │   │                   ├── audioKevinCho42515225130.m4a
+    │   │   │                   ├── audioKevinCho21515225130.m4a
+    │   │   │                   ├── audioAnotherPerson11515225130.m4a
+    │   │   │                   └── audioAnotherPerson32515225130.m4a
+    │   │   ├── PSYCHS
+    │   │   │   ├── AB00001
+    │   │   │   └── ...
+    │   │   └── transcripts
+    │   │       ├── Approved
+    │   │       │   ├── AB00001
+    │   │       │   │   ├── PrescientAB_AB00001_interviewAudioTranscript_open_day00001_session001.txt
+    │   │       │   │   └── PrescientAB_AB00001_interviewAudioTranscript_open_day00001_session002.txt
+    │   │       │   └── ...
+    │   │       └── For_review
+    │   │           ├── AB00001
+    │   │           │   ├── PrescientAB_AB00001_interviewAudioTranscript_open_day00001_session001.txt
+    │   │           │   └── PrescientAB_AB00001_interviewAudioTranscript_open_day00001_session002.txt
+    │   │           └── ...
+    │   ├── PrescientAB_EEG
+    │   │       └── AB00001
+    │   │           └── AB00001_eeg_20220101.zip
+    │   └── PrescientAB_Actigraphy
+    │   │       └── AB00001
+    │   │           └── ...
+    └── ...
+
+
+Then, configure box part as below
+
+.. code-block:: shell
+
+    box:
+        PrescientAB:
+            base: ProNET/PrescientAB
+            delete_on_success: False
+            file_patterns:
+                actigraphy:
+                       - vendor: Activinsights
+                         product: GENEActiv
+                         data_dir: PrescientAB_Actigraphy
+                         pattern: '*.*'
+                eeg:
+                       - product: eeg
+                         data_dir: PrescientAB_EEG
+                         pattern: '*.*'
+                interviews:
+                       - product: open
+                         data_dir: PrescientAB_Interviews/OPEN
+                         out_dir: open
+                         pattern: '*.*'
+                       - product: psychs
+                         data_dir: PrescientAB_Interviews/PSYCHS
+                         out_dir: psychs
+                         pattern: '*.*'
+                       - product: transcripts
+                         data_dir: PrescientAB_Interviews/transcripts/Approved
+                         out_dir: transcripts
+                         pattern: '*.*'
 
 
 Email function
