@@ -7,7 +7,6 @@ from jinja2 import Environment, FileSystemLoader
 from datetime import datetime, date, timedelta
 from typing import List
 import getpass
-import socket
 import subprocess
 import pandas as pd
 from pytz import timezone
@@ -72,6 +71,11 @@ def send_detail_google(Lochness,
     env = Environment(loader=FileSystemLoader(str(email_template_dir)))
     template = env.get_template('bootdey_template.html')
     footer = 'If you see any error, please email kevincho@bwh.harvard.edu'
+
+    server_name = Lochness['project_name'] \
+        if 'project_name' in Lochness else 'Data aggregate server'
+    title = f'{server_name}: {title}'
+
     html_str = template.render(title=title,
                                subtitle=subtitle,
                                first_message=first_message,
@@ -79,7 +83,7 @@ def send_detail_google(Lochness,
                                code=code,
                                in_mail_footer=in_mail_footer,
                                footer=footer,
-                               server=socket.gethostname(),
+                               server=server_name,
                                username=getpass.getuser())
 
     msg = MIMEText(html_str, 'html')
@@ -124,8 +128,9 @@ def send_out_daily_updates(Lochness, days: int = 1, test: bool = False):
 
         s3_df_selected['date'] = s3_df_selected['timestamp'].apply(
                 lambda x: x.date())
-        count_df = s3_df_selected.groupby(['date', 'protected', 'study',
-                'processed', 'subject', 'datatypes']).count()[['filename']]
+        count_df = s3_df_selected.groupby([
+            'date', 'protected', 'study',
+            'processed', 'subject', 'datatypes']).count()[['filename']]
         count_df.columns = ['file count']
         count_df = count_df.reset_index()
         s3_df_selected.drop('date', axis=1, inplace=True)
@@ -148,8 +153,8 @@ def send_out_daily_updates(Lochness, days: int = 1, test: bool = False):
             test)
     else:
         s3_df_selected.columns = ['Transfer time (UTC)', 'File name',
-                'Protected', 'Study', 'Processed', 'Subject',
-                'Datatype', 'Download time (UTC)']
+                                  'Protected', 'Study', 'Processed', 'Subject',
+                                  'Datatype', 'Download time (UTC)']
         s3_df_selected.reset_index().drop('index', axis=1, inplace=True)
         in_mail_footer = 'Note that only S3 transferred files are included.'
 
