@@ -35,7 +35,7 @@ def send_detail_google(Lochness,
                        second_message: str, code: List[str],
                        in_mail_footer: str,
                        test: bool = False) -> None:
-    '''Send email using gmail account which has it's "Less secure app" allowed
+    '''Send email using gmail account which has its "Less secure app" allowed
 
     Set up an google account to send out emails using its SMTP server. You need
     to allow "Less secure app" in Google aacount page in order to use this

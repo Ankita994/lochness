@@ -419,7 +419,6 @@ hdd:
         base: /PHOENIX
 admins:
     - {args.email}
-
 sender: {args.email}
 notify:
     __global__:
