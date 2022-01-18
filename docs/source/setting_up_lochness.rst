@@ -257,9 +257,23 @@ Or you could run `2_sync_command.sh`, which contains the same command ::
 
 4. Edit ``config.yml``
 ----------------------
-`config.yml` file contains details of options to be used in Lochness. ::
+`config.yml` file contains details of options to be used in Lochness.
 
-    $ vim config.yml
+.. code-block:: consolconsole
+
+    vim config.yml
+
+
+Project name
+~~~~~~~~~~~~~
+Name of the project. This string will be included in the daily email summary.
+
+.. code-block:: shell
+
+    project_name: ProNET
+    or
+    project_name: Prescient
+
 
 
 REDCap or RPMS database column names
