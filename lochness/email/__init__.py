@@ -73,7 +73,7 @@ def send_detail_google(Lochness,
     footer = 'If you see any error, please email kevincho@bwh.harvard.edu'
 
     server_name = Lochness['project_name'] \
-        if 'project_name' in Lochness else 'Data aggregate server'
+        if 'project_name' in Lochness else 'Data aggregation server'
     title = f'{server_name}: {title}'
 
     html_str = template.render(title=title,
