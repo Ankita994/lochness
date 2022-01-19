@@ -324,8 +324,8 @@ def create_s3_transfer_table(Lochness, rewrite=False) -> None:
         Lochness: lochness object
         rewrite: rewrite s3_log.csv if True, bool
 
-    Uses timestamp in the Lochness logfile to saves a s3_log.csv file under
-    PHOENIX root. This csv file has columns such as
+    Uses timestamp from the Lochness log file to create an s3_log.csv file under
+    PHOENIX root. This csv file has the following columns:
         - timestamp
         - source
         - destination
@@ -335,6 +335,7 @@ def create_s3_transfer_table(Lochness, rewrite=False) -> None:
         - processed
         - subject
         - datatypes
+        - ctime
 
     If s3_log.csv file exists, it load the most recent timepoint from the csv
     file and only appends rows of more recent data transfer information to
