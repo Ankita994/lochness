@@ -344,16 +344,12 @@ def create_s3_transfer_table(Lochness, rewrite=False) -> None:
     log_file = Lochness['log_file']
     out_file = Path(Lochness['phoenix_root']) / 's3_log.csv'
 
-    if rewrite:
-        df_prev = pd.DataFrame()
-        max_ts_prev_df = pd.to_datetime('2000-01-01')
+    if Path(out_file).is_file() and not rewrite:
+        df_prev = pd.read_csv(out_file, index_col=0)
+        max_ts_prev_df = pd.to_datetime(df_prev['timestamp']).max()
     else:
-        if Path(out_file).is_file():
-            df_prev = pd.read_csv(out_file, index_col=0)
-            max_ts_prev_df = pd.to_datetime(df_prev['timestamp']).max()
-        else:
-            df_prev = pd.DataFrame()
-            max_ts_prev_df = pd.to_datetime('2000-01-01')
+         df_prev = pd.DataFrame()
+         max_ts_prev_df = pd.to_datetime('2000-01-01')
 
     df = pd.DataFrame()
     with open(log_file, 'r') as fp:
