@@ -36,10 +36,10 @@ def send_email_update(config_file: str, days: int, recreate_db: bool,
     '''Send email update of previous s3 data sync
 
     Key arguments:
-        config: location of Lochness configuration file. 
+        config_file: location of Lochness configuration file, str.
         days: number of days from today, to summarize the dataflow for, int.
         recreate_db: True if s3_log.csv needs to be recreated based on the
-                     log_file given.
+                     log_file given, bool.
         log_file: location of lochness sync.py log file, str.
         recipients: list of email addresses to send out the summary to, list.
 
