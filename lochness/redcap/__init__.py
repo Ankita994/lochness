@@ -333,12 +333,23 @@ def sync(Lochness, subject, dry=False):
             logger.debug("Downloading REDCap data")
             _debug_tup = (redcap_instance, redcap_project, redcap_subject)
 
-            record_query = {
-                'token': api_key,
-                'content': 'record',
-                'format': 'json',
-                'records': redcap_subject
-            }
+            if 'UPENN' in redcap_instance:
+                # UPENN REDCap is set up with its own record_id, but have added
+                # "session_subid" field to note AMP-SCZ ID
+                record_query = {
+                    'token': api_key,
+                    'content': 'record',
+                    'format': 'json',
+                    'filterLogic': f"[session_subid] = '{redcap_subject}'"
+                }
+
+            else:
+                record_query = {
+                    'token': api_key,
+                    'content': 'record',
+                    'format': 'json',
+                    'records': redcap_subject
+                }
 
             if deidentify:
                 # get fields that aren't identifiable and narrow record query
