@@ -324,8 +324,8 @@ def create_s3_transfer_table(Lochness, rewrite=False) -> None:
         Lochness: lochness object
         rewrite: rewrite s3_log.csv if True, bool
 
-    Uses timestamp in the Lochness logfile to saves a s3_log.csv file under
-    PHOENIX root. This csv file has columns such as
+    Uses timestamp from the Lochness log file to create an s3_log.csv file under
+    PHOENIX root. This csv file has the following columns:
         - timestamp
         - source
         - destination
@@ -335,24 +335,21 @@ def create_s3_transfer_table(Lochness, rewrite=False) -> None:
         - processed
         - subject
         - datatypes
+        - ctime
 
-    If s3_log.csv file exists, it load the most recent timepoint from the csv
-    file and only appends rows of more recent data transfer information to
-    the csv file.
+    If s3_log.csv file exists, it loads the latest timepoint from the csv
+    file and appends rows of more recent data transfer information to
+    that file.
     '''
     log_file = Lochness['log_file']
     out_file = Path(Lochness['phoenix_root']) / 's3_log.csv'
 
-    if rewrite:
-        df_prev = pd.DataFrame()
-        max_ts_prev_df = pd.to_datetime('2000-01-01')
+    if Path(out_file).is_file() and not rewrite:
+        df_prev = pd.read_csv(out_file, index_col=0)
+        max_ts_prev_df = pd.to_datetime(df_prev['timestamp']).max()
     else:
-        if Path(out_file).is_file():
-            df_prev = pd.read_csv(out_file, index_col=0)
-            max_ts_prev_df = pd.to_datetime(df_prev['timestamp']).max()
-        else:
-            df_prev = pd.DataFrame()
-            max_ts_prev_df = pd.to_datetime('2000-01-01')
+         df_prev = pd.DataFrame()
+         max_ts_prev_df = pd.to_datetime('2000-01-01')
 
     df = pd.DataFrame()
     with open(log_file, 'r') as fp:
