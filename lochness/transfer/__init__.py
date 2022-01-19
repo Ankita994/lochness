@@ -337,9 +337,9 @@ def create_s3_transfer_table(Lochness, rewrite=False) -> None:
         - datatypes
         - ctime
 
-    If s3_log.csv file exists, it load the most recent timepoint from the csv
-    file and only appends rows of more recent data transfer information to
-    the csv file.
+    If s3_log.csv file exists, it loads the latest timepoint from the csv
+    file and appends rows of more recent data transfer information to
+    that file.
     '''
     log_file = Lochness['log_file']
     out_file = Path(Lochness['phoenix_root']) / 's3_log.csv'
