@@ -68,12 +68,9 @@ def initialize_metadata(Lochness: 'Lochness object',
         multistudy: True if the redcap repo contains multisite data, bool.
         upenn: True if upenn redcap is included in the source list, bool.
     '''
-    if multistudy:
-        # specific to DPACC project
-        site_code_study = study_name[-2:]  # 'LA'
-        project_name = study_name.split(site_code_study)[0]  # 'Pronet'
-    else:
-        project_name = study_name
+    # specific to DPACC project
+    site_code_study = study_name[-2:]  # 'LA'
+    project_name = study_name.split(site_code_study)[0]  # 'Pronet'
 
     # use redcap_project function to load the redcap keyrings for the project
     _, api_url, api_key = next(redcap_projects(
@@ -431,11 +428,11 @@ def redcap_projects(Lochness, phoenix_study, redcap_instance):
     # part 2 - check for study under 'REDCAP' field
     if phoenix_study not in Keyring['lochness']['REDCAP']:
         raise KeyringError(f'lochness > REDCAP > {phoenix_study}'
-                     'not found in keyring')
+                           'not found in keyring')
 
     if redcap_instance not in Keyring['lochness']['REDCAP'][phoenix_study]:
         raise KeyringError(f'lochness > REDCAP > {phoenix_study} '
-                     f'> {redcap_instance} not found in keyring')
+                           f'> {redcap_instance} not found in keyring')
 
     # part 3 - checking for redcap_instance
     if redcap_instance not in Keyring:
