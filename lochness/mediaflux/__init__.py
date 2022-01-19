@@ -65,16 +65,15 @@ def sync_module(Lochness: 'lochness.config',
             '''
             file_patterns:
                 actigraphy:
-                    - vendor: Philips
-                      product: Actiwatch 2
-                      data_dir: all_BWH_actigraphy
-                      pattern: 'accel/*csv'
-                      protect: True
                     - vendor: Activinsights
                       product: GENEActiv
-                      data_dir: all_BWH_actigraphy
-                      pattern: 'GENEActiv/*bin,GENEActiv/*csv'
-            
+                      data_dir: PrescientXX_Actigraphy
+                      pattern: '*'
+                interviews:
+                    - product: open
+                      data_dir: PrescientXX_Interviews/OPEN
+                      out_dir: open
+                      pattern: '*'
             '''
             for prod in products:
                 for patt in prod['pattern'].split(','):
@@ -89,6 +88,7 @@ def sync_module(Lochness: 'lochness.config',
                     # construct mediaflux remote dir
                     mf_remote_root = pjoin(
                             mf_base, prod['data_dir'], mf_subid)
+
                     mf_remote_pattern= pjoin(
                             mf_base, prod['data_dir'], mf_subid, patt)
 
@@ -142,11 +142,14 @@ def sync_module(Lochness: 'lochness.config',
                             subj_dir = subject.protected_folder \
                                 if protect else subject.general_folder
 
-                            mf_local = str(tree.get(datatype,
-                                                subj_dir,
-                                                processed=processed,
-                                                BIDS=Lochness['BIDS']) / \
-                                                        subpath.parent)
+                            mf_local = tree.get(datatype,
+                                            subj_dir,
+                                            processed=processed,
+                                            BIDS=Lochness['BIDS']) / \
+                                                    subpath.parent
+
+                            mf_local = str(mf_local / prod['out_dir'] \
+                                    if 'out_dir' in prod else mf_local)
 
                             # ENH set different permissions
                             # GENERAL: 0o755, PROTECTED: 0700
