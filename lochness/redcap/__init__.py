@@ -336,11 +336,13 @@ def sync(Lochness, subject, dry=False):
             if 'UPENN' in redcap_instance:
                 # UPENN REDCap is set up with its own record_id, but have added
                 # "session_subid" field to note AMP-SCZ ID
+                redcap_subject_sl = redcap_subject.lower()
                 record_query = {
                     'token': api_key,
                     'content': 'record',
                     'format': 'json',
-                    'filterLogic': f"[session_subid] = '{redcap_subject}'"
+                    'filterLogic': f"[session_subid] = '{redcap_subject}' or "
+                                   f"[session_subid] = '{redcap_subject_sl}'"
                 }
 
             else:
