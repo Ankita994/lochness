@@ -30,11 +30,9 @@ Execute ``sync.py`` script to have lochness sync data
 
     sync.py \
         --config /data/prescient/data_sync_prescient/config.yml \
-        --studies PronetLA PronetOR PronetBI PronetNL PronetNC PronetSD \
-                  PronetCA PronetYA PronetSF PronetPA PronetSI PronetPI \
-                  PronetNN PronetIR PronetTE PronetGA PronetWU PronetHA \
-                  PronetMT PronetKC PronetPV PronetMA PronetCM PronetMU \
-                  PronetSH PronetSL \
+        --studies PrescientME PrescientSG PrescientAD PrescientAM PrescientBM \
+                  PrescientCL PrescientCP PrescientHC PrescientJE PrescientGW \
+                  PrescientLS \
         --source rpms upenn mediaflux mindlamp \
         --lochness_sync_send --s3 \
         --log-file /data/prescient/data_sync_prescient/log.txt \

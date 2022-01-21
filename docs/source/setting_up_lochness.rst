@@ -4,7 +4,7 @@ Setting up Lochness
 The following items below are the step by step instructions to
 semi-automatically setup the lochness environment. It is specific for
 AMP-SCZ project, but it could also work for any other projects, if their main
-subject database is maintained with a ``REDCap`` or ``RPMS`` system.
+subject database is maintained with ``REDCap`` or ``RPMS`` system.
 
 If you would like to set up your environment from scratch, please see the pages
 for 
@@ -24,7 +24,7 @@ scripts for encrypting the keyring file and running the sync, will be created.
 
 .. code-block:: shell
 
-   $ lochness_create_template.py \
+   lochness_create_template.py \
        --outdir /data/pronet/data_sync_pronet \
        --studies PronetLA PronetOR PronetBI PronetNL PronetNC PronetSD \
                  PronetCA PronetYA PronetSF PronetPA PronetSI PronetPI \
@@ -38,17 +38,18 @@ scripts for encrypting the keyring file and running the sync, will be created.
        --ssh_user kc244 \
        --lochness_sync_send \
        --s3 \
-       --s3_selective_sync surveys mri phone eeg actigraphy \
-       --enter_password
+       --s3_selective_sync surveys mri phone eeg actigraphy
 
 
 **For Prescient network**
 
 .. code-block:: shell
 
-    $ lochness_create_template.py \
+    lochness_create_template.py \
         --outdir /data/prescient/data_sync_prescient \
-        --studies PrescientLA PrescientSL PrescientLA \
+        --studies PrescientME PrescientSG PrescientAD PrescientAM PrescientBM \
+                  PrescientCL PrescientCP PrescientHC PrescientJE PrescientGW \
+                  PrescientLS \
         --sources rpms upenn mediaflux mindlamp \
         --email kevincho@bwh.harvard.edu \
         --poll_interval 86400 \
@@ -56,14 +57,13 @@ scripts for encrypting the keyring file and running the sync, will be created.
         --ssh_user kc244 \
         --lochness_sync_send \
         --s3 \
-        --s3_selective_sync surveys mri phone eeg actigraphy \
-        --enter_password
+        --s3_selective_sync surveys mri phone eeg actigraphy
 
 
 .. note ::
     
-   You remove ``--enter_password`` if you want to manually add your credentials
-   to the template keyring file.
+   Add ``--enter_password`` option if you want ``lochness_create_template.py``
+   to add your credentials to the template keyring file.
    
 
 
@@ -92,13 +92,16 @@ Running the command above will create a directory which will look like this ::
 
    To see detailed options of `lochness_create_template.py` ::
 
-        $ lochness_create_template.py -h
+   .. code-block:: shell
+
+        lochness_create_template.py -h
 
 
 Step 1 completed.
 
 
-2. Edit credentials to the template keyring file
+
+2. Edit credentials in the template keyring file
 ------------------------------------------------
 
 Connecting to various external `data sources <data_sources.html>`_
@@ -107,10 +110,14 @@ e.g., URLs, usernames, passwords, API tokens, etc. Lochness will only read
 these pieces of information from an encrypted JSON file that we refer to as 
 the *keyring*.
 
-These information needs be added to the ``lochness.json`` template::
 
-   $ cd /data/pronet/data_sync_pronet  # the template directory created above
-   $ vim lochness.json
+These information needs be added to the ``lochness.json`` template
+
+
+.. code-block:: shell
+
+   cd /data/pronet/data_sync_pronet  # the template directory created above
+   vim lochness.json
 
 
 ``lochness.json`` file looks like below. Add credentials to the fields markedp
@@ -133,7 +140,7 @@ with ``*****`` ::
           "PronetLA": "LOCHNESS_SECRETS",
           ...,
         }
-        email_sender_pw: "*****"
+        "email_sender_pw": "*****"
       },
       "redcap.UPENN": {
         "URL": "*****",
@@ -173,8 +180,11 @@ with ``*****`` ::
    If you have used ``--enter_password`` option when creating the template
    files, just check through your credentials if they are correctly entered to
    the ``keyring.json`` file.
+
     
-Example of completed ``lochness.json`` ::
+Example of completed ``lochness.json``
+
+.. code-block:: json
 
     {
       "lochness": {
@@ -193,7 +203,7 @@ Example of completed ``lochness.json`` ::
           "PronetLA": "LOCHNESS_SECRETS",
           ...,
         }
-        email_sender_pw: "aaoiweytyEfhag189e7"
+        "email_sender_pw": "aaoiweytyEfhag189e7"
       },
       "redcap.UPENN": {
         "URL": "https://redcap.med.upenn.edu",
@@ -238,13 +248,19 @@ supports encrypting and decrypting files (including the keyring) using the
 should be installed automatically when you install Lochness, but you can
 install it separately on another machine as well.
 
-Encrypt the temporary keyring file by running ::
+Encrypt the temporary keyring file by running
 
-    $ crypt.py --encrypt lochness.json -o .lochness.enc
+.. code-block:: shell
 
-Or you could run `2_sync_command.sh`, which contains the same command ::
+    crypt.py --encrypt lochness.json -o .lochness.enc
 
-    $ bash 1_encrypt_command.sh
+
+.. note ::
+    Or you could run `2_sync_command.sh`, which contains the same command
+
+    .. code-block:: shell
+
+        bash 1_encrypt_command.sh
 
 
 .. attention::
@@ -259,7 +275,7 @@ Or you could run `2_sync_command.sh`, which contains the same command ::
 ----------------------
 `config.yml` file contains details of options to be used in Lochness.
 
-.. code-block:: consolconsole
+.. code-block:: console
 
     vim config.yml
 
@@ -311,49 +327,24 @@ Update AWS s3 bucket name to your s3 bucket name and root directory ::
 
 Box
 ~~~
+See :doc:`here<box_source_structure>` for how to configure Box. Then, the 
+configure file should have a ``box`` session that states which file patterns
+to look for in each study. 
 
-Planned data structure on Box account (the source itself) looks like below ::
+``base`` is the root of the data directory for the study under ``Box``. If your
+data for ``PronetAB`` is saved under ``/ProNET/PronetAB``, the base for this
+study should be ``ProNET/PronetAB``.
 
-    ProNET
-    ├── PronetAB
-    │   ├── PronetAB_Interviews
-    │   │   ├── OPEN
-    │   │   │   └── AB00001
-    │   │   │       └── 2021-12-10 16.01.56 Kevin Cho's Zoom Meeting
-    │   │   │           ├── video2515225130.mp4
-    │   │   │           ├── video1515225130.mp4
-    │   │   │           ├── audio2515225130.mp4
-    │   │   │           ├── audio1515225130.mp4
-    │   │   │           └── Audio Record
-    │   │   │               └── Audio Record
-    │   │   │                   ├── audioKevinCho42515225130.m4a
-    │   │   │                   ├── audioKevinCho21515225130.m4a
-    │   │   │                   ├── audioAnotherPerson11515225130.m4a
-    │   │   │                   └── audioAnotherPerson32515225130.m4a
-    │   │   ├── PSYCHS
-    │   │   │   ├── AB00001
-    │   │   │   └── ...
-    │   │   └── transcripts
-    │   │       ├── Approved
-    │   │       │   ├── AB00001
-    │   │       │   │   ├── PronetAB_AB00001_interviewAudioTranscript_open_day00001_session001.txt
-    │   │       │   │   └── PronetAB_AB00001_interviewAudioTranscript_open_day00001_session002.txt
-    │   │       │   └── ...
-    │   │       └── For_review
-    │   │           ├── AB00001
-    │   │           │   ├── PronetAB_AB00001_interviewAudioTranscript_open_day00001_session001.txt
-    │   │           │   └── PronetAB_AB00001_interviewAudioTranscript_open_day00001_session002.txt
-    │   │           └── ...
-    │   ├── PronetAB_EEG
-    │   │       └── AB00001
-    │   │           └── AB00001_eeg_20220101.zip
-    │   └── PronetAB_Actigraphy
-    │   │       └── AB00001
-    │   │           └── ...
-    └── ...
+``file_patterns`` takes list of different datatypes to be captured in from the
+Box. ``data_dir`` of each datatype is the name of the root directory that has
+subject directories for this datatype. And each datatype can have more than one
+product of files to look for. For an example, for ``interviews`` datatype,
+``open``, ``psychs``, and ``transcripts`` products are searched for each
+individual.  ``out_dir`` can be specified if the files need to be saved under
+a specific subdirectory for a product.
 
 
-Then, configure box part as below ::
+.. code-block:: shell
 
     box:
         PronetAB:
@@ -383,55 +374,17 @@ Then, configure box part as below ::
                          out_dir: transcripts
                          pattern: '*.*'
 
+See :doc:`here<box_source_structure>` for an example of output PHOENIX
+structure from this configuration.
+
 
 Mediaflux
 ~~~~~~~~~
 
-Planned data structure on Mediaflux account (the source itself) looks like
-below
+See :doc:`here<mediaflux_source_structure>` for how to configure Box. Then, the 
+configure file should have a ``box`` session that states which file patterns
+to look for in each study. 
 
-.. code-block:: shell
-
-    Prescient
-    ├── PrescientAB
-    │   ├── PrescientAB_Interviews
-    │   │   ├── OPEN
-    │   │   │   └── AB00001
-    │   │   │       └── 2021-12-10 16.01.56 Kevin Cho's Zoom Meeting
-    │   │   │           ├── video2515225130.mp4
-    │   │   │           ├── video1515225130.mp4
-    │   │   │           ├── audio2515225130.mp4
-    │   │   │           ├── audio1515225130.mp4
-    │   │   │           └── Audio Record
-    │   │   │               └── Audio Record
-    │   │   │                   ├── audioKevinCho42515225130.m4a
-    │   │   │                   ├── audioKevinCho21515225130.m4a
-    │   │   │                   ├── audioAnotherPerson11515225130.m4a
-    │   │   │                   └── audioAnotherPerson32515225130.m4a
-    │   │   ├── PSYCHS
-    │   │   │   ├── AB00001
-    │   │   │   └── ...
-    │   │   └── transcripts
-    │   │       ├── Approved
-    │   │       │   ├── AB00001
-    │   │       │   │   ├── PrescientAB_AB00001_interviewAudioTranscript_open_day00001_session001.txt
-    │   │       │   │   └── PrescientAB_AB00001_interviewAudioTranscript_open_day00001_session002.txt
-    │   │       │   └── ...
-    │   │       └── For_review
-    │   │           ├── AB00001
-    │   │           │   ├── PrescientAB_AB00001_interviewAudioTranscript_open_day00001_session001.txt
-    │   │           │   └── PrescientAB_AB00001_interviewAudioTranscript_open_day00001_session002.txt
-    │   │           └── ...
-    │   ├── PrescientAB_EEG
-    │   │       └── AB00001
-    │   │           └── AB00001_eeg_20220101.zip
-    │   └── PrescientAB_Actigraphy
-    │   │       └── AB00001
-    │   │           └── ...
-    └── ...
-
-
-Then, configure box part as below
 
 .. code-block:: shell
 
@@ -449,6 +402,10 @@ Then, configure box part as below
                        - product: eeg
                          data_dir: PrescientAB_EEG
                          pattern: '*.*'
+                mri:
+                       - product: mri
+                         data_dir: PrescientAB_MRI
+                         pattern: '*.*'
                 interviews:
                        - product: open
                          data_dir: PrescientAB_Interviews/OPEN
@@ -462,6 +419,9 @@ Then, configure box part as below
                          data_dir: PrescientAB_Interviews/transcripts/Approved
                          out_dir: transcripts
                          pattern: '*.*'
+
+See :doc:`here<mediaflux_source_structure>` for an example of output PHOENIX
+structure from this configuration.
 
 
 Email function

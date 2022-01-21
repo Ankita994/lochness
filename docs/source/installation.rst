@@ -20,12 +20,14 @@ Install ``AMP-SCZ Lochness`` and ``AMP-SCZ Yaxil`` using ``pip``.
    .. code-block:: shell
 
       git clone https://github.com/AMP-SCZ/lochness
+      cd lochness
+      pip install -r requirements.txt
       pip install --upgrade git+https://github.com/AMP-SCZ/yaxil
       echo "export PATH=${PATH}:lochness/scripts" >> ~/.bashrc
       source ~/.bashrc
 
 
-After `pip` installation, the scripts below should be available from your
+After ``pip`` installation, the scripts below should be available from your
 console.
 
 .. code-block:: shell
@@ -76,6 +78,11 @@ Google account for sending out emails
 In order to use the email functionalities, a google account is required. Create
 a google account and set the ``Less secure app access`` under the "Account
 settings" to "ON". 
+
+.. note ::
+
+    Future enhancement of ``Lochness`` will also work with ``mailx``. Stayp
+    tuned.
 
 
 Installation complete!
