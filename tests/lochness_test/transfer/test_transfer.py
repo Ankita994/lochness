@@ -1,6 +1,7 @@
 import lochness
 import os
 import shutil
+from datetime import datetime
 from lochness.transfer import get_updated_files, compress_list_of_files
 from lochness.transfer import compress_new_files
 from lochness.transfer import lochness_to_lochness_transfer_sftp
@@ -375,4 +376,66 @@ def test_lochness_to_lochness_transfer_s3_protected():
     # Lochness['AWS_BUCKET_ROOT'] = 'TEST_PHOENIX_ROOT'
     lochness_to_lochness_transfer_s3_protected(
             lochness, lochness['s3_selective_sync'])
+
+
+def test_create_s3_transfer_table():
+    import re
+    log_file = 'log.txt'
+
+    if Path('ha.csv').is_file():
+        df_prev = pd.read_csv('ha.csv', index_col=0)
+        most_recent_time_stamp_prev_run = pd.to_datetime(df_prev['timestamp']).max()
+    else:
+        df_prev = pd.DataFrame()
+        most_recent_time_stamp_prev_run = pd.to_datetime('2000-01-01')
+
+    df = pd.DataFrame()
+    with open(log_file, 'r') as f:
+        for line in f.readlines():
+            if 'lochness.transfer' in line:
+                most_recent_time_stamp = re.search(r'^(\S+ \w+:\w+:\w+)',
+                                                   line).group(1)
+                most_recent_time_stamp = pd.to_datetime(most_recent_time_stamp)
+                more_recent = most_recent_time_stamp > most_recent_time_stamp_prev_run
+
+            if line.startswith('upload: '):
+                if not more_recent:
+                    continue
+
+                try:
+                    source = re.search(r'upload: (\S+)', line).group(1)
+                    target = re.search(r'upload: (\S+) to (\S+)',
+                                       line).group(2)
+
+                    df_tmp = pd.DataFrame({
+                        'timestamp': [most_recent_time_stamp],
+                        'source': Path(source),
+                        'destination': Path(target)})
+
+                    df = pd.concat([df, df_tmp])
+                except AttributeError:
+                    pass
+
+    if len(df) == 0:
+        print('No new data')
+        return
+
+    # register datatypes, study and subject
+    df['filename'] = df['source'].apply(lambda x: x.name)
+    df['protected'] = df['source'].apply(lambda x: x.parts[1])
+    df['study'] = df['source'].apply(lambda x: x.parts[2])
+    df['processed'] = df['source'].apply(lambda x: x.parts[3])
+    df['subject'] = df['source'].apply(lambda x: x.parts[4]
+            if len(x.parts) > 4 else '')
+    df['datatypes'] = df['source'].apply(lambda x: x.parts[5]
+            if len(x.parts) > 5 else '')
+
+    df = df.reset_index()
+    df.loc[df[df['filename'].str.contains('metadata.csv')].index, 'processed'] = ''
+    df.timestamp = pd.to_datetime(df.timestamp)
+    
+    df = pd.concat([df_prev, df.drop('index', axis=1)])
+
+    print(df)
+    df.to_csv('ha.csv')
 

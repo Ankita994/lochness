@@ -317,6 +317,102 @@ def lochness_to_lochness_transfer_s3(Lochness, general_only: bool = True):
     logger.debug('aws rsync completed')
 
 
+def create_s3_transfer_table(Lochness, rewrite=False) -> None:
+    '''Extract s3 transfer information from the lochness log file
+
+    Key arguments:
+        Lochness: lochness object
+        rewrite: rewrite s3_log.csv if True, bool
+
+    Uses timestamp from the Lochness log file to create an s3_log.csv file under
+    PHOENIX root. This csv file has the following columns:
+        - timestamp
+        - source
+        - destination
+        - filename
+        - protected
+        - study
+        - processed
+        - subject
+        - datatypes
+        - ctime
+
+    If s3_log.csv file exists, it loads the latest timepoint from the csv
+    file and appends rows of more recent data transfer information to
+    that file.
+    '''
+    log_file = Lochness['log_file']
+    out_file = Path(Lochness['phoenix_root']) / 's3_log.csv'
+
+    if Path(out_file).is_file() and not rewrite:
+        df_prev = pd.read_csv(out_file, index_col=0)
+        max_ts_prev_df = pd.to_datetime(df_prev['timestamp']).max()
+    else:
+         df_prev = pd.DataFrame()
+         max_ts_prev_df = pd.to_datetime('2000-01-01')
+
+    df = pd.DataFrame()
+    with open(log_file, 'r') as fp:
+        for line in fp.readlines():
+            if 'lochness.transfer' in line:
+                ts = re.search(r'^(\S+ \w+:\w+:\w+)', line).group(1)
+                ts = pd.to_datetime(ts)
+                more_recent = ts > max_ts_prev_df
+
+            if line.startswith('upload: '):
+                if not more_recent:
+                    continue
+
+                try:
+                    source = re.search(r'upload: (\S+)', line).group(1)
+                     # do not save metadata.csv update since it
+                     # gets updated every pull
+                    if 'metadata.csv' in source:
+                        continue
+                    target = re.search(r'upload: (\S+) to (\S+)',
+                                       line).group(2)
+
+                    df_tmp = pd.DataFrame({'timestamp': [ts],
+                                           'source': Path(source),
+                                           'destination': Path(target)})
+
+                    df = pd.concat([df, df_tmp])
+                except AttributeError:
+                    pass
+
+    if len(df) == 0:
+        print('No new data has been transferred to s3 bucket since last'
+              's3 sync according to the s3_log database')
+        return
+
+    # register datatypes, study and subject
+    df['filename'] = df['source'].apply(lambda x: x.name)
+    df['protected'] = df['source'].apply(lambda x: x.parts[1])
+    df['study'] = df['source'].apply(lambda x: x.parts[2])
+    df['processed'] = df['source'].apply(lambda x: x.parts[3])
+    df['subject'] = df['source'].apply(lambda x: x.parts[4]
+                                       if len(x.parts) > 4 else '')
+    df['datatypes'] = df['source'].apply(lambda x: x.parts[5]
+                                         if len(x.parts) > 5 else '')
+
+    # add ctime
+    df['ctime'] = df['source'].apply(lambda x: \
+            datetime.fromtimestamp(
+                os.path.getctime(Path(Lochness['phoenix_root']).parent / x)))
+    df['ctime'] = pd.to_datetime(df['ctime'])
+
+    # clean up rows for metadata.csv
+    df.loc[df[df['processed'].str.contains('metadata.csv')].index,
+           'processed'] = ''
+    df.timestamp = pd.to_datetime(df.timestamp)
+
+    # append the df for new transfers to df_prev
+    df = pd.concat([df_prev, df.reset_index().drop('index', axis=1)])
+
+    # save outputs
+    df.to_csv(out_file)
+
+
 def lochness_to_lochness_transfer_s3_protected(Lochness):
     '''Lochness to Lochness transfer using aws s3 sync for protected data
 
