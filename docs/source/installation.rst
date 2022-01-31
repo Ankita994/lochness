@@ -10,7 +10,6 @@ Install ``AMP-SCZ Lochness`` and ``AMP-SCZ Yaxil`` using ``pip``.
 .. code-block:: shell
 
     pip install ampscz-lochness
-    pip install --upgrade git+https://github.com/AMP-SCZ/yaxil
 
 
 .. note ::
@@ -22,7 +21,6 @@ Install ``AMP-SCZ Lochness`` and ``AMP-SCZ Yaxil`` using ``pip``.
       git clone https://github.com/AMP-SCZ/lochness
       cd lochness
       pip install -r requirements.txt
-      pip install --upgrade git+https://github.com/AMP-SCZ/yaxil
 
       echo "export PYTHONPATH=${PYTHONPATH}:lochness" >> ~/.bashrc  # add path
       echo "export PATH=${PATH}:lochness/scripts" >> ~/.bashrc  # add path
