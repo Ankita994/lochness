@@ -7,6 +7,8 @@ with open("README.md", "r") as fh:
 
 here = os.path.abspath(os.path.dirname(__file__))
 
+requirements= open('requirements.txt').read().split()
+
 about = dict()
 with open(os.path.join(here, 'lochness', '__version__.py'), 'r') as f:
     exec(f.read(), about)
@@ -29,21 +31,7 @@ setup(
         "License :: OSI Approved :: MIT License",
     ],
     python_requires='>=3.7',
-    install_requires=['yaxil>=0.5.2',
-                      'paramiko>=2.7.2',
-                      'boxsdk>=2.11.0',
-                      'jsonpath_ng>=1.5.2',
-                      'cryptease>=0.2.0',
-                      'pytz>=2021.1',
-                      'requests>=2.26.0',
-                      'six>=1.16.0',
-                      'pandas>=1.3.2',
-                      'pytest>=6.2.4',
-                      'numpy>=1.20.3',
-                      'mano>=0.5.1',
-                      'LAMP>=0.0.1',
-                      'PyYAML>=6.0',
-                      'Jinja2>=2.11.3'],
+    install_requires=requirements,
     scripts=['scripts/listen_to_redcap.py',
              'scripts/lochness_create_template.py',
              'scripts/phoenix_generator.py',
