@@ -300,6 +300,12 @@ REDCap or RPMS database column names
 Update names of the ``REDCap`` or ``RPMS`` columns that contain unique subject
 ID and consent date of each stubject.
 
+For REDCap ::
+
+    redcap_id_colname: chric_record_id
+    redcap_consent_colname: chric_consent_date
+
+
 For RPMS ::
 
     RPMS_PATH: /mnt/prescient/RPMS_incoming
@@ -311,11 +317,6 @@ For RPMS ::
    ``RPMS_PATH`` is the directory where ``RPMS`` exports database as multiple
    csv files.
 
-
-For REDCap ::
-
-    redcap_id_colname: chric_record_id
-    redcap_consent_colname: chric_consent_date
 
 
 Amazon Web Services S3 bucket
@@ -329,13 +330,16 @@ Update AWS s3 bucket name to your s3 bucket name and root directory ::
 
 Box
 ~~~
-See :doc:`here<box_source_structure>` for how to configure Box. Then, the 
-configure file should have a ``box`` session that states which file patterns
-to look for in each study. 
+See :doc:`here<box_source_structure>` for how to configure Box source. Then,
+the configure file should have a ``box`` session that states which file
+patterns to look for in each study. 
 
 ``base`` is the root of the data directory for the study under ``Box``. If your
-data for ``PronetAB`` is saved under ``/ProNET/PronetAB``, the base for this
-study should be ``ProNET/PronetAB``.
+data for ``PronetAB`` is saved under ``ProNET/PronetAB`` under the root of Box
+source, the base for this study should be ``ProNET/PronetAB``.
+
+``delete_on_success`` is an option for removing the source files on the Box
+once lochness successfully downloads them. ``True`` or ``False``
 
 ``file_patterns`` takes list of different datatypes to be captured in from the
 Box. ``data_dir`` of each datatype is the name of the root directory that has
