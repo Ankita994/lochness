@@ -10,7 +10,8 @@ import lochness.net as net
 import lochness.tree as tree
 import lochness.config as config
 
-yaml.SafeDumper.add_representer(col.OrderedDict, yaml.representer.SafeRepresenter.represent_dict)
+yaml.SafeDumper.add_representer(
+        col.OrderedDict, yaml.representer.SafeRepresenter.represent_dict)
 
 logger = logging.getLogger(__name__)
 
@@ -18,28 +19,32 @@ logger = logging.getLogger(__name__)
 def sync(Lochness, subject, dry=False):
     logger.debug('exploring {0}/{1}'.format(subject.study, subject.id))
 
-    for alias,xnat_uids in iter(subject.xnat.items()):
+    for alias, xnat_uids in iter(subject.xnat.items()):
         Keyring = Lochness['keyring'][alias]
         auth = yaxil.XnatAuth(url=Keyring['URL'], username=Keyring['USERNAME'],
                               password=Keyring['PASSWORD'])
-        for xnat_uid in xnat_uids:
+
+        # CAPS agnostic XNAT data pull
+        for xnat_uid in xnat_uids + [(x[0], x[1].lower()) for x in xnat_uids]:
             for experiment in experiments(auth, xnat_uid):
                 logger.info(experiment)
                 dirname = tree.get('mri',
                                    subject.protected_folder,
                                    processed=False,
                                    BIDS=Lochness['BIDS'])
-                dst = os.path.join(dirname, experiment.label)
+                dst = os.path.join(dirname, experiment.label.upper())
                 if os.path.exists(dst):
                     try:
                         check_consistency(dst, experiment)
                         continue
                     except ConsistencyError as e:
                         logger.warn(e)
-                        message = 'A conflict was detected in study {0}'.format(subject.study)
+                        message = 'A conflict was detected in study' \
+                                  f'{subject.study}'
                         lochness.notify(Lochness, message, study=subject.study)
                         #lochness.backup(dst)
                         continue
+
                 message = 'downloading {PROJECT}/{LABEL} to {FOLDER}'
                 logger.debug(message.format(PROJECT=experiment.project,
                                             LABEL=experiment.label,
@@ -92,7 +97,7 @@ def save_experiment_file(d, url, experiment):
 def experiments(auth, uid):
     '''generator for mr session ids'''
     try:
-        project,subject = uid
+        project, subject = uid
         logger.info('searching xnat for {0}'.format(uid))
         xnat_subject = yaxil.subjects(auth, subject, project)
         xnat_subject = next(xnat_subject)
@@ -103,6 +108,7 @@ def experiments(auth, uid):
     except yaxil.exceptions.NoSubjectsError as e:
         logger.info('no xnat subject registered for {0}'.format(uid))
         return
+
     for experiment in yaxil.experiments(auth, subject=xnat_subject):
         yield experiment
 
