@@ -90,7 +90,7 @@ Running the command above will create a directory which will look like this ::
 
 .. note ::
 
-   To see detailed options of `lochness_create_template.py` ::
+   To see detailed options of `lochness_create_template.py`
 
    .. code-block:: shell
 
@@ -120,8 +120,10 @@ These information needs be added to the ``lochness.json`` template
    vim lochness.json
 
 
-``lochness.json`` file looks like below. Add credentials to the fields markedp
-with ``*****`` ::
+``lochness.json`` file looks like below. Add credentials to the fields marked
+with ``*****``
+
+.. code-block:: json
 
     {
       "lochness": {
@@ -271,9 +273,9 @@ Encrypt the temporary keyring file by running
 
 .. _edit_config ::
 
-4. Edit ``config.yml``
-----------------------
-`config.yml` file contains details of options to be used in Lochness.
+4. Edit configuration file
+--------------------------
+``config.yml`` file contains details of options to be used in Lochness.
 
 .. code-block:: console
 
