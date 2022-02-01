@@ -156,6 +156,21 @@ def send_out_daily_updates(Lochness, days: int = 1, test: bool = False):
                                   'Protected', 'Study', 'Processed', 'Subject',
                                   'Datatype', 'Download time (UTC)']
         s3_df_selected.reset_index().drop('index', axis=1, inplace=True)
+
+        # too many dicom file names -> remove
+        subject_mri_gb = s3_df_selected[
+                s3_df_selected.Datatype == 'mri'].groupby('subject')
+
+        sample_mri_df = pd.DataFrame()
+        for _, table in subject_mri_gb:
+            subject_mri_sample = table.iloc[:2]  # select only two raws
+            subject_mri_sample.iloc[1]['File name'] = '...'
+            sample_mri_df = pd.concat([sample_mri_df, subject_mri_sample])
+
+        s3_df_selected = pd.concat([
+            s3_df_selected[s3_df_selected.Datatype != 'mri'],
+            sample_mri_df]).sort_index()
+
         in_mail_footer = 'Note that only S3 transferred files are included.'
 
         send_detail_google(
