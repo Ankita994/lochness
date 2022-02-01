@@ -8,6 +8,7 @@ six>=1.16.0
 numpy>=1.20.3
 Jinja2>=2.11.3
 mano>=0.5.1
+dropbox>=11.26.0
 cryptease>=0.2.0
 pytz>=2021.1
 jsonpath_ng>=1.5.2
