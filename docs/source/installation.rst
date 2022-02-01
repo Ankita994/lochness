@@ -2,6 +2,30 @@ Installation
 ============
 
 
+Requirement
+-----------
+
+Install ``python3`` and ``pip`` using ``Miniconda``
+
+.. note ::
+
+   Below is an example for Ubuntu 20.04
+
+    .. code-block:: shell
+
+       apt-get update
+       apt-get install wget locales git -y
+
+       echo "export LC_ALL=C" >> ~/.bashrc
+       echo 'export LANGUAGE="en_US.UTF-8"' >> ~/.bashrc
+
+       cd ~/Downloads
+       wget https://repo.anaconda.com/miniconda/Miniconda3-py38_4.10.3-Linux-x86_64.sh
+       bash Miniconda3-py38_4.10.3-Linux-x86_64.sh
+
+       source ~/.bashrc
+
+
 AMP-SCZ Lochness
 ----------------
 
