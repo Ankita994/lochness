@@ -105,7 +105,7 @@ settings" to "ON".
 
 .. note ::
 
-    Future enhancement of ``Lochness`` will also work with ``mailx``. Stayp
+    Future enhancement of ``Lochness`` will also work with ``mailx``. Stay
     tuned.
 
 
