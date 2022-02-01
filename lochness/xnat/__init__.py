@@ -23,9 +23,16 @@ def sync(Lochness, subject, dry=False):
         Keyring = Lochness['keyring'][alias]
         auth = yaxil.XnatAuth(url=Keyring['URL'], username=Keyring['USERNAME'],
                               password=Keyring['PASSWORD'])
-
-        # CAPS agnostic XNAT data pull
-        for xnat_uid in xnat_uids + [(x[0], x[1].lower()) for x in xnat_uids]:
+        
+        
+        '''
+        pull XNAT data agnostic to the case of subject IDs
+        loop over lower and upper case IDs
+        if the data for one ID do not exist, experiments(auth, xnat_uid) returns nothing
+        preventing the execution of inner loop
+        '''
+        _xnat_uids= xnat_uids + [(x[0], x[1].lower()) for x in xnat_uids]
+        for xnat_uid in _xnat_uids:
             for experiment in experiments(auth, xnat_uid):
                 logger.info(experiment)
                 dirname = tree.get('mri',
