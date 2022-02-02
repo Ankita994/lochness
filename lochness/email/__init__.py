@@ -35,17 +35,11 @@ def send_detail(Lochness,
                 in_mail_footer: str,
                 test: bool = False,
                 mailx: bool = True) -> None:
-    '''Send detailed email
-
-    The configuration file should have
-        sender: senderemail@gmail.com
-        notify:
-          __global__:
-              - receiver1@anyemail.com
-              - receiver2@anyemail.com
-
-    When mailx = False, send_detail function will assume you are using Google
-    smpt to send out the emails. For this case, you will need to set up a
+    '''Email Lochness updates
+    
+    This function uses Linux's mailx system by default. But when
+    mailx = False, it uses Google's SMTP server to send emails.
+    For the latter case, you will need to set up a
     Google account with "Less secure app access" turned on, from "Manage
     your Google account" page. Also, the keyring file should have email
     password at the same level as the "SECRETS" field.
@@ -54,6 +48,15 @@ def send_detail(Lochness,
         "SECRETS": {"PronetLA": "LOCHNESS_SECRETS"},
         "email_sender_pw": "PASSWORD"
         }
+
+    The configuration file should have
+        sender: senderemail@gmail.com
+        notify:
+          __global__:
+              - receiver1@anyemail.com
+              - receiver2@anyemail.com
+
+    
     '''
 
     sender = Lochness['sender']
