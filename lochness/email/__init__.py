@@ -29,36 +29,37 @@ def send(recipients, sender, subject, message):
     s.quit()
 
 
-def send_detail_google(Lochness,
-                       title: str, subtitle: str, first_message: str,
-                       second_message: str, code: List[str],
-                       in_mail_footer: str,
-                       test: bool = False) -> None:
-    '''Send email using a Gmail account with "Less secure app access" turned on
+def send_detail(Lochness,
+                title: str, subtitle: str, first_message: str,
+                second_message: str, code: List[str],
+                in_mail_footer: str,
+                test: bool = False,
+                mailx: bool = True) -> None:
+    '''Email Lochness updates
+    
+    This function uses Linux's mailx system by default. But when
+    mailx = False, it uses Google's SMTP server to send emails.
+    For the latter case, you will need to set up a
+    Google account with "Less secure app access" turned on, from "Manage
+    your Google account" page. Also, the keyring file should have email
+    password at the same level as the "SECRETS" field.
 
-    Set up a Google account to send out emails using Google's SMTP server. You need
-    to turn on "Less secure app access" from "Manage your Google account" page 
-    in order to use this feature.
+        {...,
+        "SECRETS": {"PronetLA": "LOCHNESS_SECRETS"},
+        "email_sender_pw": "PASSWORD"
+        }
 
     The configuration file should have
-
         sender: senderemail@gmail.com
         notify:
           __global__:
               - receiver1@anyemail.com
               - receiver2@anyemail.com
 
-    The keyring file should have email password at the same level as the
-    "SECRETS" field.
-
-        {...,
-        "SECRETS": {"PronetLA": "LOCHNESS_SECRETS"},
-        "email_sender_pw": "PASSWORD"
-        }
+    
     '''
 
     sender = Lochness['sender']
-    sender_pw = Lochness['keyring']['lochness']['email_sender_pw']
     recipients_for_each_study = Lochness['notify']
 
     recipients = []
@@ -90,11 +91,17 @@ def send_detail_google(Lochness,
     msg['Subject'] = f'Lochness update {datetime.now(tz).date()}'
     msg['From'] = sender
     msg['To'] = recipients[0]
-    s = smtplib.SMTP('smtp.gmail.com', 587)
-    s.ehlo()
-    s.starttls()
-    s.ehlo()
-    s.login(sender, sender_pw)
+
+    if mailx:
+        s = smtplib.SMTP('localhost')
+    else:
+        sender_pw = Lochness['keyring']['lochness']['email_sender_pw']
+        s = smtplib.SMTP('smtp.gmail.com', 587)
+        s.ehlo()
+        s.starttls()
+        s.ehlo()
+        s.login(sender, sender_pw)
+
     if not test:
         s.sendmail(sender, recipients, msg.as_string())
         print('Email sent')
@@ -104,7 +111,8 @@ def send_detail_google(Lochness,
     s.quit()
 
 
-def send_out_daily_updates(Lochness, days: int = 1, test: bool = False):
+def send_out_daily_updates(Lochness, days: int = 1,
+                           test: bool = False, mailx: bool = True):
     '''Send daily updates from Lochness'''
 
     s3_log = Path(Lochness['phoenix_root']) / 's3_log.csv'
@@ -144,13 +152,13 @@ def send_out_daily_updates(Lochness, days: int = 1, test: bool = False):
     day_days = 'days' if days > 1 else 'day'
 
     if len(s3_df_selected) == 0:
-        send_detail_google(
+        send_detail(
             Lochness,
             'Lochness', f'Daily updates {datetime.now(tz).date()}',
             'There is no update!', '',
             list_of_lines_from_tree,
             '',
-            test)
+            test, mailx)
     else:
         s3_df_selected.columns = ['Transfer time (UTC)', 'File name',
                                   'Protected', 'Study', 'Processed', 'Subject',
@@ -173,7 +181,7 @@ def send_out_daily_updates(Lochness, days: int = 1, test: bool = False):
 
         in_mail_footer = 'Note that only S3 transferred files are included.'
 
-        send_detail_google(
+        send_detail(
             Lochness,
             'Lochness', f'Daily updates {datetime.now(tz).date()} '
                         f'(for the past {days} {day_days})',
@@ -181,7 +189,7 @@ def send_out_daily_updates(Lochness, days: int = 1, test: bool = False):
             'Each file in detail' + s3_df_selected.to_html(),
             list_of_lines_from_tree,
             in_mail_footer,
-            test)
+            test, mailx)
 
 
 def attempts_error(Lochness, attempt):

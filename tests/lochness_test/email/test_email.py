@@ -43,4 +43,14 @@ def test_box_sync_module_no_redownload(args_and_Lochness_BIDS):
 
     Lochness['notify']['test'] = ['sky8671@gmail.com']
     # send_out_daily_updates(Lochness, test=True)
+    send_out_daily_updates(Lochness, mailx=False)
+
+
+def test_box_sync_module_mailx(args_and_Lochness_BIDS):
+    args, Lochness = args_and_Lochness_BIDS
+    Lochness['sender'] = 'hahah@ho.ho'
+
+    Lochness['notify']['test'] = ['sky8671@gmail.com']
     send_out_daily_updates(Lochness)
+
+
