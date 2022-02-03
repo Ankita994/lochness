@@ -142,7 +142,6 @@ with ``*****``
           "PronetLA": "LOCHNESS_SECRETS",
           ...,
         }
-        "email_sender_pw": "*****"
       },
       "redcap.UPENN": {
         "URL": "*****",
@@ -205,7 +204,6 @@ Example of completed ``lochness.json``
           "PronetLA": "LOCHNESS_SECRETS",
           ...,
         }
-        "email_sender_pw": "aaoiweytyEfhag189e7"
       },
       "redcap.UPENN": {
         "URL": "https://redcap.med.upenn.edu",
@@ -238,6 +236,24 @@ Example of completed ``lochness.json``
       },
       ...,
     }
+
+
+
+.. note::
+
+   If you're using Google SMTP in sending out email, you need to add
+   ``"email_sender_pw": "PasswordForYourGoogleAccount"``
+
+   For an example,
+
+   .. code:: json
+
+        "SECRETS": {
+          "PronetLA": "LOCHNESS_SECRETS",
+          ...,
+        }
+        "email_sender_pw": "aaoiweytyEfhag189e7"
+
 
 
 3. Encrypt ``lochness.json`` to make a keyring file

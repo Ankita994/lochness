@@ -96,17 +96,25 @@ Your s3 bucket should be available from your shell environment.
 
 
 
-Google account for sending out emails
--------------------------------------
+``mailx`` for sending out emails
+------------------------------
 
-In order to use the email functionalities, a google account is required. Create
-a google account and set the ``Less secure app access`` under the "Account
-settings" to "ON". 
+Lochness can send out email updates. This requires ``mailx`` installed in the
+data aggregation server. In the current version ``sync.py`` is configured to
+use ``mailx`` as the default mechanism, but Google SMTP server can also be used
+when ``sync.py`` is slightly tweaked.
 
-.. note ::
 
-    Future enhancement of ``Lochness`` will also work with ``mailx``. Stay
-    tuned.
+.. note::
+
+   To use Google SMTP server, change the two lines 
+   ``send_out_daily_updates(Lochness)`` to
+   ``send_out_daily_updates(Lochness, mailx=False)``
+
+
+   In order to use Google SMTP in sending out the emails, you need to create
+   a google account and set the ``Less secure app access`` under the "Account
+   settings" to "ON". 
 
 
 Installation complete!
