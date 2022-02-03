@@ -167,7 +167,7 @@ def send_out_daily_updates(Lochness, days: int = 1,
 
         # too many dicom file names -> remove
         subject_mri_gb = s3_df_selected[
-                s3_df_selected.Datatype == 'mri'].groupby('subject')
+                s3_df_selected.Datatype == 'mri'].groupby('Subject')
 
         sample_mri_df = pd.DataFrame()
         for _, table in subject_mri_gb:
