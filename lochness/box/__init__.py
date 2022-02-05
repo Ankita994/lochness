@@ -307,7 +307,7 @@ def save(Lochness: 'lochness',
 
     if not dry:
         try:
-            # do not re-download already transferred & downloaded data
+            # do not re-download already transferred data
             if is_transferred_and_removed(Lochness, local_fullfile):
                 return
             _save(box_file_object, box_fullpath, local_fullfile, key, compress)
