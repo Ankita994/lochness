@@ -9,6 +9,7 @@ import collections as col
 import lochness.net as net
 import lochness.tree as tree
 import lochness.config as config
+from lochness.cleaner import is_transferred_and_removed
 
 yaml.SafeDumper.add_representer(
         col.OrderedDict, yaml.representer.SafeRepresenter.represent_dict)
@@ -23,13 +24,10 @@ def sync(Lochness, subject, dry=False):
         Keyring = Lochness['keyring'][alias]
         auth = yaxil.XnatAuth(url=Keyring['URL'], username=Keyring['USERNAME'],
                               password=Keyring['PASSWORD'])
-        
-        
         '''
-        pull XNAT data agnostic to the case of subject IDs
-        loop over lower and upper case IDs
-        if the data for one ID do not exist, experiments(auth, xnat_uid) returns nothing
-        preventing the execution of inner loop
+        pull XNAT data agnostic to the case of subject IDs loop over lower and
+        upper case IDs if the data for one ID do not exist, experiments(auth,
+        xnat_uid) returns nothing preventing the execution of inner loop
         '''
         _xnat_uids= xnat_uids + [(x[0], x[1].lower()) for x in xnat_uids]
         for xnat_uid in _xnat_uids:
@@ -40,6 +38,11 @@ def sync(Lochness, subject, dry=False):
                                    processed=False,
                                    BIDS=Lochness['BIDS'])
                 dst = os.path.join(dirname, experiment.label.upper())
+
+                # do not re-download already transferred & removed data
+                if is_transferred_and_removed(Lochness, dst):
+                    continue
+
                 if os.path.exists(dst):
                     try:
                         check_consistency(dst, experiment)
@@ -56,6 +59,7 @@ def sync(Lochness, subject, dry=False):
                 logger.debug(message.format(PROJECT=experiment.project,
                                             LABEL=experiment.label,
                                             FOLDER=dst))
+
                 if not dry:
                     tmpdir = tf.mkdtemp(dir=dirname, prefix='.')
                     os.chmod(tmpdir, 0o0755)
