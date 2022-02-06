@@ -305,6 +305,9 @@ ssh_host: {args.ssh_host}
 mindlamp_days_to_pull: 100
 pii_table: {args.pii_csv}
 lochness_sync_history_csv: {args.lochness_sync_history_csv}
+days_to_keep: 100
+removed_df_loc: {args.outdir}/PHOENIX/removed_files.csv
+removed_phoenix_root: {args.outdir}/track_removed_files_PHOENIX
 
 '''
 
