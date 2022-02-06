@@ -393,7 +393,7 @@ def sync(Lochness, subject, dry=False):
                     if crc_dst != crc_src:
                         logger.info('different - crc32: downloading data')
                         logger.warn(f'file has changed {dst}')
-                        lochness.backup(dst)
+                        # lochness.backup(dst)
                         logger.debug(f'saving {dst}')
                         lochness.atomic_write(dst, content)
 

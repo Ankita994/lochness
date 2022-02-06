@@ -116,21 +116,24 @@ def write_commands_needed(args: 'argparse',
                        --lochness_sync_send --s3 \
                        --debug --continuous \
                        --log-file {args.outdir}/log.txt \
-                       --daily_summary\n"
+                       --daily_summary \
+                       --remove_old_files\n"
             elif args.rsync:
                 command = f"sync.py -c {config_loc} \
                         --studies {' '.join(args.studies)} \
                         --source {' '.join(args.sources)} \
                         --lochness_sync_send --rsync \
                         --log-file {args.outdir}/log.txt \
-                        --debug --continuous\n"
+                        --debug --continuous \
+                        --remove_old_files\n"
             else:
                 command = f"sync.py -c {config_loc} \
                         --studies {' '.join(args.studies)} \
                         --source {' '.join(args.sources)} \
                         --lochness_sync_send --s3 \
                         --log-file {args.outdir}/log.txt \
-                        --debug --continuous\n"
+                        --debug --continuous \
+                        --remove_old_files\n"
         
         command = re.sub('\s\s+', ' \\\n\t', command)
         f.write(command)
