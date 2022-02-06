@@ -462,7 +462,8 @@ def test_sync_skip_for_the_day_ip(args):
         sync(Lochness, subject, False)
 
 
-def test_sync_yoon_jan_2022(args):
+def test_pronet_mindlamp(args):
+    args.studies = ['StudyA']
     syncArgs = SyncArgs(args.outdir)
     syncArgs.studies = ['StudyA']
     sources = ['mindlamp']
@@ -471,17 +472,21 @@ def test_sync_yoon_jan_2022(args):
     create_lochness_template(args)
     syncArgs.config = args.outdir / 'config.yml'
     # _ = KeyringAndEncryptMindlampAdminIP(args.outdir)
-    _ = KeyringAndEncryptMindlampAdmin(args.outdir)
+    # _ = KeyringAndEncryptMindlampAdmin(args.outdir)
+    _ = KeyringAndEncryptMindlamp(args.outdir)
     # _ = KeyringAndEncryptMindlampYoon(args.outdir)
 
     phoenix_root = args.outdir / 'PHOENIX'
     information_to_add_to_metadata = {'mindlamp': [
         {'subject_id': '1001', 'source_id': 'U5891709819'},
         ]}
+        # {'subject_id': '1001', 'source_id': 'U2763080389'},
+        # {'subject_id': '1002', 'source_id': 'U4361826716'}
     
     initialize_metadata_test(phoenix_root, 'StudyA',
                              information_to_add_to_metadata)
     Lochness = config_load_test(syncArgs.config)
+
     Lochness['mindlamp_days_to_pull'] = 3
     for subject in lochness.read_phoenix_metadata(Lochness, syncArgs.studies):
         sync(Lochness, subject, False)

@@ -146,8 +146,7 @@ def initialize_metadata(Lochness: 'Lochness object',
                 subject_dict[source_name] = \
                         f"{source}.{study_name}:{source_id}"
             else:
-                subject_dict[source_name] = \
-                        f"{source}.{study_name}:{source_id}"
+                pass
 
         df_tmp = pd.DataFrame.from_dict(subject_dict, orient='index')
         df = pd.concat([df, df_tmp.T])
@@ -247,7 +246,7 @@ def get_run_sheets_for_datatypes(json_path: Union[Path, str]) -> None:
 def check_if_modified(subject_id: str,
                       existing_json: str,
                       df: pd.DataFrame) -> bool:
-    '''check if subject data has been modified in the data entry trigger db
+    '''Check if subject data has been modified in the data entry trigger db
 
     Comparing unix times of the json modification and lastest redcap update
     '''
@@ -327,8 +326,8 @@ def sync(Lochness, subject, dry=False):
                     pass  # if modified, carry on
                 else:
                     logger.debug(f"{subject.study}/{subject.id} "
-                                 "No updates - not downloading REDCap data")
-                    break  # if not modified break
+                                 "No DET updates")
+                    # break  # if not modified break
 
             logger.debug("Downloading REDCap data")
             _debug_tup = (redcap_instance, redcap_project, redcap_subject)

@@ -167,12 +167,13 @@ def send_out_daily_updates(Lochness, days: int = 1,
 
         # too many dicom file names -> remove
         subject_mri_gb = s3_df_selected[
-                s3_df_selected.Datatype == 'mri'].groupby('subject')
+                s3_df_selected.Datatype == 'mri'].groupby('Subject')
 
         sample_mri_df = pd.DataFrame()
         for _, table in subject_mri_gb:
-            subject_mri_sample = table.iloc[:2]  # select only two raws
-            subject_mri_sample.iloc[1]['File name'] = '...'
+            subject_mri_sample = table.iloc[:2].copy()  # select only two raws
+            subject_mri_sample.loc[
+                    subject_mri_sample.index[-1], 'File name'] = '...'
             sample_mri_df = pd.concat([sample_mri_df, subject_mri_sample])
 
         s3_df_selected = pd.concat([
