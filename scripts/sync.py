@@ -30,6 +30,7 @@ from lochness.transfer import create_s3_transfer_table
 from lochness.transfer import lochness_to_lochness_transfer_receive_sftp
 from lochness.email import send_out_daily_updates
 from datetime import datetime, date
+from lochness.cleaner import rm_transferred_files_under_phoenix
 # import dpanonymize
 
 SOURCES = {
@@ -99,6 +100,10 @@ def main():
                         help='Enable daily summary email function')
     parser.add_argument('--debug', action='store_true',
                         help='Enable debug messages')
+    parser.add_argument('-rof', '--remove_old_files',
+                        action='store_true',
+                        help='Remove old files which are already transferred '
+                             'to s3 from PHOENIX directory')
     args = parser.parse_args()
 
     # configure logging for this application
@@ -137,6 +142,14 @@ def main():
     if args.continuous:
         dates_email_sent = []
         while True:
+            # remove already transferred files
+            if args.remove_old_files:
+                rm_transferred_files_under_phoenix(
+                        Lochness['phoenix_root'],
+                        days_to_keep=Lochness['days_to_keep'],
+                        removed_df_loc=Lochness['removed_df_loc'],
+                        removed_phoenix_root=Lochness['removed_phoenix_root'])
+
             do(args, Lochness)
 
             # daily email
@@ -148,6 +161,14 @@ def main():
             logger.info('sleeping for {0} seconds'.format(poll_interval))
             time.sleep(Lochness['poll_interval'])
     else:
+        # remove already transferred files
+        if args.remove_old_files:
+            rm_transferred_files_under_phoenix(
+                    Lochness['phoenix_root'],
+                    days_to_keep=Lochness['days_to_keep'],
+                    removed_df_loc=Lochness['removed_df_loc'],
+                    removed_phoenix_root=Lochness['removed_phoenix_root'])
+
         do(args, Lochness)
 
         # email
