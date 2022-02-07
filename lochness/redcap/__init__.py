@@ -407,7 +407,7 @@ def sync(Lochness, subject, dry=False):
                                     'Not saving the data')
                         # update the dst file's mtime so it can prevent the
                         # same file being pulled from REDCap
-                        os.utime(dst)
+                        # os.utime(dst)
 
 
 class REDCapError(Exception):
