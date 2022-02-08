@@ -187,6 +187,19 @@ def get_subject_data(all_df_dict: Dict[str, pd.DataFrame],
     for measure, measure_df in all_df_dict.items():
         measure_df[id_colname] = measure_df[id_colname].astype(str)
         subject_df = measure_df[measure_df[id_colname] == subject.id]
+
+        # Keep most recent rows for each visit
+        for unique_visit, table in subject_df.groupby('visit'):
+            if len(table) == 1:
+                pass
+            else:
+                most_recent_row_index = pd.to_datetime(
+                        table['LastModifiedDate']).idxmax()
+                non_recent_row_index = [x for x in table.index
+                         if x != most_recent_row_index]
+                print(f'RPMS export has duplicated rows for {measure}')
+                subject_df.drop(non_recent_row_index, inplace=True)
+
         subject_df_dict[measure] = subject_df
 
     return subject_df_dict
