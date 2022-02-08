@@ -221,22 +221,27 @@ def sync(Lochness, subject, dry=False):
                                BIDS=Lochness['BIDS'])
         proc_dst = Path(proc_folder) / f"{subject_id}_{measure}.csv"
 
-        # load the time of the lastest data pull from daris
-        # estimated from the mtime of the zip file downloaded
+        # if the csv already exists, compare the dataframe
         if Path(target_df_loc).is_file():
-            latest_pull_mtime = target_df_loc.stat().st_mtime
+            # index might be different, so drop it before comparing it
+            prev_df = pd.read_csv(target_df_loc).reset_index().drop(
+                    'index', axis=1)
+
+            # in order to use df.equals function, which also checks for data
+            # types of each data, the source_df needs to be saved and re-loaded
+            # to make the datatype consistent to that of prev_df
+            with tf.NamedTemporaryFile(delete=True) as f:
+                source_df.to_csv(f.name, index=False)
+                same_df = pd.read_csv(f.name).reset_index().drop(
+                        'index', axis=1).equals(prev_df)
+                if same_df:
+                    print(f'No new updates in {subject_id}:{measure}')
+                    continue
+
         else:
             latest_pull_mtime = 0
 
         if len(source_df) == 0:  # do not save if the dataframe is empty
-            continue
-
-        # if last_modified date > latest_pull_mtime, pull the data
-        source_df['LastModifiedDate'] = pd.to_datetime(
-                source_df['LastModifiedDate'])
-        if source_df['LastModifiedDate'].max() <= \
-                pd.to_datetime(latest_pull_mtime):
-            print('No new updates')
             continue
 
         if not dry:
