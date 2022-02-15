@@ -149,6 +149,7 @@ def is_transferred_and_removed(Lochness,
         df_removed = pd.read_csv(removed_df_loc, index_col=0)
     else:
         df_removed = pd.DataFrame()
+        df_removed['source'] = []
 
     if str(destination) in df_removed.source.tolist():
         return True
