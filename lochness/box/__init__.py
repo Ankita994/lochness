@@ -517,8 +517,6 @@ def sync_module(Lochness: 'lochness.config',
                     if datatype_root_obj == None:
                         logger.debug(f'{subject.study} {datatype} {product} '
                                      f'is not found under {bx_base_obj}')
-                        for file_or_folder in bx_base_obj.get_items():
-                            print(f'{bx_base_obj}/{file_or_folder}')
                         continue
 
                     # for BIDS root datatype_obj has bx_sid
