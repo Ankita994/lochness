@@ -428,6 +428,8 @@ def lochness_to_lochness_transfer_s3_protected(Lochness):
             eg) AWS_BUCKET_NAME: ampscz-dev
                 AWS_BUCKET_PHOENIX_ROOT: TEST_PHOENIX_ROOT
 
+    Notes:
+        - do not share .mp3 files from phone data
     '''
 
     s3_bucket_name = Lochness['AWS_BUCKET_NAME']
@@ -444,9 +446,10 @@ def lochness_to_lochness_transfer_s3_protected(Lochness):
                 s3_phoenix_root_dtype = re.sub(Lochness['phoenix_root'],
                                                s3_phoenix_root,
                                                str(source_directory))
-                command = f'aws s3 sync \
+                command = f"aws s3 sync \
                         {source_directory}/ \
-                        s3://{s3_bucket_name}/{s3_phoenix_root_dtype} --delete'
+                        s3://{s3_bucket_name}/{s3_phoenix_root_dtype} \
+                        --exclude '*.mp3' --delete"
 
                 logger.debug('Executing aws s3 sync function for '
                              f'{source_directory}')
