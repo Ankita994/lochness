@@ -89,6 +89,9 @@ def sync(Lochness: 'lochness.config',
     logger.debug(f'deidentify for study {subject.study} is {deidentify}')
 
     # get keyring for mindlamp
+    if len(subject.mindlamp.keys()) == 0:
+        return
+
     api_url, access_key, secret_key = mindlamp_projects(Lochness,
                                                         subject.mindlamp)
 
@@ -214,7 +217,6 @@ def mindlamp_projects(Lochness: 'lochness.config',
                       mindlamp_instance: 'subject.mindlamp.item'):
     '''get mindlamp api_url and api_key for a phoenix study'''
     Keyring = Lochness['keyring']
-
     key_name = list(mindlamp_instance.keys())[0]  # mindlamp.StudyA
 
     # Assertations

@@ -218,7 +218,8 @@ def _subjects(Lochness, study, general_folder, protected_folder, metadata_file):
 
         # sanity check on very critical bits of information
         if not phoenix_id or not phoenix_study:
-            raise StudyMetadataError('bad row in metadata file {0}'.format(meta_basename))
+            raise StudyMetadataError(
+                    'bad row in metadata file {0}'.format(meta_basename))
         general = os.path.join(general_folder, phoenix_study, phoenix_id)
         protected = os.path.join(protected_folder, phoenix_study, phoenix_id)
         subject = Subject(active, phoenix_study, phoenix_id, consent, beiwe,
@@ -226,7 +227,6 @@ def _subjects(Lochness, study, general_folder, protected_folder, metadata_file):
                           box, mediaflux, mindlamp, daris, rpms,
                           general, protected, metadata_file)
 
-        logger.debug('subject metadata blob:\n{0}'.format(json.dumps(subject.asdict(), indent=2)))
         yield subject
 
 
