@@ -15,7 +15,6 @@ from os.path import join as pjoin, basename, dirname, isfile
 import cryptease as enc
 import re
 from subprocess import Popen
-import tempfile
 import pandas as pd
 from numpy import nan
 from distutils.spawn import find_executable
@@ -94,7 +93,7 @@ def sync_module(Lochness: 'lochness.config',
                             mf_base, prod['data_dir'], mf_subid, patt)
 
                     # obtain mediaflux remote paths
-                    with tempfile.TemporaryDirectory() as tmpdir:
+                    with tf.TemporaryDirectory() as tmpdir:
                         diff_path= pjoin(tmpdir,'diff.csv')
                         cmd = (' ').join(['unimelb-mf-check',
                                           '--mf.config', mflux_cfg,
