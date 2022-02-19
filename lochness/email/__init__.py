@@ -184,7 +184,7 @@ def send_out_daily_updates(Lochness, days: int = 1,
             s3_df_selected[s3_df_selected.Datatype != 'mri'],
             sample_mri_df]).sort_index()
 
-        in_mail_footer = 'Note that only S3 transferred files are included.'
+        in_mail_footer = 'Only the files transferred to NDA are shown.'
 
         send_detail(
             Lochness,
