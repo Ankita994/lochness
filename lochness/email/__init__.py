@@ -141,6 +141,9 @@ def send_out_daily_updates(Lochness, days: int = 1,
             'processed', 'subject', 'datatypes']).count()[['filename']]
         count_df.columns = ['file count']
         count_df = count_df.reset_index()
+        count_df.columns = ['Transfer date', 'Protected vs General', 'Site',
+                'Raw vs Processed', 'Subject', 'Data type',
+                'Number of files transferred']
         s3_df_selected.drop('date', axis=1, inplace=True)
 
     else:
@@ -167,7 +170,10 @@ def send_out_daily_updates(Lochness, days: int = 1,
 
         # too many dicom file names -> remove
         subject_mri_gb = s3_df_selected[
-                s3_df_selected.Datatype == 'mri'].groupby('Subject')
+               (s3_df_selected.Datatype == 'mri') &
+               (~s3_df_selected['File name'].str.startswith('.')) &
+               (~s3_df_selected['File name'].str.endswith('.gif'))
+                ].groupby('Subject')
 
         sample_mri_df = pd.DataFrame()
         for _, table in subject_mri_gb:
@@ -182,7 +188,7 @@ def send_out_daily_updates(Lochness, days: int = 1,
 
         s3_df_selected = pd.concat([
             s3_df_selected[s3_df_selected.Datatype != 'mri'],
-            sample_mri_df]).sort_index()
+            sample_mri_df]).sort_index().reset_index(drop=True)
 
         in_mail_footer = 'Only the files transferred to NDA are shown.'
 
@@ -190,8 +196,11 @@ def send_out_daily_updates(Lochness, days: int = 1,
             Lochness,
             'Lochness', f'Daily updates {datetime.now(tz).date()} '
                         f'(for the past {days} {day_days})',
-            'Summary of files sent to NDA' + count_df.to_html(),
-            'Each file in detail' + s3_df_selected.to_html(),
+            '<h2>Summary of the files transferred to NDA</h2>' \
+                    + count_df.to_html() + '<br>',
+            '<h2>More details for each data type</h2>' \
+                    + '<br>'.join(
+                        [f"<h3>{datatype.upper()}</h3>{table.to_html()}" for datatype, table in s3_df_selected.groupby('Datatype')]),
             list_of_lines_from_tree,
             in_mail_footer,
             test, mailx)
