@@ -15,11 +15,11 @@ from os.path import join as pjoin, basename, dirname, isfile
 import cryptease as enc
 import re
 from subprocess import Popen
-import tempfile
 import pandas as pd
 from numpy import nan
 from distutils.spawn import find_executable
 import lochness.tree as tree
+from lochness.cleaner import is_transferred_and_removed
 
 logger = logging.getLogger(__name__)
 Module = lochness.lchop(__name__, 'lochness.')
@@ -55,7 +55,7 @@ def sync_module(Lochness: 'lochness.config',
         _passphrase = keyring.passphrase(Lochness, subject.study)
         enc_key = enc.kdf(_passphrase)
 
-        mflux_cfg= keyring.mediaflux_api_token(Lochness, study_name)
+        mflux_cfg = keyring.mediaflux_api_token(Lochness, study_name)
         
         mf_base = base(Lochness, study_basename)
 
@@ -89,11 +89,11 @@ def sync_module(Lochness: 'lochness.config',
                     mf_remote_root = pjoin(
                             mf_base, prod['data_dir'], mf_subid)
 
-                    mf_remote_pattern= pjoin(
+                    mf_remote_pattern = pjoin(
                             mf_base, prod['data_dir'], mf_subid, patt)
 
                     # obtain mediaflux remote paths
-                    with tempfile.TemporaryDirectory() as tmpdir:
+                    with tf.TemporaryDirectory() as tmpdir:
                         diff_path= pjoin(tmpdir,'diff.csv')
                         cmd = (' ').join(['unimelb-mf-check',
                                           '--mf.config', mflux_cfg,
@@ -115,7 +115,8 @@ def sync_module(Lochness: 'lochness.config',
                             if remote is nan:
                                 continue
 
-                            if not re.search(patt.replace('*','(.+?)'), remote):
+                            if not re.search(patt.replace('*', '(.+?)'),
+                                             remote):
                                 continue
                             else:
                                 remote = remote.split(':')[1]
@@ -151,6 +152,12 @@ def sync_module(Lochness: 'lochness.config',
                             mf_local = str(mf_local / prod['out_dir'] \
                                     if 'out_dir' in prod else mf_local)
 
+                            # do not re-download already transferred &
+                            # removed data
+                            if is_transferred_and_removed(
+                                    Lochness, mf_local / subpath.name):
+                                continue
+
                             # ENH set different permissions
                             # GENERAL: 0o755, PROTECTED: 0700
                             os.makedirs(mf_local, exist_ok=True)
@@ -165,9 +172,9 @@ def sync_module(Lochness: 'lochness.config',
                             p = Popen(cmd, shell=True)
                             p.wait()
 
-                            # verify checksum after download completes
-                            # if checksum does not match, data will be downloaded again
-                            # ENH should we verify checksum 5 times?
+                            # verify checksum after download completes if
+                            # checksum does not match, data will be downloaded
+                            # again ENH should we verify checksum 5 times?
                             cmd += ' --csum-check'
                             p = Popen(cmd, shell=True)
                             p.wait()

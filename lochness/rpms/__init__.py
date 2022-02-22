@@ -253,6 +253,19 @@ def get_subject_data(all_df_dict: Dict[str, pd.DataFrame],
     for measure, measure_df in all_df_dict.items():
         measure_df[id_colname] = measure_df[id_colname].astype(str)
         subject_df = measure_df[measure_df[id_colname] == subject.id]
+
+        # Keep the most recent row for each visit
+        for unique_visit, table in subject_df.groupby('visit'):
+            if len(table) == 1:
+                pass
+            else:
+                most_recent_row_index = pd.to_datetime(
+                        table['LastModifiedDate']).idxmax()
+                non_recent_row_index = [x for x in table.index
+                         if x != most_recent_row_index]
+                print(f'RPMS export has duplicated rows for {measure}')
+                subject_df.drop(non_recent_row_index, inplace=True)
+
         subject_df_dict[measure] = subject_df
 
     return subject_df_dict
@@ -290,16 +303,16 @@ def sync(Lochness, subject, dry=False):
         # if the csv already exists, compare the dataframe
         if Path(target_df_loc).is_file():
             # index might be different, so drop it before comparing it
-            prev_df = pd.read_csv(target_df_loc).reset_index().drop(
-                    'index', axis=1)
+            prev_df = pd.read_csv(target_df_loc).reset_index(
+                    inplace=True, drop=True)
 
             # in order to use df.equals function, which also checks for data
             # types of each data, the source_df needs to be saved and re-loaded
             # to make the datatype consistent to that of prev_df
             with tf.NamedTemporaryFile(delete=True) as f:
                 source_df.to_csv(f.name, index=False)
-                same_df = pd.read_csv(f.name).reset_index().drop(
-                        'index', axis=1).equals(prev_df)
+                same_df = pd.read_csv(f.name).reset_index(
+                        inplace=True, drop=True).equals(prev_df)
                 if same_df:
                     print(f'No new updates in {subject_id}:{measure}')
                     continue
