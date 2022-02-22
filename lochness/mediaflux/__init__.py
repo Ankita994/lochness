@@ -14,7 +14,7 @@ import lochness.keyring as keyring
 from os.path import join as pjoin, basename, dirname, isfile
 import cryptease as enc
 import re
-from subprocess import Popen
+from subprocess import Popen, DEVNULL, STDOUT
 import pandas as pd
 from numpy import nan
 from distutils.spawn import find_executable
@@ -102,7 +102,8 @@ def sync_module(Lochness: 'lochness.config',
                                           mf_remote_root,
                                           '-o', diff_path])
                         
-                        p = Popen(cmd, shell=True)
+                        p = Popen(cmd, shell=True,
+                                  stdout=DEVNULL, stderr=STDOUT)
                         p.wait()
 
                         # ENH
@@ -169,14 +170,16 @@ def sync_module(Lochness: 'lochness.config',
                                               '--nb-retries 5',
                                               f'\"{remote}\"'])
 
-                            p = Popen(cmd, shell=True)
+                            p = Popen(cmd, shell=True,
+                                      stdout=DEVNULL, stderr=STDOUT)
                             p.wait()
 
                             # verify checksum after download completes if
                             # checksum does not match, data will be downloaded
                             # again ENH should we verify checksum 5 times?
                             cmd += ' --csum-check'
-                            p = Popen(cmd, shell=True)
+                            p = Popen(cmd, shell=True,
+                                      stdout=DEVNULL, stderr=STDOUT)
                             p.wait()
 
 
