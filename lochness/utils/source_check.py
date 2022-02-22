@@ -14,7 +14,7 @@ from lochness.utils.path_checker import check_file_path_df, print_deviation
 import tempfile as tf
 from datetime import datetime
 from pytz import timezone
-from subprocess import Popen
+from subprocess import Popen, DEVNULL, STDOUT
 tz = timezone('EST')
 
 
@@ -220,84 +220,58 @@ def send_source_qc_summary(qc_fail_df: pd.DataFrame,
         'should have passed QC')
 
 
-def check_pronet_source(Lochness: 'lochness'):
-    '''Check if there is any file that deviates from SOP for ProNET
-    
-    Key arguments:
-        Lochness: Lochness object, created by loading the lochnessi
-                  configuration file, using lochness.config.load
-
-    Notes:
-        - Uses four threads in sending signals to Box APIs by default
-
-    '''
-    keyring = Lochness['keyring']
-
-    # xnat
-    xnat_df = check_list_all_xnat_subjects(keyring)
-
-    # box
-    box_files_df = collect_box_files_info(keyring)
-    with tf.NamedTemporaryFile(delete=True) as f:
-        box_files_df.to_csv(f.name, index=False)
-        box_df = load_box_df(f.name)
-        box_df_checked = check_file_path_df(box_df)
-
-    # merge xnat and box check files
-    all_df = pd.concat([xnat_df, box_df])
-
-    # select final_check failed files, and clean up
-    qc_fail_df = all_df[~all_df['final_check']]
-    qc_fail_df['final_check'] = 'Incorrect'
-    cols_to_show = ['file_path', 'site', 'subject', 'modality', 'final_check']
-    qc_fail_df = qc_fail_df[cols_to_show]
-    qc_fail_df.columns = ['File Path', 'Site', 'Subject',
-                          'Data Type', 'Format']
-
-    # temporary change email receipient
-    Lochness['notify']['__global__'] = ['kevincho@bwh.harvard.edu']
-
-    lines = []
-    send_source_qc_summary(qc_fail_df, lines, Lochness)
-
-
 def collect_mediaflux_files_info(Lochness: 'lochness') -> pd.DataFrame:
     '''Collect list of files from mediaflux in a pandas dataframe'''
     mflux_cfg = Path(Lochness['phoenix_root']) / 'mflux.cfg'
     mf_remote_root = '/projects/proj-5070_prescient-1128.4.380'
     with tf.TemporaryDirectory() as tmpdir:
-        diff_path = tmpdir / 'diff.csv'
+        diff_path = Path(tmpdir) / 'diff.csv'
         cmd = (' ').join(['unimelb-mf-check',
-                          '--mf.config', mflux_cfg,
+                          f'--mf.config {mflux_cfg}',
                           '--nb-retries 5',
                           '--direction down', tmpdir,
                           mf_remote_root,
-                          '-o', diff_path])
+                          f'-o {diff_path}'])
         
-        p = Popen(cmd, shell=True)
+        p = Popen(cmd, shell=True, stdout=DEVNULL, stderr=STDOUT)
         p.wait()
 
-        return pd.read_csv(diff_path)
+        mediaflux_df = load_mediaflux_df(diff_path)
+        return mediaflux_df
 
 
-def check_prescient_source(Lochness: 'lochness'):
-    '''Check if there is any file that deviates from SOP for ProNET
-    
-    Key arguments:
-        Lochness: Lochness object, created by loading the lochnessi
-                  configuration file, using lochness.config.load
+def check_source(Lochness: 'lochness') -> None:
+    '''Check if there is any file that deviates from SOP'''
 
-    Notes:
-        - Uses four threads in sending signals to Box APIs by default
+    if Lochness['project_name'] == 'Prescient':
+        mediaflux_df = collect_mediaflux_files_info(Lochness)
+        all_df = check_file_path_df(mediaflux_df)
 
-    '''
-    mediaflux_df = load_mediaflux_df('~/diff_path-20220219020947.csv')
-    all_df = check_file_path_df(mediaflux_df)
+    elif Lochness['project_name'] == 'Prescient':
+        keyring = Lochness['keyring']
+
+        # xnat
+        xnat_df = check_list_all_xnat_subjects(keyring)
+
+        # box
+        box_files_df = collect_box_files_info(keyring)
+        with tf.NamedTemporaryFile(delete=True) as f:
+            box_files_df.to_csv(f.name, index=False)
+            box_df = load_box_df(f.name)
+            box_df_checked = check_file_path_df(box_df)
+
+        # merge xnat and box check files
+        all_df = pd.concat([xnat_df, box_df])
+
+    else:
+        return
 
     # select final_check failed files, and clean up
     qc_fail_df = all_df[
             (~all_df['final_check']) & 
-            (all_df['site'].str.startswith('Prescient'))]
+            (all_df['site'].str.startswith('Prescient')) &
+            (~all_df['file_name'].str.contains('.dcm|._dicom_series'))
+            ]
     qc_fail_df['final_check'] = 'Incorrect'
     cols_to_show = ['file_path', 'site', 'subject', 'modality', 'final_check']
     qc_fail_df = qc_fail_df[cols_to_show]
@@ -310,10 +284,12 @@ def check_prescient_source(Lochness: 'lochness'):
     lines = []
     send_source_qc_summary(qc_fail_df, lines, Lochness)
 
+
 if __name__ == '__main__':
-    config_loc = '/opt/software/Pronet_data_sync/config.yml'
+    config_loc = '/mnt/prescient/Prescient_data_sync/config.yml'
     Lochness = load(config_loc)
-    # check_pronet_source(Lochness)
-    check_prescient_source(Lochness)
+    check_source(Lochness)
+
+
 
 
