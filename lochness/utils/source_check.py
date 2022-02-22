@@ -14,6 +14,7 @@ from lochness.utils.path_checker import check_file_path_df, print_deviation
 import tempfile as tf
 from datetime import datetime
 from pytz import timezone
+from subprocess import Popen
 tz = timezone('EST')
 
 
@@ -204,10 +205,10 @@ def send_source_qc_summary(qc_fail_df: pd.DataFrame,
                            lines,
                            Lochness: 'lochness') -> None:
     '''Send summary of qc failed files in sources'''
-    title = 'List of files need to be renamed'
+    title = 'List of files out of SOP'
     send_detail(
         Lochness,
-        'Files on data source',
+        'Files on source out of SOP',
         f'Daily updates {datetime.now(tz).date()}',
         'Dear team,<br><br>Please find the list of files on the source, which '
         'do not follow the SOP. Please move, rename or delete the files '
@@ -219,7 +220,7 @@ def send_source_qc_summary(qc_fail_df: pd.DataFrame,
         'should have passed QC')
 
 
-def check_pronia_source(Lochness: 'lochness'):
+def check_pronet_source(Lochness: 'lochness'):
     '''Check if there is any file that deviates from SOP for ProNET
     
     Key arguments:
@@ -250,14 +251,69 @@ def check_pronia_source(Lochness: 'lochness'):
     qc_fail_df['final_check'] = 'Incorrect'
     cols_to_show = ['file_path', 'site', 'subject', 'modality', 'final_check']
     qc_fail_df = qc_fail_df[cols_to_show]
-    qc_fail_df.columns = ['File Path', 'Site', 'Subject', 'Data Type', 'Format']
+    qc_fail_df.columns = ['File Path', 'Site', 'Subject',
+                          'Data Type', 'Format']
 
-    lines = []  # for future addtion
+    # temporary change email receipient
+    Lochness['notify']['__global__'] = ['kevincho@bwh.harvard.edu']
+
+    lines = []
     send_source_qc_summary(qc_fail_df, lines, Lochness)
 
+
+def collect_mediaflux_files_info(Lochness: 'lochness') -> pd.DataFrame:
+    '''Collect list of files from mediaflux in a pandas dataframe'''
+    mflux_cfg = Path(Lochness['phoenix_root']) / 'mflux.cfg'
+    mf_remote_root = '/projects/proj-5070_prescient-1128.4.380'
+    with tf.TemporaryDirectory() as tmpdir:
+        diff_path = tmpdir / 'diff.csv'
+        cmd = (' ').join(['unimelb-mf-check',
+                          '--mf.config', mflux_cfg,
+                          '--nb-retries 5',
+                          '--direction down', tmpdir,
+                          mf_remote_root,
+                          '-o', diff_path])
+        
+        p = Popen(cmd, shell=True)
+        p.wait()
+
+        return pd.read_csv(diff_path)
+
+
+def check_prescient_source(Lochness: 'lochness'):
+    '''Check if there is any file that deviates from SOP for ProNET
+    
+    Key arguments:
+        Lochness: Lochness object, created by loading the lochnessi
+                  configuration file, using lochness.config.load
+
+    Notes:
+        - Uses four threads in sending signals to Box APIs by default
+
+    '''
+    mediaflux_df = load_mediaflux_df('~/diff_path-20220219020947.csv')
+    all_df = check_file_path_df(mediaflux_df)
+
+    # select final_check failed files, and clean up
+    qc_fail_df = all_df[
+            (~all_df['final_check']) & 
+            (all_df['site'].str.startswith('Prescient'))]
+    qc_fail_df['final_check'] = 'Incorrect'
+    cols_to_show = ['file_path', 'site', 'subject', 'modality', 'final_check']
+    qc_fail_df = qc_fail_df[cols_to_show]
+    qc_fail_df.columns = ['File Path', 'Site', 'Subject',
+                          'Data Type', 'Format']
+
+    # temporary change email receipient
+    Lochness['notify']['__global__'] = ['kevincho@bwh.harvard.edu']
+
+    lines = []
+    send_source_qc_summary(qc_fail_df, lines, Lochness)
 
 if __name__ == '__main__':
     config_loc = '/opt/software/Pronet_data_sync/config.yml'
     Lochness = load(config_loc)
-    check_pronia_source(Lochness)
+    # check_pronet_source(Lochness)
+    check_prescient_source(Lochness)
+
 
