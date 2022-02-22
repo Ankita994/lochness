@@ -61,6 +61,7 @@ def check_list_all_xnat_subjects(keyring: dict) -> pd.DataFrame:
     df = pd.DataFrame()
     for matching_project in project_to_check:
         project = session.projects[matching_project]
+
         for num, (id, subject) in enumerate(project.subjects.items(), 1):
             for exp_id, experiment in subject.experiments.items():
                 df_tmp = pd.DataFrame({
@@ -68,7 +69,8 @@ def check_list_all_xnat_subjects(keyring: dict) -> pd.DataFrame:
                                   f'{experiment.label}'],
                     'subject': subject.label,
                     'project': project.id,
-                    'experiment': experiment.label})
+                    'experiment': experiment.label,
+                    'date': experiment.date})
                 df = pd.concat([df, df_tmp])
 
     df['modality'] = 'MRI'
