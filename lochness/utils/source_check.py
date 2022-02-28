@@ -1,6 +1,6 @@
 import pandas as pd
 from pathlib import Path
-from typing import Union
+from typing import Union, List
 import xnat
 import pandas as pd
 from lochness.config import load
@@ -47,7 +47,8 @@ def get_box_client_from_box_keyrings(box_k: dict) -> Client:
     return client
 
 
-def check_list_all_xnat_subjects(keyring: dict) -> pd.DataFrame:
+def check_list_all_xnat_subjects(keyring: dict,
+                                 subject_list: List[str]) -> pd.DataFrame:
     '''Return a dataframe of experiments for target_site'''
     xnat_k = keyring['xnat.PronetLA']
     session = xnat.connect(xnat_k['URL'],
@@ -78,6 +79,12 @@ def check_list_all_xnat_subjects(keyring: dict) -> pd.DataFrame:
 
     df['subject_check'] = df['subject'].str.match('^[A-Za-z]{2}\d{5}$')
     df['site'] = df['project'].str.split('_').str[0]
+
+    df['exist_in_db'] = df['subject'].str.upper().isin(
+            subject_list).fillna(False)
+    df.loc[df[df['exist_in_db']].index,
+           'notes'] = 'Subject missing from database'
+
     df['site_check'] = df['project'].str.match('^Pronet[A-Z]{2}_\w+$')
     df['file_check'] = df['experiment'].str.match(
             '^[A-Za-z]{2}\d{5}_MR_\d{4}_\d{2}_\d{2}_\d$')
@@ -141,21 +148,14 @@ def get_df_of_files_for_site(keyring, site):
 
 def collect_box_files_info(keyring) -> pd.DataFrame:
     '''Box clean up function'''
-    folder_dict = {'PronetCA':147568280050, 'PronetCM':147569025780,
-                   'PronetGA':147569449803, 'PronetHA':147568610087,
-                   'PronetBI':147568078480, 'PronetKC':147568869324,
-                   'PronetMU':147568909879, 'PronetMA':147568873738,
-                   'PronetMT':147567624284, 'PronetSI':147568159676,
-                   'PronetNL':147569038268, 'PronetNN':147567284495,
-                   'PronetOR':147569330828, 'PronetPV':147568884538,
-                   'PronetPA':147568159035, 'PronetPI':147568919154,
-                   'PronetSL':147568683922, 'PronetSH':147568092207,
-                   'PronetTE':147567344512, 'PronetIR':147568662381,
-                   'PronetLA':147568723651, 'PronetSD':147568290916,
-                   'PronetSF':147567284569, 'PronetNC':147568636984,
-                   'PronetWU':147568356792, 'PronetYA':147567323985}
+    study_name_list = ['PronetCA', 'PronetCM', 'PronetGA', 'PronetHA',
+                       'PronetBI', 'PronetKC', 'PronetMU', 'PronetMA',
+                       'PronetMT', 'PronetSI', 'PronetNL', 'PronetNN',
+                       'PronetOR', 'PronetPV', 'PronetPA', 'PronetPI',
+                       'PronetSL', 'PronetSH', 'PronetTE', 'PronetIR',
+                       'PronetLA', 'PronetSD', 'PronetSF', 'PronetNC',
+                       'PronetWU', 'PronetYA']
 
-    # folder_dict = {'PronetYA':147568280050}
     box_keyrings = keyring['box.PronetLA']
 
     # run in parallel
@@ -163,8 +163,8 @@ def collect_box_files_info(keyring) -> pd.DataFrame:
     def collect_out(df):
         results.append(df)
 
-    pool = Pool(4)
-    for site, site_num in folder_dict.items():
+    pool = Pool(10)
+    for site in study_name_list:
         pool.apply_async(get_df_of_files_for_site,
                          args=(box_keyrings, site,),
                          callback=collect_out,
@@ -175,7 +175,6 @@ def collect_box_files_info(keyring) -> pd.DataFrame:
     df = pd.concat(results)
     df.sort_values(by='path').reset_index(
             drop=True, inplace=True)
-
 
     return df
 
@@ -214,7 +213,7 @@ def send_source_qc_summary(qc_fail_df: pd.DataFrame,
         'do not follow the SOP. Please move, rename or delete the files '
         'according to the SOP. Please do not hesitate to get back to us. '
         '<br><br>Best wishes,<br>DPACC',
-        qc_fail_df.to_html(index=False),
+        '<br>'.join([f'<h2>{site}</h2>{x.to_html(index=False)}' for site, x in qc_fail_df.groupby('Site')]),
         lines,
         'Please let us know if any of the files above '
         'should have passed QC')
@@ -240,25 +239,45 @@ def collect_mediaflux_files_info(Lochness: 'lochness') -> pd.DataFrame:
         return mediaflux_df
 
 
+def get_subject_list_from_metadata(Lochness: 'lochness') -> List[str]:
+    '''Get list of subjects form metadata under GENERAL directories'''
+    general_path = Path(Lochness['phoenix_root']) / 'GENERAL'
+    metadata_file_paths = general_path.glob('*/*_metadata.csv')
+
+    subject_id_list = []
+    for metadata_file in metadata_file_paths:
+        subject_id_list += pd.read_csv(metadata_file)['Subject ID'].to_list()
+
+    return subject_id_list
+
+
 def check_source(Lochness: 'lochness') -> None:
     '''Check if there is any file that deviates from SOP'''
 
-    if Lochness['project_name'] == 'Prescient':
-        mediaflux_df = collect_mediaflux_files_info(Lochness)
-        all_df = check_file_path_df(mediaflux_df)
+    subject_id_list = get_subject_list_from_metadata(Lochness)
 
-    elif Lochness['project_name'] == 'Prescient':
+    if Lochness['project_name'] == 'Prescient':
+        db_string = 'RPMS'
+        mediaflux_df = collect_mediaflux_files_info(Lochness)
+        all_df = check_file_path_df(mediaflux_df, subject_id_list)
+
+    elif Lochness['project_name'] == 'ProNET':
+        db_string = 'REDCap'
         keyring = Lochness['keyring']
 
         # xnat
-        xnat_df = check_list_all_xnat_subjects(keyring)
+        print('Loading data list from XNAT')
+        xnat_df = check_list_all_xnat_subjects(keyring, subject_id_list)
 
         # box
+        print('Loading data list from BOX')
         box_files_df = collect_box_files_info(keyring)
+        box_files_df.to_csv('box_test.csv')
+
         with tf.NamedTemporaryFile(delete=True) as f:
             box_files_df.to_csv(f.name, index=False)
             box_df = load_box_df(f.name)
-            box_df_checked = check_file_path_df(box_df)
+            box_df_checked = check_file_path_df(box_df, subject_id_list)
 
         # merge xnat and box check files
         all_df = pd.concat([xnat_df, box_df])
@@ -266,20 +285,28 @@ def check_source(Lochness: 'lochness') -> None:
     else:
         return
 
+
     # select final_check failed files, and clean up
     qc_fail_df = all_df[
-            (~all_df['final_check']) & 
-            (all_df['site'].str.startswith('Prescient')) &
-            (~all_df['file_name'].str.contains('.dcm|._dicom_series'))
+            (~all_df['final_check']) | (~all_df['exist_in_db'])
+            # (~all_df['file_name'].str.contains('.dcm|._dicom_series'))
             ]
-    qc_fail_df['final_check'] = 'Incorrect'
-    cols_to_show = ['file_path', 'site', 'subject', 'modality', 'final_check']
+
+    qc_fail_df['exist_in_db'] = qc_fail_df['exist_in_db'].map(
+            {True: f'Exist in {db_string}', False: 'Missing'})
+
+    qc_fail_df['final_check'] = qc_fail_df['final_check'].map(
+            {True: 'Correct', False: 'Incorrect'})
+
+    cols_to_show = ['file_path', 'site', 'subject', 'modality',
+                    'exist_in_db', 'final_check']
     qc_fail_df = qc_fail_df[cols_to_show]
     qc_fail_df.columns = ['File Path', 'Site', 'Subject',
-                          'Data Type', 'Format']
+                          'Data Type', 'Subject ID in database', 'Format']
 
     # temporary change email receipient
     Lochness['notify']['__global__'] = ['kevincho@bwh.harvard.edu']
+            # , 'mennis@g.harvard.edu']
 
     lines = []
     send_source_qc_summary(qc_fail_df, lines, Lochness)
@@ -287,6 +314,7 @@ def check_source(Lochness: 'lochness') -> None:
 
 if __name__ == '__main__':
     config_loc = '/mnt/prescient/Prescient_data_sync/config.yml'
+    config_loc = '/opt/software/Pronet_data_sync/config.yml'
     Lochness = load(config_loc)
     check_source(Lochness)
 

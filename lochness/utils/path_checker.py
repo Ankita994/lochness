@@ -1,6 +1,7 @@
 import pandas as pd
 import re
 from pathlib import Path
+from typing import List
 
 
 def nth_item_from_path(df: pd.DataFrame, n: int) -> pd.Series:
@@ -58,7 +59,8 @@ def update_interviews_transcript_check(df: pd.DataFrame) -> pd.DataFrame:
             (df.subject.isin(['For_review', 'Approved']))].index
 
     transcript_int_df = df.loc[transcript_int_index]
-    transcript_int_df['subject'] = transcript_int_df['parent_dir']
+    transcript_int_df['subject'] = transcript_int_df['file_name'].str.split(
+            '_').str[1]
     transcript_int_df['subject_check'] = transcript_int_df['subject'
             ].str.match('[A-Z]{2}\d{5}').fillna(False)
 
@@ -96,7 +98,7 @@ def update_interviews_video_check(df: pd.DataFrame) -> pd.DataFrame:
 
 def update_interviews_audio_check(df: pd.DataFrame) -> pd.DataFrame:
     '''Check logics in rows for Interviews audio'''
-    # interviews transcript
+    # interviews audio
     audio_int_index = df[(df.modality=='Interviews') &
                          (df.file_name.str.endswith('.m4a'))].index
 
@@ -114,7 +116,38 @@ def update_interviews_audio_check(df: pd.DataFrame) -> pd.DataFrame:
     df.loc[audio_int_index] = audio_int_df
 
 
-def check_file_path_df(df: pd.DataFrame) -> pd.DataFrame:
+    # ignore playback.m3u audio files
+    audio_int_index = df[(df.modality=='Interviews') &
+                         (df.file_name == 'playback.m3u')].index
+    audio_int_df = df.loc[audio_int_index]
+    audio_int_df['file_check'] = True
+    df.loc[audio_int_index] = audio_int_df
+
+
+def update_by_adding_notes(df: pd.DataFrame) -> None:
+    '''Add notes to the table'''
+    pass
+
+
+def update_by_removing_unused_files(df: pd.DataFrame) -> None:
+    '''Remove unused files'''
+    # .DS_Store
+    ds_store_index = df[df.file_name == '.DS_Store'].index
+    df.drop(ds_store_index, inplace=True)
+
+
+def update_by_checking_against_subject_list(
+        df: pd.DataFrame,
+        subject_id_list: List[str]) -> None:
+    '''pass'''
+    df['exist_in_db'] = df['subject'].isin(subject_id_list).fillna(False)
+
+    df.loc[df[df['exist_in_db']].index,
+           'notes'] = 'Subject missing from database'
+
+
+def check_file_path_df(df: pd.DataFrame,
+                       subject_id_list: list) -> pd.DataFrame:
     '''Check file_path column for deviations from SOP'''
 
     df['site'] = nth_item_from_path(df, 0)
@@ -143,9 +176,17 @@ def check_file_path_df(df: pd.DataFrame) -> pd.DataFrame:
 
     update_interviews_check(df)
     update_interviews_transcript_check(df)
-
     update_interviews_video_check(df)
     update_interviews_audio_check(df)
+
+    # ignore .DS_Store files
+    update_by_removing_unused_files(df)
+
+    # check if the subject exist in metadata
+    update_by_checking_against_subject_list(df, subject_id_list)
+
+    # add notes
+    update_by_adding_notes(df)
 
     # fill na as False for the check columns
     for i in ['modality', 'subject', 'file']:
@@ -153,7 +194,8 @@ def check_file_path_df(df: pd.DataFrame) -> pd.DataFrame:
 
 
     df['final_check'] = df[
-            ['modality_check', 'subject_check', 'file_check']].all(axis=1)
+            ['modality_check', 'subject_check', 'file_check']
+        ].all(axis=1)
 
     return df
 
