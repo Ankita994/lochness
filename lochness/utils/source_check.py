@@ -211,7 +211,7 @@ def send_source_qc_summary(qc_fail_df: pd.DataFrame,
         table_str += f'<h2>{site}</h2>'
         for dt, y in x.groupby('Data Type'):
             table_str += f'<h4>{site} - {dt}</h4>'
-            table_str += x.to_html(index=False)
+            table_str += y.to_html(index=False)
         table_str += '<br>'
 
     send_detail(
