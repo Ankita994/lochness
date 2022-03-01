@@ -205,6 +205,15 @@ def send_source_qc_summary(qc_fail_df: pd.DataFrame,
                            Lochness: 'lochness') -> None:
     '''Send summary of qc failed files in sources'''
     title = 'List of files out of SOP'
+    table_str = ''
+
+    for site, x in qc_fail_df.groupby('Site'):
+        table_str += f'<h2>{site}</h2>'
+        for dt, y in x.groupby('Data Type'):
+            table_str += f'<h4>{site} - {dt}</h4>'
+            table_str += x.to_html(index=False)
+        table_str += '<br>'
+
     send_detail(
         Lochness,
         'Files on source out of SOP',
@@ -213,10 +222,7 @@ def send_source_qc_summary(qc_fail_df: pd.DataFrame,
         'do not follow the SOP. Please move, rename or delete the files '
         'according to the SOP. Please do not hesitate to get back to us. '
         '<br><br>Best wishes,<br>DPACC',
-        '<br>'.join([
-            f'<h2>{site}</h2><h4>{site} - {dt}</h4>{x.to_html(index=False)}'
-                    for (site, dt), x in
-                    qc_fail_df.groupby(['Site', 'Data Type'])]),
+        table_str,
         lines,
         'Please let us know if any of the files above '
         'should have passed QC')
