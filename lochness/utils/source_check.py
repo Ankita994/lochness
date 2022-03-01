@@ -213,7 +213,10 @@ def send_source_qc_summary(qc_fail_df: pd.DataFrame,
         'do not follow the SOP. Please move, rename or delete the files '
         'according to the SOP. Please do not hesitate to get back to us. '
         '<br><br>Best wishes,<br>DPACC',
-        '<br>'.join([f'<h2>{site}</h2>{x.to_html(index=False)}' for site, x in qc_fail_df.groupby('Site')]),
+        '<br>'.join([
+            f'<h2>{site}</h2><h4>{site} - {dt}</h4>{x.to_html(index=False)}'
+                    for (site, dt), x in
+                    qc_fail_df.groupby(['Site', 'Data Type'])]),
         lines,
         'Please let us know if any of the files above '
         'should have passed QC')
@@ -272,7 +275,6 @@ def check_source(Lochness: 'lochness') -> None:
         # box
         print('Loading data list from BOX')
         box_files_df = collect_box_files_info(keyring)
-        box_files_df.to_csv('box_test.csv')
 
         with tf.NamedTemporaryFile(delete=True) as f:
             box_files_df.to_csv(f.name, index=False)
