@@ -3,18 +3,18 @@ from pathlib import Path
 from typing import Union, List
 import xnat
 import pandas as pd
-from lochness.config import load
-from lochness.email import send_detail
 from boxsdk import Client, OAuth2
-from lochness.box import get_access_token, walk_from_folder_object, \
-        get_box_object_based_on_name
 from typing import List
 from multiprocessing import Pool
-from lochness.utils.path_checker import check_file_path_df, print_deviation
 import tempfile as tf
 from datetime import datetime
 from pytz import timezone
 from subprocess import Popen, DEVNULL, STDOUT
+from lochness.box import get_access_token, walk_from_folder_object, \
+        get_box_object_based_on_name
+from lochness.utils.path_checker import check_file_path_df, print_deviation
+from lochness.config import load
+from lochness.email import send_detail
 tz = timezone('EST')
 
 
@@ -224,7 +224,7 @@ def send_source_qc_summary(qc_fail_df: pd.DataFrame,
         '<br><br>Best wishes,<br>DPACC',
         table_str,
         lines,
-        'Please let us know if any of the files above '
+        yPlease let us know if any of the files above '
         'should have passed QC')
 
 
