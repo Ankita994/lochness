@@ -30,6 +30,7 @@ def send(recipients, sender, subject, message):
 
 
 def send_detail(Lochness,
+                sender,
                 recipients_for_each_study: dict,
                 title: str, subtitle: str, first_message: str,
                 second_message: str, code: List[str],
@@ -59,8 +60,6 @@ def send_detail(Lochness,
 
     
     '''
-    sender = Lochness['sender']
-
     recipients = []
     for study, study_recipients in recipients_for_each_study.items():
         for recipient in study_recipients:
@@ -70,7 +69,8 @@ def send_detail(Lochness,
     email_template_dir = os.path.join(__dir__)
     env = Environment(loader=FileSystemLoader(str(email_template_dir)))
     template = env.get_template('bootdey_template.html')
-    footer = 'If you see any error, please email kevincho@bwh.harvard.edu'
+
+    footer = 'If you see any error, please email {sender}'
 
     server_name = Lochness['project_name'] \
         if 'project_name' in Lochness else 'Data aggregation server'
@@ -157,12 +157,13 @@ def send_out_daily_updates(Lochness, days: int = 1,
     if len(s3_df_selected) == 0:
         send_detail(
             Lochness,
+            Lochness['sender'],
             Lochness['notify'],
             'Lochness', f'Daily updates {datetime.now(tz).date()}',
             'There is no update!', '',
             list_of_lines_from_tree,
             '',
-            test, mailx)
+            False, test, mailx)
     else:
         s3_df_selected.columns = ['Transfer time (UTC)', 'File name',
                                   'Protected', 'Study', 'Processed', 'Subject',
@@ -195,6 +196,7 @@ def send_out_daily_updates(Lochness, days: int = 1,
 
         send_detail(
             Lochness,
+            Lochness['sender'],
             Lochness['notify'],
             'Lochness', f'Daily updates {datetime.now(tz).date()} '
                         f'(for the past {days} {day_days})',
@@ -204,8 +206,7 @@ def send_out_daily_updates(Lochness, days: int = 1,
                     + '<br>'.join(
                         [f"<h3>{datatype.upper()}</h3>{table.to_html()}" for datatype, table in s3_df_selected.groupby('Datatype')]),
             list_of_lines_from_tree,
-            in_mail_footer,
-            test, mailx)
+            in_mail_footer, False, test, mailx)
 
 
 def attempts_error(Lochness, attempt):
