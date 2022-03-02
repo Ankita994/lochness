@@ -30,6 +30,7 @@ def send(recipients, sender, subject, message):
 
 
 def send_detail(Lochness,
+                recipients_for_each_study: dict,
                 title: str, subtitle: str, first_message: str,
                 second_message: str, code: List[str],
                 in_mail_footer: str,
@@ -58,9 +59,7 @@ def send_detail(Lochness,
 
     
     '''
-
     sender = Lochness['sender']
-    recipients_for_each_study = Lochness['notify']
 
     recipients = []
     for study, study_recipients in recipients_for_each_study.items():
@@ -158,6 +157,7 @@ def send_out_daily_updates(Lochness, days: int = 1,
     if len(s3_df_selected) == 0:
         send_detail(
             Lochness,
+            Lochness['notify'],
             'Lochness', f'Daily updates {datetime.now(tz).date()}',
             'There is no update!', '',
             list_of_lines_from_tree,
@@ -195,6 +195,7 @@ def send_out_daily_updates(Lochness, days: int = 1,
 
         send_detail(
             Lochness,
+            Lochness['notify'],
             'Lochness', f'Daily updates {datetime.now(tz).date()} '
                         f'(for the past {days} {day_days})',
             '<h2>Summary of the files transferred to NDA</h2>' \
