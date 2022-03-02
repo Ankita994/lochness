@@ -216,6 +216,7 @@ def send_source_qc_summary(qc_fail_df: pd.DataFrame,
 
     send_detail(
         Lochness,
+        Lochness['sender'],
         Lochness['file_check_notify'],
         'Files on source out of SOP',
         f'Daily updates {datetime.now(tz).date()}',
@@ -225,8 +226,8 @@ def send_source_qc_summary(qc_fail_df: pd.DataFrame,
         '<br><br>Best wishes,<br>DPACC<br><br><br>',
         table_str,
         lines,
-        'Please let us know if any of the files above '
-        'should have passed QC')
+        'Please let us know if any of the files above should have passed QC'
+        )
 
 
 def collect_mediaflux_files_info(Lochness: 'lochness') -> pd.DataFrame:
@@ -321,11 +322,7 @@ def check_source(Lochness: 'lochness') -> None:
 
 if __name__ == '__main__':
     # testing purposes
-    config_loc = '/mnt/prescient/Prescient_data_sync/config.yml'
-    # config_loc = '/opt/software/Pronet_data_sync/config.yml'
+    # config_loc = '/mnt/prescient/Prescient_data_sync/config.yml'
+    config_loc = '/opt/software/Pronet_data_sync/config.yml'
     Lochness = load(config_loc)
     check_source(Lochness)
-
-
-
-
