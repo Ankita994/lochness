@@ -216,15 +216,16 @@ def send_source_qc_summary(qc_fail_df: pd.DataFrame,
 
     send_detail(
         Lochness,
+        Lochness['file_check_notify'],
         'Files on source out of SOP',
         f'Daily updates {datetime.now(tz).date()}',
         'Dear team,<br><br>Please find the list of files on the source, which '
         'do not follow the SOP. Please move, rename or delete the files '
         'according to the SOP. Please do not hesitate to get back to us. '
-        '<br><br>Best wishes,<br>DPACC',
+        '<br><br>Best wishes,<br>DPACC<br><br><br>',
         table_str,
         lines,
-        yPlease let us know if any of the files above '
+        'Please let us know if any of the files above '
         'should have passed QC')
 
 
@@ -233,6 +234,7 @@ def collect_mediaflux_files_info(Lochness: 'lochness') -> pd.DataFrame:
     mflux_cfg = Path(Lochness['phoenix_root']) / 'mflux.cfg'
     mf_remote_root = '/projects/proj-5070_prescient-1128.4.380'
     with tf.TemporaryDirectory() as tmpdir:
+        print('Getting mediaflux information')
         diff_path = Path(tmpdir) / 'diff.csv'
         cmd = (' ').join(['unimelb-mf-check',
                           f'--mf.config {mflux_cfg}',
@@ -269,6 +271,7 @@ def check_source(Lochness: 'lochness') -> None:
         db_string = 'RPMS'
         mediaflux_df = collect_mediaflux_files_info(Lochness)
         all_df = check_file_path_df(mediaflux_df, subject_id_list)
+        all_df = all_df[all_df['site'].str.startswith('Prescient')]
 
     elif Lochness['project_name'] == 'ProNET':
         db_string = 'REDCap'
@@ -312,17 +315,14 @@ def check_source(Lochness: 'lochness') -> None:
     qc_fail_df.columns = ['File Path', 'Site', 'Subject',
                           'Data Type', 'Subject ID in database', 'Format']
 
-    # temporary change email receipient
-    Lochness['notify']['__global__'] = ['kevincho@bwh.harvard.edu']
-            # , 'mennis@g.harvard.edu']
-
     lines = []
     send_source_qc_summary(qc_fail_df, lines, Lochness)
 
 
 if __name__ == '__main__':
+    # testing purposes
     config_loc = '/mnt/prescient/Prescient_data_sync/config.yml'
-    config_loc = '/opt/software/Pronet_data_sync/config.yml'
+    # config_loc = '/opt/software/Pronet_data_sync/config.yml'
     Lochness = load(config_loc)
     check_source(Lochness)
 
