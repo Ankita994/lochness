@@ -31,6 +31,7 @@ from lochness.transfer import lochness_to_lochness_transfer_receive_sftp
 from lochness.email import send_out_daily_updates
 from datetime import datetime, date
 from lochness.cleaner import rm_transferred_files_under_phoenix
+from lochness.utils.soure_check import check_source
 # import dpanonymize
 
 SOURCES = {
@@ -155,6 +156,7 @@ def main():
             # daily email
             if args.daily_summary and date.today() not in dates_email_sent:
                 send_out_daily_updates(Lochness)
+                check_source(Lochness)
                 dates_email_sent.append(date.today())
 
             poll_interval = int(Lochness['poll_interval'])
