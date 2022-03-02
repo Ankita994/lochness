@@ -59,13 +59,17 @@ def update_interviews_transcript_check(df: pd.DataFrame) -> pd.DataFrame:
             (df.subject.isin(['For_review', 'Approved']))].index
 
     transcript_int_df = df.loc[transcript_int_index]
-    transcript_int_df['subject'] = transcript_int_df['file_name'].str.split(
-            '_').str[1]
+    transcript_int_df['subject'] = nth_item_from_path(transcript_int_df, 4)
     transcript_int_df['subject_check'] = transcript_int_df['subject'
             ].str.match('[A-Z]{2}\d{5}').fillna(False)
 
     # check site and AMPSCZ IDs in the transcript file name
     for index, row in transcript_int_df.iterrows():
+        if not row['subject_check']:
+            transcript_int_df.loc[index, 'subject'] = re.search(
+                r'[A-Z]{2}\d{5}', row['subject']).group(0)
+            row['subject'] = transcript_int_df.loc[index, 'subject']
+
         subject = row['subject']
         site = row['site']
         transcript_int_df.loc[index, 'file_check'] = re.match(
