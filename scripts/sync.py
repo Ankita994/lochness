@@ -31,7 +31,7 @@ from lochness.transfer import lochness_to_lochness_transfer_receive_sftp
 from lochness.email import send_out_daily_updates
 from datetime import datetime, date
 from lochness.cleaner import rm_transferred_files_under_phoenix
-from lochness.utils.soure_check import check_source
+from lochness.utils.source_check import check_source
 # import dpanonymize
 
 SOURCES = {
