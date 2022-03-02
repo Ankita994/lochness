@@ -163,7 +163,7 @@ def send_out_daily_updates(Lochness, days: int = 1,
             'There is no update!', '',
             list_of_lines_from_tree,
             '',
-            False, test, mailx)
+            test, mailx)
     else:
         s3_df_selected.columns = ['Transfer time (UTC)', 'File name',
                                   'Protected', 'Study', 'Processed', 'Subject',
@@ -204,9 +204,11 @@ def send_out_daily_updates(Lochness, days: int = 1,
                     + count_df.to_html() + '<br>',
             '<h2>More details for each data type</h2>' \
                     + '<br>'.join(
-                        [f"<h3>{datatype.upper()}</h3>{table.to_html()}" for datatype, table in s3_df_selected.groupby('Datatype')]),
+                        [f"<h3>{datatype.upper()}</h3>{table.to_html()}" for 
+                            datatype, table in 
+                            s3_df_selected.groupby('Datatype')]),
             list_of_lines_from_tree,
-            in_mail_footer, False, test, mailx)
+            in_mail_footer, test, mailx)
 
 
 def attempts_error(Lochness, attempt):
