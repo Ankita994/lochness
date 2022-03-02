@@ -99,7 +99,7 @@ def initialize_metadata(Lochness, args,
 
         elif 'redcap' in args.input_sources:
             id_fieldname = Lochness['redcap_id_colname']
-            consent_fieldname = Lochness['chric_consent_date']
+            consent_fieldname = Lochness['redcap_consent_colname']
             REDCap.initialize_metadata(
                     Lochness, study_name, id_fieldname, consent_fieldname,
                     multiple_site_in_a_repo, upenn_redcap)
