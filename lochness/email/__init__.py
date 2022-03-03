@@ -70,7 +70,7 @@ def send_detail(Lochness,
     env = Environment(loader=FileSystemLoader(str(email_template_dir)))
     template = env.get_template('bootdey_template.html')
 
-    footer = 'If you see any error, please email {sender}'
+    footer = f'If you see any error, please email {sender}'
 
     server_name = Lochness['project_name'] \
         if 'project_name' in Lochness else 'Data aggregation server'
