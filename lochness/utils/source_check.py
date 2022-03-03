@@ -305,7 +305,7 @@ def check_source(Lochness: 'lochness') -> None:
             ]
 
     qc_fail_df['exist_in_db'] = qc_fail_df['exist_in_db'].map(
-            {True: f'Exist in {db_string}', False: 'Missing in {db_string}'})
+            {True: f'Exist in {db_string}', False: f'Missing in {db_string}'})
 
     qc_fail_df['final_check'] = qc_fail_df['final_check'].map(
             {True: 'Correct', False: 'Incorrect'})
