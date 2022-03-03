@@ -7,6 +7,7 @@ import lochness
 import logging
 import importlib
 import argparse as ap
+from pathlib import Path
 import lochness.config as config
 import lochness.daemon as daemon
 import lochness.hdd as HDD
@@ -141,7 +142,14 @@ def main():
 
     # run downloader once, or continuously
     if args.continuous:
-        dates_email_sent = []
+        email_dates_file = Path(Lochness['phoenix_root']).parent / \
+                '.email_tmp.txt'
+        if email_dates_file.is_file():
+            with open(email_dates_file, 'r') as fp:
+                dates_email_sent = [x.strip() for x in fp.readlines()]
+        else:
+            dates_email_sent = []
+
         while True:
             # remove already transferred files
             if args.remove_old_files:
@@ -154,10 +162,13 @@ def main():
             do(args, Lochness)
 
             # daily email
-            if args.daily_summary and date.today() not in dates_email_sent:
-                send_out_daily_updates(Lochness)
+            if args.daily_summary and \
+                    str(date.today()) not in dates_email_sent:
                 check_source(Lochness)
-                dates_email_sent.append(date.today())
+                send_out_daily_updates(Lochness)
+
+                with open(email_dates_file, 'w') as fp:
+                    fp.write(str(date.today()))
 
             poll_interval = int(Lochness['poll_interval'])
             logger.info('sleeping for {0} seconds'.format(poll_interval))
@@ -175,6 +186,7 @@ def main():
 
         # email
         if args.daily_summary:
+            check_source(Lochness)
             send_out_daily_updates(Lochness)
 
 
