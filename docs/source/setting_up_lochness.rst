@@ -344,6 +344,18 @@ Update AWS s3 bucket name to your s3 bucket name and root directory ::
     AWS_BUCKET_ROOT: TEST_PHOENIX_ROOT_PRONET
 
 
+
+Remove old & already s3-transferred files
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Lochness will read the following information from the configuration file to
+remove already transferred files from the local PHOENIX directory. ::
+
+    days_to_keep: 100
+    removed_df_loc: /mnt/prescient/Prescient_data/PHOENIX/removed_files.csv
+    removed_phoenix_root: prescient/Prescient_data/track_removed_files_PHOENIX
+
+
 Box
 ~~~
 See :doc:`here<box_source_structure>` for how to configure Box source. Then,
