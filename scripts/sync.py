@@ -164,8 +164,16 @@ def main():
             # daily email
             if args.daily_summary and \
                     str(date.today()) not in dates_email_sent:
-                check_source(Lochness)
-                send_out_daily_updates(Lochness)
+
+                if datetime.today().isoweekday() in [6, 7]:  # Weekends
+                    pass  # no email
+                elif datetime.today().isoweekday() == 1:  # Monday
+                    days_to_summarize = 3
+                    check_source(Lochness, days=days_to_summarize)
+                    send_out_daily_updates(Lochness)
+                else:
+                    check_source(Lochness)
+                    send_out_daily_updates(Lochness)
 
                 with open(email_dates_file, 'w') as fp:
                     fp.write(str(date.today()))
