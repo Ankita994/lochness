@@ -312,7 +312,7 @@ def sync(Lochness, subject, dry=False):
             with tf.NamedTemporaryFile(delete=True) as f:
                 source_df.to_csv(f.name, index=False)
                 same_df = pd.read_csv(f.name).reset_index(
-                        inplace=True, drop=True).equals(prev_df)
+                        drop=True).equals(prev_df)
                 if same_df:
                     print(f'No new updates in {subject_id}:{measure}')
                     continue
