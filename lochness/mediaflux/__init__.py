@@ -156,7 +156,7 @@ def sync_module(Lochness: 'lochness.config',
                             # do not re-download already transferred &
                             # removed data
                             if is_transferred_and_removed(
-                                    Lochness, mf_local / subpath.name):
+                                    Lochness, Path(mf_local) / subpath.name):
                                 continue
 
                             # ENH set different permissions
