@@ -320,9 +320,8 @@ def lochness_to_lochness_transfer_s3(Lochness, general_only: bool = True):
     now = datetime.now()
     current_time = now.strftime("%Y-%m-%d %H:%M:%S")
     with open(s3_sync_stdout, 'a') as fp:
-        fp.write('\n'.join(
-            [f'{current_time} {x}' for x in 
-                os.popen(command).read().split('\n')]))
+        fp.write('\n'.join([f'{current_time} {x}' for x in
+                            os.popen(command).read().split('\n')]))
 
     logger.debug(os.popen(command).read())
     logger.debug('aws rsync completed')
