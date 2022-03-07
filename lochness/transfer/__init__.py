@@ -6,6 +6,7 @@ import os
 import pandas as pd
 import subprocess
 from time import time
+from datetime import datetime
 import tempfile as tf
 import sys
 import paramiko
@@ -313,6 +314,16 @@ def lochness_to_lochness_transfer_s3(Lochness, general_only: bool = True):
             s3://{s3_bucket_name}/{s3_phoenix_root} --delete'
 
     logger.debug('Executing aws s3 sync function')
+
+    # save aws 3 sync cmd stdout to a file
+    s3_sync_stdout = Path(Lochness['phoenix_root']) / 'aws_s3_sync_stdouts.log'
+    now = datetime.now()
+    current_time = now.strftime("%Y-%m-%d %H:%M:%S")
+    with open(s3_sync_stdout, 'a') as fp:
+        fp.write('\n'.join(
+            [f'{current_time} {x}' for x in 
+                os.popen(command).read().split('\n')]))
+
     logger.debug(os.popen(command).read())
     logger.debug('aws rsync completed')
 
@@ -342,6 +353,7 @@ def create_s3_transfer_table(Lochness, rewrite=False) -> None:
     that file.
     '''
     log_file = Lochness['log_file']
+    log_file = Path(Lochness['phoenix_root']) / 'aws_s3_sync_stdouts.log'
     out_file = Path(Lochness['phoenix_root']) / 's3_log.csv'
 
     if Path(out_file).is_file() and not rewrite:
@@ -354,10 +366,10 @@ def create_s3_transfer_table(Lochness, rewrite=False) -> None:
     df = pd.DataFrame()
     with open(log_file, 'r') as fp:
         for line in fp.readlines():
-            if 'lochness.transfer' in line:
-                ts = re.search(r'^(\S+ \w+:\w+:\w+)', line).group(1)
-                ts = pd.to_datetime(ts)
-                more_recent = ts > max_ts_prev_df
+            print(line)
+            ts = re.search(r'^(\S+ \w+:\w+:\w+)', line).group(1)
+            ts = pd.to_datetime(ts)
+            more_recent = ts > max_ts_prev_df
 
             if line.startswith('upload: '):
                 if not more_recent:
