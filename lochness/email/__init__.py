@@ -14,6 +14,7 @@ tz = timezone('EST')
 
 __dir__ = os.path.dirname(__file__)
 
+
 def send(recipients, sender, subject, message):
     '''send an email'''
     email_template = os.path.join(__dir__, 'template.html')

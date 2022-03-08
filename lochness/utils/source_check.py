@@ -156,6 +156,7 @@ def collect_box_files_info(keyring) -> pd.DataFrame:
                        'PronetLA', 'PronetSD', 'PronetSF', 'PronetNC',
                        'PronetWU', 'PronetYA']
 
+    # study_name_list = ['PronetYA']
     box_keyrings = keyring['box.PronetLA']
 
     # run in parallel
@@ -200,13 +201,17 @@ def load_box_df(csv_loc: Union[Path, str]) -> pd.DataFrame:
     return df
 
 
+def highlight_incorrect(s):
+    '''Highlight incorrect format cells'''
+    return ['color: #d9544d' if x else 'color: black' for x in s=='Incorrect']
+
+
 def send_source_qc_summary(qc_fail_df: pd.DataFrame,
                            lines,
                            Lochness: 'lochness') -> None:
     '''Send summary of qc failed files in sources'''
     title = 'List of files out of SOP'
     table_str = ''
-
     for site, x in qc_fail_df.groupby('Site'):
         table_str += f'<h2>{site}</h2>'
         for dt, y in x.groupby('Data Type'):
@@ -325,4 +330,5 @@ if __name__ == '__main__':
     # config_loc = '/mnt/prescient/Prescient_data_sync/config.yml'
     config_loc = '/opt/software/Pronet_data_sync/config.yml'
     Lochness = load(config_loc)
+    Lochness['file_check_notify']['__global__'] = ['kevincho@bwh.harvard.edu']
     check_source(Lochness)
