@@ -142,14 +142,6 @@ def main():
 
     # run downloader once, or continuously
     if args.continuous:
-        email_dates_file = Path(Lochness['phoenix_root']).parent / \
-                '.email_tmp.txt'
-        if email_dates_file.is_file():
-            with open(email_dates_file, 'r') as fp:
-                dates_email_sent = [x.strip() for x in fp.readlines()]
-        else:
-            dates_email_sent = []
-
         while True:
             # remove already transferred files
             if args.remove_old_files:
@@ -160,6 +152,14 @@ def main():
                         removed_phoenix_root=Lochness['removed_phoenix_root'])
 
             do(args, Lochness)
+
+            email_dates_file = Path(Lochness['phoenix_root']).parent / \
+                    '.email_tmp.txt'
+            if email_dates_file.is_file():
+                with open(email_dates_file, 'r') as fp:
+                    dates_email_sent = [x.strip() for x in fp.readlines()]
+            else:
+                dates_email_sent = []
 
             # daily email
             if args.daily_summary and \
