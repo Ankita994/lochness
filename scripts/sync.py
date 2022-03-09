@@ -7,6 +7,7 @@ import lochness
 import logging
 import importlib
 import argparse as ap
+from pathlib import Path
 import lochness.config as config
 import lochness.daemon as daemon
 import lochness.hdd as HDD
@@ -30,6 +31,8 @@ from lochness.transfer import create_s3_transfer_table
 from lochness.transfer import lochness_to_lochness_transfer_receive_sftp
 from lochness.email import send_out_daily_updates
 from datetime import datetime, date
+from lochness.cleaner import rm_transferred_files_under_phoenix
+from lochness.utils.source_check import check_source
 # import dpanonymize
 
 SOURCES = {
@@ -99,6 +102,10 @@ def main():
                         help='Enable daily summary email function')
     parser.add_argument('--debug', action='store_true',
                         help='Enable debug messages')
+    parser.add_argument('-rof', '--remove_old_files',
+                        action='store_true',
+                        help='Remove old files which are already transferred '
+                             'to s3 from PHOENIX directory')
     args = parser.parse_args()
 
     # configure logging for this application
@@ -135,23 +142,59 @@ def main():
 
     # run downloader once, or continuously
     if args.continuous:
-        dates_email_sent = []
         while True:
+            # remove already transferred files
+            if args.remove_old_files:
+                rm_transferred_files_under_phoenix(
+                        Lochness['phoenix_root'],
+                        days_to_keep=Lochness['days_to_keep'],
+                        removed_df_loc=Lochness['removed_df_loc'],
+                        removed_phoenix_root=Lochness['removed_phoenix_root'])
+
             do(args, Lochness)
 
+            email_dates_file = Path(Lochness['phoenix_root']).parent / \
+                    '.email_tmp.txt'
+            if email_dates_file.is_file():
+                with open(email_dates_file, 'r') as fp:
+                    dates_email_sent = [x.strip() for x in fp.readlines()]
+            else:
+                dates_email_sent = []
+
             # daily email
-            if args.daily_summary and date.today() not in dates_email_sent:
-                send_out_daily_updates(Lochness)
-                dates_email_sent.append(date.today())
+            if args.daily_summary and \
+                    str(date.today()) not in dates_email_sent:
+
+                if datetime.today().isoweekday() in [6, 7]:  # Weekends
+                    pass  # no email
+                elif datetime.today().isoweekday() == 1:  # Monday
+                    days_to_summarize = 3
+                    check_source(Lochness, days=days_to_summarize)
+                    send_out_daily_updates(Lochness)
+                else:
+                    check_source(Lochness)
+                    send_out_daily_updates(Lochness)
+
+                with open(email_dates_file, 'w') as fp:
+                    fp.write(str(date.today()))
 
             poll_interval = int(Lochness['poll_interval'])
             logger.info('sleeping for {0} seconds'.format(poll_interval))
             time.sleep(Lochness['poll_interval'])
     else:
+        # remove already transferred files
+        if args.remove_old_files:
+            rm_transferred_files_under_phoenix(
+                    Lochness['phoenix_root'],
+                    days_to_keep=Lochness['days_to_keep'],
+                    removed_df_loc=Lochness['removed_df_loc'],
+                    removed_phoenix_root=Lochness['removed_phoenix_root'])
+
         do(args, Lochness)
 
         # email
         if args.daily_summary:
+            check_source(Lochness)
             send_out_daily_updates(Lochness)
 
 

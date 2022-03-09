@@ -78,6 +78,72 @@ def get_rpms_database(rpms_root_path: str) -> Dict[str, pd.DataFrame]:
     return all_df_dict
 
 
+# def get_run_sheets_for_datatypes(target_df_loc: Union[Path, str]) -> None:
+    # '''Extract run sheet information from RPMS outputs and save as csv file
+
+    # For each data types, there should be Run Sheets completed by RAs on RPMS
+    # This information is extracted and saved as a csv flie in the 
+        # PHOENIX/PROTECTED/raw/
+            # {STUDY}/{DATATYPE}/{subject}.{study}.Run_sheet_{DATATYPE}.csv
+
+    # Key Arguments:
+        # - target_df_loc: REDCap json path, Path.
+
+    # Returns:
+        # - None
+    # '''
+
+    # modality_fieldname_dict = {'eeg': 'eeg',
+                               # 'actigraphy': 'axivity',
+                               # 'mri': 'MRI'}
+    # if '_MRI.csv' in target_df_loc.name:
+        # pass
+
+    # if not json_path.is_file():
+        # return
+
+    # with open(json_path, 'r') as f:
+        # data = json.load(f)
+
+    # if type(data) == list:  # most cases, because U24 has follow up data
+        # pass
+    # elif type(data) == dict:  # single timepoint cases
+        # data = [data]
+    # else:
+        # raise TypeError(f'Type of the data in {json_path} is not correct')
+
+
+    # raw_path = Path(json_path).parent.parent
+
+    # for modality, fieldname in modality_fieldname_dict.items():
+        # modality_df = pd.DataFrame()
+        # raw_modality_path = raw_path / modality
+        # for data_num, data_timepoint in enumerate(data):
+            # modality_key_names = [x for x in data_timepoint.keys()
+                    # if fieldname in x.lower()]
+            # for _, modality_key_name in enumerate(modality_key_names):
+                # modality_df_tmp = pd.DataFrame({
+                    # 'data_num': [data_num],
+                    # 'field name': modality_key_name,
+                    # 'field value': data_timepoint[modality_key_name]})
+                # modality_df = pd.concat([modality_df, modality_df_tmp])
+
+        # if 'field value' in modality_df.columns:
+            # # if all value is empty, don't load it
+            # if (modality_df['field value'] == '').all():
+                # continue
+
+            # elif (modality_df[modality_df['field value'] != ''][
+                # 'field name'].str.contains('sheet_complete').all()):
+                # continue
+
+            # raw_modality_path.mkdir(exist_ok=True, parents=True)
+            # output_name = Path(json_path).name.split('.json')[0]
+            # modality_df.to_csv(
+                    # raw_modality_path / 
+                    # f'{output_name}.Run_sheet_{modality}.csv')
+
+
 def initialize_metadata(Lochness: 'Lochness object',
                         study_name: str,
                         rpms_id_colname: str,
@@ -115,13 +181,13 @@ def initialize_metadata(Lochness: 'Lochness object',
 
         # loop through each line of the RPMS database
         for index, df_measure in df_measure_all_subj.iterrows():
-            if multistudy:
-                # site of the subject for the line
-                site_code_rpms_id = df_measure[rpms_id_colname][:2]
+            # if multistudy:
+            # site of the subject for the line
+            site_code_rpms_id = df_measure[rpms_id_colname][:2]
 
-                # if the subject does not belong to the site, pass it
-                if site_code_rpms_id != site_code_study:
-                    continue
+            # if the subject does not belong to the site, pass it
+            if site_code_rpms_id != site_code_study:
+                continue
 
             subject_dict = {'Subject ID': df_measure[rpms_id_colname]}
 
@@ -187,6 +253,19 @@ def get_subject_data(all_df_dict: Dict[str, pd.DataFrame],
     for measure, measure_df in all_df_dict.items():
         measure_df[id_colname] = measure_df[id_colname].astype(str)
         subject_df = measure_df[measure_df[id_colname] == subject.id]
+
+        # Keep the most recent row for each visit
+        for unique_visit, table in subject_df.groupby('visit'):
+            if len(table) == 1:
+                pass
+            else:
+                most_recent_row_index = pd.to_datetime(
+                        table['LastModifiedDate']).idxmax()
+                non_recent_row_index = [x for x in table.index
+                         if x != most_recent_row_index]
+                print(f'RPMS export has duplicated rows for {measure}')
+                subject_df.drop(non_recent_row_index, inplace=True)
+
         subject_df_dict[measure] = subject_df
 
     return subject_df_dict
@@ -224,16 +303,16 @@ def sync(Lochness, subject, dry=False):
         # if the csv already exists, compare the dataframe
         if Path(target_df_loc).is_file():
             # index might be different, so drop it before comparing it
-            prev_df = pd.read_csv(target_df_loc).reset_index().drop(
-                    'index', axis=1)
+            prev_df = pd.read_csv(target_df_loc).reset_index(
+                    inplace=True, drop=True)
 
             # in order to use df.equals function, which also checks for data
             # types of each data, the source_df needs to be saved and re-loaded
             # to make the datatype consistent to that of prev_df
             with tf.NamedTemporaryFile(delete=True) as f:
                 source_df.to_csv(f.name, index=False)
-                same_df = pd.read_csv(f.name).reset_index().drop(
-                        'index', axis=1).equals(prev_df)
+                same_df = pd.read_csv(f.name).reset_index(
+                        drop=True).equals(prev_df)
                 if same_df:
                     print(f'No new updates in {subject_id}:{measure}')
                     continue

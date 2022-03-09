@@ -14,6 +14,7 @@ import time
 from datetime import datetime, timedelta
 import base64
 import re
+from lochness.cleaner import is_transferred_and_removed
 
 logger = logging.getLogger(__name__)
 
@@ -88,6 +89,9 @@ def sync(Lochness: 'lochness.config',
     logger.debug(f'deidentify for study {subject.study} is {deidentify}')
 
     # get keyring for mindlamp
+    if len(subject.mindlamp.keys()) == 0:
+        return
+
     api_url, access_key, secret_key = mindlamp_projects(Lochness,
                                                         subject.mindlamp)
 
@@ -140,6 +144,10 @@ def sync(Lochness: 'lochness.config',
             function_to_execute = get_activity_events_lamp \
                 if data_name == 'activity' else get_sensor_events_lamp
 
+            # do not re-download already transferred & removed data
+            if is_transferred_and_removed(Lochness, dst):
+                continue
+
             # confirm it's a new file
             if Path(dst).is_file():
                 with open(dst, 'r') as existing_file:
@@ -165,8 +173,9 @@ def sync(Lochness: 'lochness.config',
                     LAMP, subject_id,
                     from_ts=time_utc_00_ts, to_ts=time_utc_24_ts)
             end = time.time()
-            logger.debug(f'Mindlamp {subject_id} {date_str} {data_name}'
-                         'data pull - completed in ({end - begin} seconds)')
+            logger.debug(
+                f'Mindlamp {subject_id} {date_str} {data_name} data pull'
+                f' - completed in ({end - begin} seconds)')
 
             # separate out audio data from the activity dictionary
             if data_name == 'activity' and data_dict:
@@ -174,6 +183,8 @@ def sync(Lochness: 'lochness.config',
                         dst_folder,
                         f'{subject_id}_{subject.study}_{data_name}_'
                         f'{date_str}_sound.mp3')
+                if is_transferred_and_removed(Lochness, sound_dst):
+                    continue
                 data_dict = get_audio_out_from_content(data_dict, sound_dst)
 
             jsonData = json.dumps(
@@ -206,7 +217,6 @@ def mindlamp_projects(Lochness: 'lochness.config',
                       mindlamp_instance: 'subject.mindlamp.item'):
     '''get mindlamp api_url and api_key for a phoenix study'''
     Keyring = Lochness['keyring']
-
     key_name = list(mindlamp_instance.keys())[0]  # mindlamp.StudyA
 
     # Assertations

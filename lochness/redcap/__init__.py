@@ -115,10 +115,10 @@ def initialize_metadata(Lochness: 'Lochness object',
     df = pd.DataFrame()
     # extract subject ID and source IDs for each sources
     for item in data:
-        if multistudy:  # filter out data from other sites
-            site_code_redcap_id = item[redcap_id_colname][:2]
-            if site_code_redcap_id != site_code_study:
-                continue
+        # filter out data from other sites (if multistudy removed)
+        site_code_redcap_id = item[redcap_id_colname][:2]
+        if site_code_redcap_id != site_code_study:
+            continue
 
         subject_dict = {'Subject ID': item[redcap_id_colname]}
 
@@ -210,9 +210,11 @@ def get_run_sheets_for_datatypes(json_path: Union[Path, str]) -> None:
 
     raw_path = Path(json_path).parent.parent
 
-    modality_fieldname_dict = {'eeg': 'eeg',
-                               'actigraphy': 'axivity',
-                               'mri': 'mri'}
+    modality_fieldname_dict = {'eeg': 'chreeg_',
+                               'actigraphy': 'chrax_',
+                               'mri': 'chrmri_',
+                               'phone': 'chrdig_',
+                               'survey': 'chrpenn_'}
     for modality, fieldname in modality_fieldname_dict.items():
         modality_df = pd.DataFrame()
         raw_modality_path = raw_path / modality
@@ -237,9 +239,13 @@ def get_run_sheets_for_datatypes(json_path: Union[Path, str]) -> None:
 
             raw_modality_path.mkdir(exist_ok=True, parents=True)
             output_name = Path(json_path).name.split('.json')[0]
-            modality_df.to_csv(
-                    raw_modality_path / 
-                    f'{output_name}.Run_sheet_{modality}.csv')
+
+            if modality == 'survey':
+                modality_df.to_csv(raw_modality_path /
+                                   f'{output_name}.Run_sheet_PennCNB.csv')
+            else:
+                modality_df.to_csv(raw_modality_path /
+                                   f'{output_name}.Run_sheet_{modality}.csv')
 
 
 
@@ -393,7 +399,7 @@ def sync(Lochness, subject, dry=False):
                     if crc_dst != crc_src:
                         logger.info('different - crc32: downloading data')
                         logger.warn(f'file has changed {dst}')
-                        lochness.backup(dst)
+                        # lochness.backup(dst)
                         logger.debug(f'saving {dst}')
                         lochness.atomic_write(dst, content)
 
@@ -407,7 +413,7 @@ def sync(Lochness, subject, dry=False):
                                     'Not saving the data')
                         # update the dst file's mtime so it can prevent the
                         # same file being pulled from REDCap
-                        os.utime(dst)
+                        # os.utime(dst)
 
 
 class REDCapError(Exception):

@@ -14,6 +14,7 @@ tz = timezone('EST')
 
 __dir__ = os.path.dirname(__file__)
 
+
 def send(recipients, sender, subject, message):
     '''send an email'''
     email_template = os.path.join(__dir__, 'template.html')
@@ -30,6 +31,8 @@ def send(recipients, sender, subject, message):
 
 
 def send_detail(Lochness,
+                sender,
+                recipients_for_each_study: dict,
                 title: str, subtitle: str, first_message: str,
                 second_message: str, code: List[str],
                 in_mail_footer: str,
@@ -58,10 +61,6 @@ def send_detail(Lochness,
 
     
     '''
-
-    sender = Lochness['sender']
-    recipients_for_each_study = Lochness['notify']
-
     recipients = []
     for study, study_recipients in recipients_for_each_study.items():
         for recipient in study_recipients:
@@ -71,11 +70,12 @@ def send_detail(Lochness,
     email_template_dir = os.path.join(__dir__)
     env = Environment(loader=FileSystemLoader(str(email_template_dir)))
     template = env.get_template('bootdey_template.html')
-    footer = 'If you see any error, please email kevincho@bwh.harvard.edu'
+
+    footer = f'If you see any error, please email {sender}'
 
     server_name = Lochness['project_name'] \
         if 'project_name' in Lochness else 'Data aggregation server'
-    title = f'{server_name}: {title}'
+    title = f'{server_name}: {title} {datetime.now(tz).date()}'
 
     html_str = template.render(title=title,
                                subtitle=subtitle,
@@ -88,7 +88,8 @@ def send_detail(Lochness,
                                username=getpass.getuser())
 
     msg = MIMEText(html_str, 'html')
-    msg['Subject'] = f'Lochness update {datetime.now(tz).date()}'
+    print(title)
+    msg['Subject'] = title
     msg['From'] = sender
     msg['To'] = recipients[0]
 
@@ -141,6 +142,9 @@ def send_out_daily_updates(Lochness, days: int = 1,
             'processed', 'subject', 'datatypes']).count()[['filename']]
         count_df.columns = ['file count']
         count_df = count_df.reset_index()
+        count_df.columns = ['Transfer date', 'Protected vs General', 'Site',
+                'Raw vs Processed', 'Subject', 'Data type',
+                'Number of files transferred']
         s3_df_selected.drop('date', axis=1, inplace=True)
 
     else:
@@ -154,6 +158,8 @@ def send_out_daily_updates(Lochness, days: int = 1,
     if len(s3_df_selected) == 0:
         send_detail(
             Lochness,
+            Lochness['sender'],
+            Lochness['notify'],
             'Lochness', f'Daily updates {datetime.now(tz).date()}',
             'There is no update!', '',
             list_of_lines_from_tree,
@@ -167,30 +173,43 @@ def send_out_daily_updates(Lochness, days: int = 1,
 
         # too many dicom file names -> remove
         subject_mri_gb = s3_df_selected[
-                s3_df_selected.Datatype == 'mri'].groupby('Subject')
+               (s3_df_selected.Datatype == 'mri') &
+               (~s3_df_selected['File name'].str.startswith('.')) &
+               (~s3_df_selected['File name'].str.endswith('.gif'))
+                ].groupby('Subject')
 
         sample_mri_df = pd.DataFrame()
         for _, table in subject_mri_gb:
-            subject_mri_sample = table.iloc[:2].copy()  # select only two raws
-            subject_mri_sample.loc[
-                    subject_mri_sample.index[-1], 'File name'] = '...'
-            sample_mri_df = pd.concat([sample_mri_df, subject_mri_sample])
+            if len(table) > 2:
+                # select only two raws
+                subject_mri_sample = table.iloc[:2].copy()
+                subject_mri_sample.loc[
+                        subject_mri_sample.index[-1], 'File name'] = '...'
+                sample_mri_df = pd.concat([sample_mri_df, subject_mri_sample])
+            else:
+                sample_mri_df = pd.concat([sample_mri_df, table])
 
         s3_df_selected = pd.concat([
             s3_df_selected[s3_df_selected.Datatype != 'mri'],
-            sample_mri_df]).sort_index()
+            sample_mri_df]).sort_index().reset_index(drop=True)
 
-        in_mail_footer = 'Note that only S3 transferred files are included.'
+        in_mail_footer = 'Only the files transferred to NDA are shown.'
 
         send_detail(
             Lochness,
+            Lochness['sender'],
+            Lochness['notify'],
             'Lochness', f'Daily updates {datetime.now(tz).date()} '
                         f'(for the past {days} {day_days})',
-            'Summary of files sent to NDA' + count_df.to_html(),
-            'Each file in detail' + s3_df_selected.to_html(),
+            '<h2>Summary of the files transferred to NDA</h2>' \
+                    + count_df.to_html() + '<br>',
+            '<h2>More details for each data type</h2>' \
+                    + '<br>'.join(
+                        [f"<h3>{datatype.upper()}</h3>{table.to_html()}" for 
+                            datatype, table in 
+                            s3_df_selected.groupby('Datatype')]),
             list_of_lines_from_tree,
-            in_mail_footer,
-            test, mailx)
+            in_mail_footer, test, mailx)
 
 
 def attempts_error(Lochness, attempt):
