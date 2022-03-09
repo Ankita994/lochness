@@ -115,10 +115,10 @@ def initialize_metadata(Lochness: 'Lochness object',
     df = pd.DataFrame()
     # extract subject ID and source IDs for each sources
     for item in data:
-        if multistudy:  # filter out data from other sites
-            site_code_redcap_id = item[redcap_id_colname][:2]
-            if site_code_redcap_id != site_code_study:
-                continue
+        # filter out data from other sites (if multistudy removed)
+        site_code_redcap_id = item[redcap_id_colname][:2]
+        if site_code_redcap_id != site_code_study:
+            continue
 
         subject_dict = {'Subject ID': item[redcap_id_colname]}
 

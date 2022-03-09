@@ -181,13 +181,13 @@ def initialize_metadata(Lochness: 'Lochness object',
 
         # loop through each line of the RPMS database
         for index, df_measure in df_measure_all_subj.iterrows():
-            if multistudy:
-                # site of the subject for the line
-                site_code_rpms_id = df_measure[rpms_id_colname][:2]
+            # if multistudy:
+            # site of the subject for the line
+            site_code_rpms_id = df_measure[rpms_id_colname][:2]
 
-                # if the subject does not belong to the site, pass it
-                if site_code_rpms_id != site_code_study:
-                    continue
+            # if the subject does not belong to the site, pass it
+            if site_code_rpms_id != site_code_study:
+                continue
 
             subject_dict = {'Subject ID': df_measure[rpms_id_colname]}
 
