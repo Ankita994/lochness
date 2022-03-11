@@ -248,7 +248,6 @@ def get_run_sheets_for_datatypes(json_path: Union[Path, str]) -> None:
                                    f'{output_name}.Run_sheet_{modality}.csv')
 
 
-
 def check_if_modified(subject_id: str,
                       existing_json: str,
                       df: pd.DataFrame) -> bool:
