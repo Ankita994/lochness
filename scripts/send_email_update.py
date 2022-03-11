@@ -6,6 +6,7 @@ import argparse as ap
 import lochness.config as config
 from lochness.email import send_out_daily_updates
 from lochness.transfer import create_s3_transfer_table
+from lochness.utils.source_check import check_source
 from typing import List
 
 def parse_args(argv):
@@ -59,6 +60,7 @@ def send_email_update(config_file: str, days: int, recreate_db: bool,
     # update recipients
     if recipients:
         Lochness['notify'] = {'_': recipients}
+        Lochness['file_check_notify'] = {'_': recipients}
 
 
     if log_file:
@@ -76,6 +78,7 @@ def send_email_update(config_file: str, days: int, recreate_db: bool,
         create_s3_transfer_table(Lochness)
 
     send_out_daily_updates(Lochness, days, test)
+    check_source(Lochness)
 
 
 if __name__ == '__main__':
