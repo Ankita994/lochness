@@ -189,6 +189,10 @@ def check_file_path_df(df: pd.DataFrame,
     # check if the subject exist in metadata
     update_by_checking_against_subject_list(df, subject_id_list)
 
+    # check if the letters in front of the subject matches the site
+    site_mismatch = df[df['subject'].str[:2] != df['site'].str[-2:]].index
+    df.loc[site_mismatch, 'subject_check'] = False
+
     # add notes
     update_by_adding_notes(df)
 

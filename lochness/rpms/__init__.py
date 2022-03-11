@@ -9,7 +9,7 @@ import tempfile as tf
 import collections as col
 import lochness.net as net
 import lochness.tree as tree
-from typing import List, Dict
+from typing import List, Dict, Union
 import pandas as pd
 import re
 from lochness.redcap.process_piis import process_and_copy_db
@@ -78,70 +78,49 @@ def get_rpms_database(rpms_root_path: str) -> Dict[str, pd.DataFrame]:
     return all_df_dict
 
 
-# def get_run_sheets_for_datatypes(target_df_loc: Union[Path, str]) -> None:
-    # '''Extract run sheet information from RPMS outputs and save as csv file
+def get_run_sheets_for_datatypes(target_df_loc: Union[Path, str]) -> None:
+    '''Extract run sheet information from RPMS outputs and save as csv file
 
-    # For each data types, there should be Run Sheets completed by RAs on RPMS
-    # This information is extracted and saved as a csv flie in the 
-        # PHOENIX/PROTECTED/raw/
-            # {STUDY}/{DATATYPE}/{subject}.{study}.Run_sheet_{DATATYPE}.csv
+    For each data types, there should be Run Sheets completed by RAs on RPMS
+    This information is extracted and saved as a csv flie in the 
+        PHOENIX/PROTECTED/raw/
+            {STUDY}/{DATATYPE}/{subject}.{study}.Run_sheet_{DATATYPE}.csv
 
-    # Key Arguments:
-        # - target_df_loc: REDCap json path, Path.
+    Key Arguments:
+        - target_df_loc: REDCap json path, Path.
 
-    # Returns:
-        # - None
-    # '''
+    Returns:
+        - None
+    '''
+    target_df_loc = Path(target_df_loc)
+    if not target_df_loc.is_file():
+        return
 
-    # modality_fieldname_dict = {'eeg': 'eeg',
-                               # 'actigraphy': 'axivity',
-                               # 'mri': 'MRI'}
-    # if '_MRI.csv' in target_df_loc.name:
-        # pass
+    modality_fieldname_dict = {'eeg': 'EEG',
+                               'actigraphy': 'Actigraphy',
+                               'mri': 'MRI',
+                               'survey': 'PennCNB'}
 
-    # if not json_path.is_file():
-        # return
+    for modality, fieldname in modality_fieldname_dict.items():
+        if target_df_loc.name.endswith(f"_{fieldname}.csv"):
+            raw_subject_path = target_df_loc.parent.parent
+            subject = raw_subject_path.name
+            study = 'Prescient' + subject[:2]
+            raw_modality_path = raw_subject_path / modality
+            raw_modality_path.mkdir(exist_ok=True, parents=True)
+            run_sheet_output = raw_modality_path / \
+                    f'{subject}.{study}.Run_sheet_{modality}.csv'
 
-    # with open(json_path, 'r') as f:
-        # data = json.load(f)
+            if run_sheet_output.is_file():
+                target_df = pd.read_csv(target_df_loc)
+                same_df = pd.read_csv(run_sheet_output).equals(target_df)
+                if same_df:  # skip everything if it is already there
+                    return
 
-    # if type(data) == list:  # most cases, because U24 has follow up data
-        # pass
-    # elif type(data) == dict:  # single timepoint cases
-        # data = [data]
-    # else:
-        # raise TypeError(f'Type of the data in {json_path} is not correct')
-
-
-    # raw_path = Path(json_path).parent.parent
-
-    # for modality, fieldname in modality_fieldname_dict.items():
-        # modality_df = pd.DataFrame()
-        # raw_modality_path = raw_path / modality
-        # for data_num, data_timepoint in enumerate(data):
-            # modality_key_names = [x for x in data_timepoint.keys()
-                    # if fieldname in x.lower()]
-            # for _, modality_key_name in enumerate(modality_key_names):
-                # modality_df_tmp = pd.DataFrame({
-                    # 'data_num': [data_num],
-                    # 'field name': modality_key_name,
-                    # 'field value': data_timepoint[modality_key_name]})
-                # modality_df = pd.concat([modality_df, modality_df_tmp])
-
-        # if 'field value' in modality_df.columns:
-            # # if all value is empty, don't load it
-            # if (modality_df['field value'] == '').all():
-                # continue
-
-            # elif (modality_df[modality_df['field value'] != ''][
-                # 'field name'].str.contains('sheet_complete').all()):
-                # continue
-
-            # raw_modality_path.mkdir(exist_ok=True, parents=True)
-            # output_name = Path(json_path).name.split('.json')[0]
-            # modality_df.to_csv(
-                    # raw_modality_path / 
-                    # f'{output_name}.Run_sheet_{modality}.csv')
+            # save run sheet
+            target_df = pd.read_csv(target_df_loc)
+            target_df.to_csv(run_sheet_output, index=False)
+            os.chmod(run_sheet_output, 0o0755)
 
 
 def initialize_metadata(Lochness: 'Lochness object',
@@ -328,6 +307,7 @@ def sync(Lochness, subject, dry=False):
             os.chmod(dirname, 0o0755)
             source_df.to_csv(target_df_loc, index=False)
             os.chmod(target_df_loc, 0o0755)
+            get_run_sheets_for_datatypes(target_df_loc)
             # process_and_copy_db(Lochness, subject, target_df_loc, proc_dst)
 
 

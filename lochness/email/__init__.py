@@ -128,7 +128,6 @@ def send_out_daily_updates(Lochness, days: int = 1,
         timestamp_to_check_from = pd.Timestamp(date_to_check_from)
 
         s3_df_selected = s3_df[s3_df['timestamp'] > timestamp_to_check_from]
-
         s3_df_selected = s3_df_selected.fillna('_')
 
         s3_df_selected = s3_df_selected[~s3_df_selected.filename.str.contains(
