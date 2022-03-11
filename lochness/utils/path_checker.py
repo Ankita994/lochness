@@ -3,10 +3,13 @@ import re
 from pathlib import Path
 from typing import List
 
-def ampscz_id_validate(some_id):
+def ampscz_id_validate(some_id: str):
     # https://github.com/AMP-SCZ/subject-id-validator
     # Basic checks: len == 7, first two chars are not numbers,
     # all other chars are numbers
+    if type(some_id) != str:
+        return False
+
     if len(some_id) != 7:
         return False
 
