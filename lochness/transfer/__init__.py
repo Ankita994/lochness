@@ -320,10 +320,11 @@ def lochness_to_lochness_transfer_s3(Lochness, general_only: bool = True):
     now = datetime.now()
     current_time = now.strftime("%Y-%m-%d %H:%M:%S")
     with open(s3_sync_stdout, 'a') as fp:
-        fp.write('\n'.join([f'{current_time} {x}' for x in
-                            os.popen(command).read().split('\n')]))
+        command_str = '\n'.join([f'{current_time} {x}' for x in
+                            os.popen(command).read().split('\n')])
+        fp.write(command_str)
 
-    logger.debug(os.popen(command).read())
+    logger.debug(command_str)
     logger.debug('aws rsync completed')
 
 
@@ -365,15 +366,13 @@ def create_s3_transfer_table(Lochness, rewrite=False) -> None:
     df = pd.DataFrame()
     with open(log_file, 'r') as fp:
         for line in fp.readlines():
-            print(line)
             ts = re.search(r'^(\S+ \w+:\w+:\w+)', line).group(1)
             ts = pd.to_datetime(ts)
             more_recent = ts > max_ts_prev_df
 
-            if line.startswith('upload: '):
+            if line.startswith(f'{ts} upload: '):
                 if not more_recent:
                     continue
-
                 try:
                     source = re.search(r'upload: (\S+)', line).group(1)
                      # do not save metadata.csv update since it
@@ -446,6 +445,9 @@ def lochness_to_lochness_transfer_s3_protected(Lochness):
     s3_bucket_name = Lochness['AWS_BUCKET_NAME']
     s3_phoenix_root = Lochness['AWS_BUCKET_ROOT']
 
+    # save aws 3 sync cmd stdout to a file
+    s3_sync_stdout = Path(Lochness['phoenix_root']) / 'aws_s3_sync_stdouts.log'
+
     for datatype in Lochness['s3_selective_sync']:
         # phoenix_root / PROTECTED / site / raw / subject / datatype
         source_directories = Path(Lochness['phoenix_root']).glob(
@@ -465,7 +467,16 @@ def lochness_to_lochness_transfer_s3_protected(Lochness):
                 logger.debug('Executing aws s3 sync function for '
                              f'{source_directory}')
                 logger.debug(re.sub(r'\s+', r' ', command))
-                logger.debug(os.popen(command).read())
+
+                now = datetime.now()
+                current_time = now.strftime("%Y-%m-%d %H:%M:%S")
+                with open(s3_sync_stdout, 'a') as fp:
+
+                    command_str = '\n'.join([f'{current_time} {x}' for x in
+                                        os.popen(command).read().split('\n')])
+                    fp.write(command_str)
+
+                logger.debug(command_str)
                 logger.debug('aws rsync completed')
 
 
