@@ -3,6 +3,41 @@ import re
 from pathlib import Path
 from typing import List
 
+def ampscz_id_validate(some_id: str):
+    # https://github.com/AMP-SCZ/subject-id-validator
+    # Basic checks: len == 7, first two chars are not numbers,
+    # all other chars are numbers
+    if type(some_id) != str:
+        return False
+
+    if len(some_id) != 7:
+        return False
+
+    if not (some_id[0].isalpha() and some_id[1].isalpha()):
+        return False
+
+    if not all([n.isdecimal() for n in some_id[2:6]]):
+        return False
+
+    # Convert ID to array of numbers, excluding check digit
+    id_array = []
+    id_array.append(ord(some_id[0].upper()))
+    id_array.append(ord(some_id[1].upper()))
+    id_array = id_array + list(some_id[2:6])
+
+    # Use check digit algorithm to generate correct check digit
+    check_digit_array = []
+
+    for pos in range(len(id_array)):
+        check_digit_array.append(int(id_array[pos]) * (pos+1))
+    check_digit = sum(check_digit_array) % 10
+
+    # Check correct check digit against entered ID
+    if int(some_id[6]) != check_digit:
+        return False
+
+    return True
+
 
 def nth_item_from_path(df: pd.DataFrame, n: int) -> pd.Series:
     '''Return n th item from pd.Series of paths'''
@@ -46,9 +81,7 @@ def update_interviews_check(df: pd.DataFrame) -> pd.DataFrame:
     # subject location is different
     int_df = df.loc[int_index]
     int_df['subject'] = nth_item_from_path(int_df, 3)
-    int_df['subject_check'] = int_df['subject'].str.match(
-            '[A-Z]{2}\d{5}').fillna(False)
-
+    int_df['subject_check'] = int_df['subject'].apply(ampscz_id_validate)
     df.loc[int_index] = int_df
 
 
@@ -61,7 +94,7 @@ def update_interviews_transcript_check(df: pd.DataFrame) -> pd.DataFrame:
     transcript_int_df = df.loc[transcript_int_index]
     transcript_int_df['subject'] = nth_item_from_path(transcript_int_df, 4)
     transcript_int_df['subject_check'] = transcript_int_df['subject'
-            ].str.match('[A-Z]{2}\d{5}').fillna(False)
+            ].apply(ampscz_id_validate)
 
     # check site and AMPSCZ IDs in the transcript file name
     for index, row in transcript_int_df.iterrows():
@@ -69,6 +102,7 @@ def update_interviews_transcript_check(df: pd.DataFrame) -> pd.DataFrame:
             transcript_int_df.loc[index, 'subject'] = re.search(
                 r'[A-Z]{2}\d{5}', row['subject']).group(0)
             row['subject'] = transcript_int_df.loc[index, 'subject']
+            row['subject_check'] = ampscz_id_validate(row['subject'])
 
         subject = row['subject']
         site = row['site']
@@ -166,8 +200,9 @@ def check_file_path_df(df: pd.DataFrame,
 
     # main check logics start here
     df['site_check'] = df.site.str.match('Prescient|Pronet')
-    df['subject_check'] = df['subject'].str.match(
-            '[A-Z]{2}\d{5}').fillna(False)
+
+    #  validate AMPSCZ ID
+    df['subject_check'] = df['subject'].apply(ampscz_id_validate)
 
     df['modality_check'] = df['modality'].str.contains(
             'MRI|EEG|Actigraphy|Interviews').fillna(False)

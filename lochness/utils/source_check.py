@@ -268,7 +268,7 @@ def get_subject_list_from_metadata(Lochness: 'lochness') -> List[str]:
     return subject_id_list
 
 
-def check_source(Lochness: 'lochness') -> None:
+def check_source(Lochness: 'lochness', test: bool = False) -> None:
     '''Check if there is any file that deviates from SOP'''
 
     subject_id_list = get_subject_list_from_metadata(Lochness)
@@ -289,7 +289,13 @@ def check_source(Lochness: 'lochness') -> None:
 
         # box
         print('Loading data list from BOX')
-        box_files_df = collect_box_files_info(keyring)
+        tmp_box_db = Path(Lochness['phoenix_root']) / \
+                '.tmp_box_source_files.csv'
+        if test:
+            box_files_df = pd.read_csv(tmp_box_db)
+        else:
+            box_files_df = collect_box_files_info(keyring)
+            box_files_df.to_csv(tmp_box_db)
 
         with tf.NamedTemporaryFile(delete=True) as f:
             box_files_df.to_csv(f.name, index=False)
