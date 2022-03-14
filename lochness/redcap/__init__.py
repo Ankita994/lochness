@@ -141,12 +141,13 @@ def initialize_metadata(Lochness: 'Lochness object',
         for source, (source_name, source_field_name) \
                 in source_source_name_dict.items():
             # if mindlamp_id field is available in REDCap record
-            source_id = item[source_field_name]
-            if source_id != '':
-                subject_dict[source_name] = \
-                        f"{source}.{study_name}:{source_id}"
-            else:
-                pass
+            if source_field_name in item:
+                source_id = item[source_field_name]
+                if source_id != '':
+                    subject_dict[source_name] = \
+                            f"{source}.{study_name}:{source_id}"
+                else:
+                    pass
 
         df_tmp = pd.DataFrame.from_dict(subject_dict, orient='index')
         df = pd.concat([df, df_tmp.T])
@@ -350,12 +351,16 @@ def sync(Lochness, subject, dry=False):
                 }
 
             else:
+                id_field = Lochness['redcap_id_colname']
+                redcap_subject_sl = redcap_subject.lower()
                 record_query = {
                     'token': api_key,
                     'content': 'record',
                     'format': 'json',
-                    'records': redcap_subject
-                }
+                    'filterLogic': f"[{id_field}] = '{redcap_subject}' or "
+                                   f"[{id_field}] = '{redcap_subject_sl}'"
+                   }
+                    # 'records': redcap_subject
 
             if deidentify:
                 # get fields that aren't identifiable and narrow record query
@@ -369,10 +374,12 @@ def sync(Lochness, subject, dry=False):
                 content = post_to_redcap(api_url, metadata_query, _debug_tup)
                 metadata = json.loads(content)
                 field_names = []
+                field_num = 0
                 for field in metadata:
                     if field['identifier'] != 'y':
-                        field_names.append(field['field_name'])
-                record_query['fields'] = ','.join(field_names)
+                        field_label = f'fields[{field_num}]'
+                        record_query[field_label] = field['field_name']
+                        field_num += 1
 
             # post query to redcap
             content = post_to_redcap(api_url, record_query, _debug_tup)
