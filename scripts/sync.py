@@ -169,8 +169,8 @@ def main():
                     pass  # no email
                 elif datetime.today().isoweekday() == 1:  # Monday
                     days_to_summarize = 3
-                    check_source(Lochness, days=days_to_summarize)
-                    send_out_daily_updates(Lochness)
+                    check_source(Lochness)
+                    send_out_daily_updates(Lochness, days=days_to_summarize)
                 else:
                     check_source(Lochness)
                     send_out_daily_updates(Lochness)
