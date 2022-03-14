@@ -305,6 +305,8 @@ def _parse_redcap(value, default_id=None):
 def _parse_mindlamp(value, default_id=None):
     '''helper function to parse a mindlamp metadata value'''
     default = 'mindlamp.*:{ID}'.format(ID=default_id)
+    if value == 'nan':
+        return col.defaultdict(list)
     return _simple_parser(value, default=default)
 
 
