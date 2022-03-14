@@ -109,7 +109,7 @@ def get_run_sheets_for_datatypes(target_df_loc: Union[Path, str]) -> None:
             raw_modality_path = raw_subject_path / modality
             raw_modality_path.mkdir(exist_ok=True, parents=True)
             run_sheet_output = raw_modality_path / \
-                    f'{subject}.{study}.Run_sheet_{modality}.csv'
+                    f'{subject}.{study[:-2]}.Run_sheet_{modality}.csv'
 
             if run_sheet_output.is_file():
                 target_df = pd.read_csv(target_df_loc)
