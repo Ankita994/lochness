@@ -337,4 +337,4 @@ if __name__ == '__main__':
     config_loc = '/opt/software/Pronet_data_sync/config.yml'
     Lochness = load(config_loc)
     Lochness['file_check_notify']['__global__'] = ['kevincho@bwh.harvard.edu']
-    check_source(Lochness)
+    check_source(Lochness, test=True)
