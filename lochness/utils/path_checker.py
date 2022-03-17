@@ -237,7 +237,7 @@ def check_file_path_df(df: pd.DataFrame,
 
 
     df['final_check'] = df[
-            ['modality_check', 'subject_check', 'file_check']
+            ['modality_check', 'file_check']
         ].all(axis=1)
 
     return df
