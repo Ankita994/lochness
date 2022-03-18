@@ -49,7 +49,7 @@ def update_eeg_check(df: pd.DataFrame) -> None:
     eeg_index = df[df['modality'] == 'EEG'].index
     eeg_df = df.loc[eeg_index]
     eeg_df['file_check'] = eeg_df['file_name'].str.match(
-            '[A-Z]{2}\d{5}_eeg_\d{4}\d{2}\d{2}\.*')
+            '[A-Z]{2}\d{5}_eeg_\d{4}\d{2}\d{2}.*.zip$')
 
     df.loc[eeg_index] = eeg_df
 
@@ -237,7 +237,7 @@ def check_file_path_df(df: pd.DataFrame,
 
 
     df['final_check'] = df[
-            ['modality_check', 'subject_check', 'file_check']
+            ['modality_check', 'file_check']
         ].all(axis=1)
 
     return df

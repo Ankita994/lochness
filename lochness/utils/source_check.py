@@ -311,9 +311,14 @@ def check_source(Lochness: 'lochness', test: bool = False) -> None:
 
     # select final_check failed files, and clean up
     qc_fail_df = all_df[
-            (~all_df['final_check']) | (~all_df['exist_in_db'])
+            (~all_df['final_check']) | 
+            (~all_df['exist_in_db']) |
+            (~all_df['subject_check'])
             # (~all_df['file_name'].str.contains('.dcm|._dicom_series'))
             ]
+
+    qc_fail_df['subject_check'] = qc_fail_df['subject_check'].map(
+            {True: f'Correct', False: f'Incorrect'})
 
     qc_fail_df['exist_in_db'] = qc_fail_df['exist_in_db'].map(
             {True: f'Exist in {db_string}', False: f'Missing in {db_string}'})
@@ -322,10 +327,12 @@ def check_source(Lochness: 'lochness', test: bool = False) -> None:
             {True: 'Correct', False: 'Incorrect'})
 
     cols_to_show = ['file_path', 'site', 'subject', 'modality',
-                    'exist_in_db', 'final_check']
+                    'subject_check', 'exist_in_db', 'final_check']
+
     qc_fail_df = qc_fail_df[cols_to_show]
     qc_fail_df.columns = ['File Path', 'Site', 'Subject',
-                          'Data Type', 'Subject ID in database', 'Format']
+                          'Data Type', 'AMPSCZ-ID checksum',
+                          'Subject ID in database', 'Format']
 
     lines = []
     send_source_qc_summary(qc_fail_df, lines, Lochness)
@@ -337,4 +344,4 @@ if __name__ == '__main__':
     config_loc = '/opt/software/Pronet_data_sync/config.yml'
     Lochness = load(config_loc)
     Lochness['file_check_notify']['__global__'] = ['kevincho@bwh.harvard.edu']
-    check_source(Lochness)
+    check_source(Lochness, test=True)
