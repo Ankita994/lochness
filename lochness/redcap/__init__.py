@@ -215,7 +215,8 @@ def get_run_sheets_for_datatypes(json_path: Union[Path, str]) -> None:
                                'actigraphy': 'chrax_',
                                'mri': 'chrmri_',
                                'phone': 'chrdig_',
-                               'survey': 'chrpenn_'}
+                               'surveys': 'chrpenn_',
+                               'interviews': 'chrnsipr_'}
     for modality, fieldname in modality_fieldname_dict.items():
         modality_df = pd.DataFrame()
         raw_modality_path = raw_path / modality
@@ -241,7 +242,7 @@ def get_run_sheets_for_datatypes(json_path: Union[Path, str]) -> None:
             raw_modality_path.mkdir(exist_ok=True, parents=True)
             output_name = Path(json_path).name.split('.json')[0]
 
-            if modality == 'survey':
+            if modality == 'surveys':
                 modality_df.to_csv(raw_modality_path /
                                    f'{output_name}.Run_sheet_PennCNB.csv')
             else:
