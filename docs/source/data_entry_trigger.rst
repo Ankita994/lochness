@@ -112,3 +112,30 @@ trigger.
 
 
 
+
+Last step: update your configuration file
+"""""""""""""""""""""""""""""""""""""""""
+Your lochness configuration file should include the path of the
+``data_entry_trigger_database.csv``. See example below.
+
+
+.. code-block:: shell
+
+    AWS_BUCKET_NAME: pronet-test
+    AWS_BUCKET_ROOT: TEST_PHOENIX_ROOT_PRONET_PROD
+    s3_selective_sync: [surveys,mri,phone,eeg,actigraphy]
+    redcap:
+        PronetLA:
+            deidentify: True
+            data_entry_trigger_csv: /data/pronet/data_sync_pronet/data_entry_trigger_database.csv
+            update_metadata: True
+        PronetOR:
+            deidentify: True
+            data_entry_trigger_csv: /data/pronet/data_sync_pronet/data_entry_trigger_database.csv
+            update_metadata: True
+        ...
+
+
+
+If you have more than one REDCap server sending the data entry trigger signal,
+``nginx`` and ``listen_to_redcap.py`` need to be configured accordingly.
