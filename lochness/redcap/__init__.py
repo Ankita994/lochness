@@ -275,11 +275,20 @@ def check_if_modified(subject_id: str,
         return False
 
 
-def get_data_entry_trigger_df(Lochness: 'Lochness') -> pd.DataFrame:
-    '''Read Data Entry Trigger database as dataframe'''
+def get_data_entry_trigger_df(Lochness: 'Lochness',
+                              study: str) -> pd.DataFrame:
+    '''Read Data Entry Trigger database as dataframe
+
+    Key Arguments:
+        Lochness: Lochness config object, obj.
+        study: study string, str. eg) PronetYA
+
+    Returns:
+        pandas dataframe for data entry trigger database
+    '''
     if 'redcap' in Lochness:
-        if 'data_entry_trigger_csv' in Lochness['redcap']:
-            db_loc = Lochness['redcap']['data_entry_trigger_csv']
+        if 'data_entry_trigger_csv' in Lochness['redcap'][study]:
+            db_loc = Lochness['redcap'][study]['data_entry_trigger_csv']
             if Path(db_loc).is_file():
                 db_df = pd.read_csv(db_loc)
                 try:
@@ -289,15 +298,11 @@ def get_data_entry_trigger_df(Lochness: 'Lochness') -> pd.DataFrame:
                 return db_df
 
     db_df = pd.DataFrame({'record':[]})
-    # db_df = pd.DataFrame()
     return db_df
 
 
 @net.retry(max_attempts=5)
 def sync(Lochness, subject, dry=False):
-
-    # load dataframe for redcap data entry trigger
-    db_df = get_data_entry_trigger_df(Lochness)
 
     logger.debug(f'exploring {subject.study}/{subject.id}')
     deidentify = deidentify_flag(Lochness, subject.study)
@@ -326,17 +331,25 @@ def sync(Lochness, subject, dry=False):
 
             proc_dst = Path(proc_folder) / fname
 
+            # Data Entry Trigger
             # check if the data has been updated by checking the redcap data
             # entry trigger db
-            if dst.is_file():
-                if check_if_modified(redcap_subject, dst, db_df):
-                    pass  # if modified, carry on
-                else:
-                    logger.debug(f"{subject.study}/{subject.id} "
-                                 "No DET updates")
-                    # break  # if not modified break
+            # UPENN redcap does not have data download limit, therefore no DET
+            if 'UPENN' in redcap_instance:
+                pass
+            else:
+                if dst.is_file():
+                    # load dataframe for redcap data entry trigger
+                    db_df = get_data_entry_trigger_df(Lochness, subject.study)
 
-            logger.debug("Downloading REDCap data")
+                    if check_if_modified(redcap_subject, dst, db_df):
+                        pass  # if modified, download REDCap data
+                    else:
+                        logger.debug(f"{subject.study}/{subject.id} "
+                                     "No DET updates")
+                        break  # if not modified, don't pull
+
+            logger.debug(f"Downloading REDCap ({redcap_instance}) data")
             _debug_tup = (redcap_instance, redcap_project, redcap_subject)
 
             if 'UPENN' in redcap_instance:
