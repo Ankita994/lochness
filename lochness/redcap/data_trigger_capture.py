@@ -121,7 +121,7 @@ def save_post_from_redcap(body: str, db_location: str):
         'record': record,
         'instrument': instrument})
 
-    db_df = db_df.append(df_tmp)
+    db_df = pd.concat([db_df, df_tmp])
     db_df[columns].to_csv(db_location)
 
 
