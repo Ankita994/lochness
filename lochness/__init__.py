@@ -497,10 +497,15 @@ def notify(Lochness, s, study=None):
     if '__global__' in Lochness['notify']:
         for address in Lochness['notify']['__global__']:
             recipients.add(address)
-    lochness.email.send(recipients,
-                        Lochness['sender'],
-                        'lochness notification', s)
 
+    lochness.email.send_message(Lochness,
+                                Lochness['sender'],
+                                Lochness['notify'],
+                                'Issue at Lochness system',
+                                datetime.now(tz).date(),
+                                s, '',
+                                [],
+                                '')
 
 class NotificationError(Exception):
     pass
