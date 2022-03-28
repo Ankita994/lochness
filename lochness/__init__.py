@@ -484,9 +484,11 @@ def notify(Lochness, s, study=None):
     :type study: str
     '''
     if 'notify' not in Lochness:
-        raise NotificationError("no 'notify' section found in the configuration file")
+        raise NotificationError(
+                "no 'notify' section found in the configuration file")
     if 'sender' not in Lochness:
-        raise NotificationError("no 'sender' section found in the configuration file")
+        raise NotificationError(
+                "no 'sender' section found in the configuration file")
     # schema validation would help here instead of making assumptions
     recipients = set()
     if study and study in Lochness['notify']:
@@ -495,8 +497,15 @@ def notify(Lochness, s, study=None):
     if '__global__' in Lochness['notify']:
         for address in Lochness['notify']['__global__']:
             recipients.add(address)
-    lochness.email.send(recipients, Lochness['sender'], 'lochness notification', s)
 
+    lochness.email.send_message(Lochness,
+                                Lochness['sender'],
+                                Lochness['notify'],
+                                'Issue at Lochness system',
+                                datetime.now(tz).date(),
+                                s, '',
+                                [],
+                                '')
 
 class NotificationError(Exception):
     pass

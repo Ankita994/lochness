@@ -49,8 +49,13 @@ def sync(Lochness, subject, dry=False):
                         continue
                     except ConsistencyError as e:
                         logger.warn(e)
-                        message = 'A conflict was detected in study' \
-                                  f'{subject.study}'
+                        message = 'A conflict was detected in study ' \
+                                  f'{subject.study}\n' \
+                                  f'There is existing data in {dst}, but ' \
+                                  'it does not match the data on XNAT.' \
+                                  'Please check MRI data saved in {dst} and ' \
+                                  'compared to the XNAT data.'
+                            
                         lochness.notify(Lochness, message, study=subject.study)
                         #lochness.backup(dst)
                         continue
@@ -83,7 +88,8 @@ def check_consistency(d, experiment):
     local_uid = experiment_local['id']
     remote_uid = experiment.id
     if local_uid != remote_uid:
-        raise ConsistencyError('conflict detected {0} != {1}'.format(local_uid, remote_uid))
+        raise ConsistencyError('conflict detected {0} != {1}'.format(
+            local_uid, remote_uid))
 
 
 class ConsistencyError(Exception):
