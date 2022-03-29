@@ -103,7 +103,8 @@ def update_interviews_transcript_check(df: pd.DataFrame) -> pd.DataFrame:
                 r'[A-Z]{2}\d{5}', row['subject']).group(0)
             row['subject'] = transcript_int_df.loc[index, 'subject']
             row['subject_check'] = ampscz_id_validate(row['subject'])
-
+            transcript_int_df.loc[index,
+                                  'subject_check'] = row['subject_check']
         subject = row['subject']
         site = row['site']
         transcript_int_df.loc[index, 'file_check'] = re.match(
