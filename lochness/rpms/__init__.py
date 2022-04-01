@@ -287,8 +287,7 @@ def sync(Lochness, subject, dry=False):
         # if the csv already exists, compare the dataframe
         if Path(target_df_loc).is_file():
             # index might be different, so drop it before comparing it
-            prev_df = pd.read_csv(target_df_loc).reset_index(
-                    inplace=True, drop=True)
+            prev_df = pd.read_csv(target_df_loc).reset_index(drop=True)
 
             # in order to use df.equals function, which also checks for data
             # types of each data, the source_df needs to be saved and re-loaded
