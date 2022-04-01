@@ -82,7 +82,9 @@ def initialize_metadata(Lochness: 'Lochness object',
     record_query = {'token': api_key,
                     'content': 'record',
                     'format': 'json',
-                    'fields[0]': redcap_id_colname}
+                    'fields[0]': redcap_id_colname,
+                    'fields[1]': redcap_consent_colname,
+                    }
 
     # only pull source_names
     # mindlamp id is manually added to "chrdig_lamp_id" field
@@ -113,6 +115,7 @@ def initialize_metadata(Lochness: 'Lochness object',
             data = json.load(f)
 
     df = pd.DataFrame()
+
     # extract subject ID and source IDs for each sources
     for item in data:
         # filter out data from other sites (if multistudy removed)
@@ -123,9 +126,9 @@ def initialize_metadata(Lochness: 'Lochness object',
         subject_dict = {'Subject ID': item[redcap_id_colname]}
 
         # Consent date
-        try:
+        if item[redcap_consent_colname] != '':
             subject_dict['Consent'] = item[redcap_consent_colname]
-        except:
+        else:
             subject_dict['Consent'] = '1900-01-01'
 
         # Redcap default information
@@ -437,7 +440,7 @@ def sync(Lochness, subject, dry=False):
                             except:
                                 print(field['field_name'], ': not in record')
 
-            content = str(content_dict_list).encode('utf-8')
+            content = json.dumps(content_dict_list).encode('utf-8')
 
             if not dry:
                 if not os.path.exists(dst):
