@@ -99,7 +99,7 @@ def get_run_sheets_for_datatypes(target_df_loc: Union[Path, str]) -> None:
     modality_fieldname_dict = {'eeg': 'EEG',
                                'actigraphy': 'Actigraphy',
                                'mri': 'MRI',
-                               'survey': 'PennCNB'}
+                               'surveys': 'PennCNB'}
 
     for modality, fieldname in modality_fieldname_dict.items():
         if target_df_loc.name.endswith(f"_{fieldname}.csv"):
@@ -108,8 +108,13 @@ def get_run_sheets_for_datatypes(target_df_loc: Union[Path, str]) -> None:
             study = 'Prescient' + subject[:2]
             raw_modality_path = raw_subject_path / modality
             raw_modality_path.mkdir(exist_ok=True, parents=True)
-            run_sheet_output = raw_modality_path / \
-                    f'{subject}.{study[:-2]}.Run_sheet_{modality}.csv'
+
+            if modality == 'surveys':
+                run_sheet_output = raw_modality_path / \
+                        f'{subject}.{study[:-2]}.Run_sheet_PennCNB.csv'
+            else:
+                run_sheet_output = raw_modality_path / \
+                        f'{subject}.{study[:-2]}.Run_sheet_{modality}.csv'
 
             if run_sheet_output.is_file():
                 target_df = pd.read_csv(target_df_loc)
@@ -282,8 +287,7 @@ def sync(Lochness, subject, dry=False):
         # if the csv already exists, compare the dataframe
         if Path(target_df_loc).is_file():
             # index might be different, so drop it before comparing it
-            prev_df = pd.read_csv(target_df_loc).reset_index(
-                    inplace=True, drop=True)
+            prev_df = pd.read_csv(target_df_loc).reset_index(drop=True)
 
             # in order to use df.equals function, which also checks for data
             # types of each data, the source_df needs to be saved and re-loaded
