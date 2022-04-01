@@ -50,7 +50,6 @@ def update_eeg_check(df: pd.DataFrame) -> None:
     eeg_df = df.loc[eeg_index]
     eeg_df['file_check'] = eeg_df['file_name'].str.match(
             '[A-Z]{2}\d{5}_eeg_\d{4}\d{2}\d{2}.*.zip$')
-
     df.loc[eeg_index] = eeg_df
 
 
@@ -70,6 +69,7 @@ def update_actigraphy_check(df: pd.DataFrame) -> pd.DataFrame:
     act_df = df.loc[act_index]
     act_df['file_check'] = act_df['file_name'].str.match(
             '[A-Z]{2}\d{5}_\d{5}_\d{4}\d{2}\d{2}.cwa')
+
 
     df.loc[act_index] = act_df
 
@@ -210,6 +210,9 @@ def check_file_path_df(df: pd.DataFrame,
 
     # file name pattern checks
     df['file_check'] = False
+
+    # below are functions for files directly under the subject directory in
+    # the source
     update_eeg_check(df)
     update_actigraphy_check(df)
     update_mri_check(df)
