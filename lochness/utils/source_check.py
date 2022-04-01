@@ -288,6 +288,7 @@ def check_source(Lochness: 'lochness', test: bool = False) -> None:
         # xnat
         print('Loading data list from XNAT')
         xnat_df = check_list_all_xnat_subjects(keyring, subject_id_list)
+        print(xnat_df)
 
         # box
         print('Loading data list from BOX')
