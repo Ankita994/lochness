@@ -498,14 +498,14 @@ def notify(Lochness, s, study=None):
         for address in Lochness['notify']['__global__']:
             recipients.add(address)
 
-    lochness.email.send_message(Lochness,
-                                Lochness['sender'],
-                                Lochness['notify'],
-                                'Issue at Lochness system',
-                                datetime.now(tz).date(),
-                                s, '',
-                                [],
-                                '')
+    lochness.email.send_detail(Lochness,
+                               Lochness['sender'],
+                               Lochness['notify'],
+                               'Issue at Lochness system',
+                               datetime.now(tz).date(),
+                               s, '',
+                               [],
+                               '')
 
 class NotificationError(Exception):
     pass

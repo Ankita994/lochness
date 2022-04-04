@@ -5,7 +5,8 @@ from lochness import tree
 from pathlib import Path
 
 from lochness.redcap import sync, initialize_metadata
-from lochness.redcap import get_run_sheets_for_datatypes
+from lochness.redcap import get_run_sheets_for_datatypes, post_to_redcap, \
+        deidentify_flag
 from lochness.redcap.data_trigger_capture import save_post_from_redcap
 from lochness.redcap.data_trigger_capture import back_up_db
 
@@ -275,5 +276,80 @@ def test_sync_det_update_while_diff_file_leads_to_data_overwrite(
     rmtree('tmp_lochness')
 
 
-def test_get_run_sheets_for_datatypes():
-    get_run_sheets_for_datatypes('/opt/software/Pronet_data_sync/PHOENIX/PROTECTED/PronetYA/raw/YA00009/surveys/YA00009.Pronet.json')
+def test_get_run_sheet_for_datatypes():
+    from lochness.config import load
+    config_loc = '/opt/software/Pronet_data_sync/config.yml'
+    Lochness = load(config_loc)
+
+    # get URL
+    keyring = Lochness['keyring']
+    api_url = keyring['redcap.Pronet']['URL'] + '/api/'
+    api_key = keyring['redcap.Pronet']['API_TOKEN']['Pronet']
+    id_field = Lochness['redcap_id_colname']
+    for subject_path in (
+            Path(Lochness['phoenix_root']) / 'PROTECTED').glob('*/raw/*'):
+        subject = subject_path.name
+        print(subject)
+        site = subject[:2]
+        json_path = subject_path / f'surveys/{subject}.Pronet.json'
+        print(json_path)
+        get_run_sheets_for_datatypes(
+                api_url, api_key, subject, id_field, json_path)
+        return
+
+
+def test_deidentification():
+    from lochness.config import load
+    config_loc = '/opt/software/Pronet_data_sync/config.yml'
+    Lochness = load(config_loc)
+
+    # get URL
+    keyring = Lochness['keyring']
+    api_url = keyring['redcap.Pronet']['URL'] + '/api/'
+    api_key = keyring['redcap.Pronet']['API_TOKEN']['Pronet']
+    id_field = Lochness['redcap_id_colname']
+    for subject_path in (
+            Path(Lochness['phoenix_root']) / 'PROTECTED').glob('*/raw/*'):
+        subject = subject_path.name
+        print(subject)
+        site = subject[:2]
+        json_path = subject_path / f'surveys/{subject}.Pronet.json'
+        redcap_subject = subject
+        redcap_subject_sl = redcap_subject.lower()
+        record_query = {
+            'token': api_key,
+            'content': 'record',
+            'format': 'json',
+            'filterLogic': f"[{id_field}] = '{redcap_subject}' or "
+                           f"[{id_field}] = '{redcap_subject_sl}'"
+           }
+        content = post_to_redcap(api_url, record_query, '')
+        content_dict_list = json.loads(content)
+
+        for content_dict in content_dict_list:
+            deidentify = deidentify_flag(Lochness, 'PronetLA')
+            # deidentify = False
+            if deidentify:
+                metadata_query = {
+                    'token': api_key,
+                    'content': 'metadata',
+                    'format': 'json',
+                    'returnFormat': 'json'
+                }
+
+                content = post_to_redcap(api_url, metadata_query, '')
+                metadata = json.loads(content)
+                field_names = []
+                field_num = 0
+                non_field_num = 0
+                total_num = 0
+                for field in metadata:
+                    if field['identifier'] == 'y':
+                        try:
+                            content_dict.pop(field['field_name'])
+                        except:
+                            print(field['field_name'])
+
+        test = str(content_dict_list).encode('utf-8')
+        lochness.atomic_write('test.json', test)
+        return

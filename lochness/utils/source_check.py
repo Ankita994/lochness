@@ -12,7 +12,8 @@ from pytz import timezone
 from subprocess import Popen, DEVNULL, STDOUT
 from lochness.box import get_access_token, walk_from_folder_object, \
         get_box_object_based_on_name
-from lochness.utils.path_checker import check_file_path_df, print_deviation
+from lochness.utils.path_checker import check_file_path_df, print_deviation, \
+        ampscz_id_validate
 from lochness.config import load
 from lochness.email import send_detail
 tz = timezone('EST')
@@ -77,7 +78,8 @@ def check_list_all_xnat_subjects(keyring: dict,
 
     df['modality'] = 'MRI'
 
-    df['subject_check'] = df['subject'].str.match('^[A-Za-z]{2}\d{5}$')
+    # df['subject_check'] = df['subject'].str.match('^[A-Za-z]{2}\d{5}$')
+    df['subject_check'] = df['subject'].apply(ampscz_id_validate)
     df['site'] = df['project'].str.split('_').str[0]
 
     df['exist_in_db'] = df['subject'].str.upper().isin(
@@ -286,6 +288,7 @@ def check_source(Lochness: 'lochness', test: bool = False) -> None:
         # xnat
         print('Loading data list from XNAT')
         xnat_df = check_list_all_xnat_subjects(keyring, subject_id_list)
+        print(xnat_df)
 
         # box
         print('Loading data list from BOX')
