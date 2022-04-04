@@ -447,6 +447,8 @@ def sync(Lochness, subject, dry=False):
                     logger.debug(f'saving {dst}')
                     lochness.atomic_write(dst, content)
                     # Extract run sheet information
+                    if 'UPENN' in redcap_instance:
+                        continue
                     get_run_sheets_for_datatypes(api_url, api_key,
                                                  subject.id, id_field,
                                                  dst)
@@ -465,6 +467,8 @@ def sync(Lochness, subject, dry=False):
                         logger.debug(f'saving {dst}')
                         lochness.atomic_write(dst, content)
 
+                        if 'UPENN' in redcap_instance:
+                            continue
                         # Extract run sheet information
                         get_run_sheets_for_datatypes(api_url, api_key,
                                                      subject.id, id_field,
