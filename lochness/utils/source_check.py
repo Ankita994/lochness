@@ -2,6 +2,7 @@ import pandas as pd
 from pathlib import Path
 from typing import Union, List
 import xnat
+import json
 import pandas as pd
 from boxsdk import Client, OAuth2
 from typing import List
@@ -16,6 +17,7 @@ from lochness.utils.path_checker import check_file_path_df, print_deviation, \
         ampscz_id_validate
 from lochness.config import load
 from lochness.email import send_detail
+from lochness.redcap import post_to_redcap
 tz = timezone('EST')
 
 
@@ -47,6 +49,47 @@ def get_box_client_from_box_keyrings(box_k: dict) -> Client:
 
     return client
 
+
+def check_list_all_penn_cnb_subjects(project_name: str,
+                                     keyring: dict,
+                                     subject_list: List[str]) -> pd.DataFrame:
+    '''Return a dataframe of records in PENN CNB redcap'''
+
+    api_url = keyring['redcap.UPENN']['URL'] + '/api/'
+    api_key = keyring['redcap.UPENN']['API_TOKEN']['UPENN']
+
+    record_query = {
+        'token': api_key,
+        'content': 'record',
+        'format': 'json',
+        'fields[0]': 'session_subid',
+        'fields[1]': 'session_siteid',
+    }
+
+    content = post_to_redcap(api_url, record_query, '')
+    content_dict_list = json.loads(content)
+
+    df = pd.DataFrame(content_dict_list)
+    df.columns = ['site_orig', 'subject']
+
+    # select records that start with the project name
+    df = df[df.site_orig.str.lower().str.startswith(project_name.lower())]
+
+    # change site label to follow other data types
+    df['site'] = project_name[0].upper() + project_name[1:].lower() + \
+            df['site_orig'].str.split('_').str[1].str.upper()
+
+    df['modality'] = 'PENN_CNB'
+    df['subject_check'] = df['subject'].apply(ampscz_id_validate)
+    df['exist_in_db'] = df['subject'].str.upper().isin(
+            subject_list).fillna(False)
+    df['site_check'] = df['site'].str.split('_').str[1] == \
+            df.subject.str[:2].str.lower()
+    df['final_check'] = df['subject_check'] & df['exist_in_db']
+    df['file_path'] = 'PENN CNB REDCap'
+
+    return df
+    
 
 def check_list_all_xnat_subjects(keyring: dict,
                                  subject_list: List[str]) -> pd.DataFrame:
@@ -274,16 +317,27 @@ def check_source(Lochness: 'lochness', test: bool = False) -> None:
     '''Check if there is any file that deviates from SOP'''
 
     subject_id_list = get_subject_list_from_metadata(Lochness)
+    project_name = Lochness['project_name']
 
-    if Lochness['project_name'] == 'Prescient':
+    if project_name == 'Prescient':
         db_string = 'RPMS'
         mediaflux_df = collect_mediaflux_files_info(Lochness)
+        # Penn CNB
+        keyring = Lochness['keyring']
+        penn_cnb_df = check_list_all_penn_cnb_subjects(
+                project_name, keyring, subject_id_list)
+
         all_df = check_file_path_df(mediaflux_df, subject_id_list)
         all_df = all_df[all_df['site'].str.startswith('Prescient')]
+        all_df = pd.concat([all_df, penn_cnb_df])
 
-    elif Lochness['project_name'] == 'ProNET':
+    elif project_name == 'ProNET':
         db_string = 'REDCap'
         keyring = Lochness['keyring']
+
+        # Penn CNB
+        penn_cnb_df = check_list_all_penn_cnb_subjects(
+                project_name, keyring, subject_id_list)
 
         # xnat
         print('Loading data list from XNAT')
@@ -306,7 +360,7 @@ def check_source(Lochness: 'lochness', test: bool = False) -> None:
             box_df_checked = check_file_path_df(box_df, subject_id_list)
 
         # merge xnat and box check files
-        all_df = pd.concat([xnat_df, box_df])
+        all_df = pd.concat([xnat_df, box_df, penn_cnb_df])
 
     else:
         return
