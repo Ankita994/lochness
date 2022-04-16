@@ -242,7 +242,9 @@ def get_run_sheets_for_datatypes(api_url, api_key,
             # content_num is set to start with 1 to match the session number
             for content_num, content_dict in enumerate(content_dict_list, 1):
                 content_df = pd.DataFrame.from_dict(content_dict,
-                                                    orient='index')
+                                                    orient='index',
+                                                    columns=['field_value'])
+                content_df.index.name = 'field_name'
 
                 # if all is empty, or 0
                 all_empty = ((content_df[content_df.columns[0]]=='0') |
