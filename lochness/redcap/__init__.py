@@ -238,6 +238,10 @@ def get_run_sheets_for_datatypes(api_url, api_key,
 
             content_dict_list = json.loads(content)
 
+            # select the right form, and ignore the weird empty dictionary
+            content_dict_list = [x for x in content_dict_list if
+                    x[run_sheet_name+'_complete'] != '']
+
             # for run sheet at each timepoint - baseline, follow up1, etc.
             # content_num is set to start with 1 to match the session number
             for content_num, content_dict in enumerate(content_dict_list, 1):
@@ -638,7 +642,6 @@ if __name__ == '__main__':
     print(api_url, api_key)
 
     id_field = Lochness['redcap_id_colname']
-            # Path(Lochness['phoenix_root']) / 'PROTECTED').glob('*/raw/*'):
     for subject_path in (
             Path(Lochness['phoenix_root']) / 'PROTECTED').glob('*/raw/*'):
         subject = subject_path.name
