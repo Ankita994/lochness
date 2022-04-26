@@ -96,6 +96,12 @@ def update_interviews_transcript_check(df: pd.DataFrame) -> pd.DataFrame:
     transcript_int_df['subject_check'] = transcript_int_df['subject'
             ].apply(ampscz_id_validate)
 
+    # make sure there is no duplicated subject directory
+    fourth_item_in_path = nth_item_from_path(transcript_int_df, 4)  # dirname
+    fifth_item_in_path = nth_item_from_path(transcript_int_df, 5)  # file name
+    transcript_int_df['modality_check'] = \
+            fourth_item_in_path != fifth_item_in_path
+
     # check site and AMPSCZ IDs in the transcript file name
     for index, row in transcript_int_df.iterrows():
         if not row['subject_check']:
