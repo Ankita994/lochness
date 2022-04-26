@@ -553,7 +553,8 @@ def iso8601(tz="UTC"):
     return dt.datetime.now(pytz.timezone(tz)).isoformat()
 
 
-def atomic_write(filename, content, overwrite=True, permissions=0o0644, encoding='utf-8'):
+def atomic_write(filename, content, overwrite=True,
+                 permissions=0o0644, encoding='utf-8'):
     '''
     Write a file atomically by writing the file content to a
     temporary location first, then renaming the file. 
