@@ -390,7 +390,7 @@ def sync(Lochness, subject, dry=False):
                     else:
                         logger.debug(f"{subject.study}/{subject.id} "
                                      "No DET updates")
-                        # break  # if not modified, don't pull
+                        break  # if not modified, don't pull
 
             logger.debug(f"Downloading REDCap ({redcap_instance}) data")
             _debug_tup = (redcap_instance, redcap_project, redcap_subject)
