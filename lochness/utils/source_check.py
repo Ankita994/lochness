@@ -336,6 +336,7 @@ def check_source(Lochness: 'lochness', test: bool = False) -> None:
         keyring = Lochness['keyring']
 
         # Penn CNB
+        print('Loading data list from PENN CNB')
         penn_cnb_df = check_list_all_penn_cnb_subjects(
                 project_name, keyring, subject_id_list)
 
@@ -398,7 +399,7 @@ def check_source(Lochness: 'lochness', test: bool = False) -> None:
 if __name__ == '__main__':
     # testing purposes
     # config_loc = '/mnt/prescient/Prescient_data_sync/config.yml'
-    config_loc = '/opt/software/Pronet_data_sync/config.yml'
+    config_loc = '/mnt/ProNET/Lochness/config.yml'
     Lochness = load(config_loc)
     Lochness['file_check_notify']['__global__'] = ['kevincho@bwh.harvard.edu']
     check_source(Lochness, test=True)
