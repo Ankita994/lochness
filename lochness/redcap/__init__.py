@@ -77,7 +77,7 @@ def initialize_metadata(Lochness: 'Lochness object',
         Lochness, study_name, f'redcap.{project_name}'))
 
     # sources to add to the metadata, apart from REDCap, XNAT, and Box
-    source_source_name_dict = {'mindlamp': ['Mindlamp', 'chrdig_lamp_id']}
+    source_source_name_dict = {'mindlamp': ['Mindlamp', 'chrdbb_lamp_id']}
 
     record_query = {'token': api_key,
                     'content': 'record',
