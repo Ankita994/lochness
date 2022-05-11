@@ -37,7 +37,7 @@ def load(f: 'location', archive_base=None):
         logger.info('reading keyring file {0}'.format(Lochness['keyring_file']))
         if 'NRG_KEYRING_PASS' in os.environ:
             load.passphrase = os.environ['NRG_KEYRING_PASS']
-        if not load.passphrase:
+        if load.passphrase is None:
             load.passphrase = gp.getpass('enter passphrase: ')
         key = crypt.key_from_file(fp, load.passphrase)
         content = b''
