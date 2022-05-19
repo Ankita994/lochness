@@ -256,7 +256,9 @@ def get_subject_data(all_df_dict: Dict[str, pd.DataFrame],
         measure_df[id_colname] = measure_df[id_colname].astype(str)
         subject_df = measure_df[measure_df[id_colname] == subject.id]
 
-        # Keep the most recent row for each visit
+        # RPMS should overwrite the row whenever there is an update in any 
+        # field of the visit. The snippet below is a safety measure, to store
+        # most recent visit row for each visit
         if 'visit' in subject_df.columns:
             for unique_visit, table in subject_df.groupby('visit'):
                 if len(table) == 1:
