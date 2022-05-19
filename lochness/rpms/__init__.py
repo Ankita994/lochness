@@ -110,22 +110,29 @@ def get_run_sheets_for_datatypes(target_df_loc: Union[Path, str]) -> None:
             raw_modality_path.mkdir(exist_ok=True, parents=True)
 
             if modality == 'surveys':
-                run_sheet_output = raw_modality_path / \
-                        f'{subject}.{study[:-2]}.Run_sheet_PennCNB.csv'
+                run_sheet_output_prefix = raw_modality_path / \
+                        f'{subject}.{study[:-2]}.Run_sheet_PennCNB'
             else:
-                run_sheet_output = raw_modality_path / \
-                        f'{subject}.{study[:-2]}.Run_sheet_{modality}.csv'
+                run_sheet_output_prefix = raw_modality_path / \
+                        f'{subject}.{study[:-2]}.Run_sheet_{modality}'
 
-            if run_sheet_output.is_file():
-                target_df = pd.read_csv(target_df_loc)
-                same_df = pd.read_csv(run_sheet_output).equals(target_df)
-                if same_df:  # skip everything if it is already there
-                    return
+            # convert month to datapoint
+            if modality in ['eeg', 'mri']:
+                # two month : first timepoint
+                # four month : second timpeoint
+                time_to_timepoint = {2: 1, 4: 2}
+            elif fieldname == 'PennCNB':
+                time_to_timepoint = {2: 1, 4: 2, 8: 3, 14: 4, 16: 5}
+            else:  # actigraphy & EMA
+                time_to_timepoint = dict(zip(range(2, 15), range(1, 14)))
 
             # save run sheet
             target_df = pd.read_csv(target_df_loc)
-            target_df.to_csv(run_sheet_output, index=False)
-            os.chmod(run_sheet_output, 0o0755)
+            target_df['timepoint'] = target_df['visit'].map(time_to_timepoint)
+            for tp, table in target_df.groupby('timepoint'):
+                run_sheet_output = f'{run_sheet_output_prefix}_{tp}.csv'
+                table.to_csv(run_sheet_output, index=False)
+                os.chmod(run_sheet_output, 0o0755)
 
 
 def initialize_metadata(Lochness: 'Lochness object',
@@ -167,6 +174,13 @@ def initialize_metadata(Lochness: 'Lochness object',
         for index, df_measure in df_measure_all_subj.iterrows():
             # if multistudy:
             # site of the subject for the line
+
+            # if the rpms table is not ready (e.g.doesn't have the subject col)
+            if rpms_id_colname not in df_measure.index or \
+                pd.isna(df_measure[rpms_id_colname]):
+                continue
+
+            # print(df_measure)
             site_code_rpms_id = df_measure[rpms_id_colname][:2]
 
             # if the subject does not belong to the site, pass it
@@ -188,9 +202,10 @@ def initialize_metadata(Lochness: 'Lochness object',
                                         df_measure[rpms_id_colname]
 
             # if mindlamp_id exists in the rpms table
-            if 'mindlamp_id' in df_measure:
-                subject_dict['mindlamp'] = f'mindlamp.{study_name}:' \
-                        + df_measure[f'mindlamp_id']
+            if 'chrdbb_lamp_id' in df_measure:
+                if not pd.isna(df_measure[f'chrdbb_lamp_id']):
+                    subject_dict['Mindlamp'] = f'mindlamp.{study_name}:' \
+                            + df_measure[f'chrdbb_lamp_id']
 
             if upenn:
                 subject_dict['REDCap'] = \
@@ -235,20 +250,24 @@ def get_subject_data(all_df_dict: Dict[str, pd.DataFrame],
 
     subject_df_dict = {}
     for measure, measure_df in all_df_dict.items():
+        if id_colname not in measure_df.columns:
+            continue
+
         measure_df[id_colname] = measure_df[id_colname].astype(str)
         subject_df = measure_df[measure_df[id_colname] == subject.id]
 
         # Keep the most recent row for each visit
-        for unique_visit, table in subject_df.groupby('visit'):
-            if len(table) == 1:
-                pass
-            else:
-                most_recent_row_index = pd.to_datetime(
-                        table['LastModifiedDate']).idxmax()
-                non_recent_row_index = [x for x in table.index
-                         if x != most_recent_row_index]
-                print(f'RPMS export has duplicated rows for {measure}')
-                subject_df.drop(non_recent_row_index, inplace=True)
+        if 'visit' in subject_df.columns:
+            for unique_visit, table in subject_df.groupby('visit'):
+                if len(table) == 1:
+                    pass
+                else:
+                    most_recent_row_index = pd.to_datetime(
+                            table['LastModifiedDate']).idxmax()
+                    non_recent_row_index = [x for x in table.index
+                             if x != most_recent_row_index]
+                    print(f'RPMS export has duplicated rows for {measure}')
+                    subject_df.drop(non_recent_row_index, inplace=True)
 
         subject_df_dict[measure] = subject_df
 
