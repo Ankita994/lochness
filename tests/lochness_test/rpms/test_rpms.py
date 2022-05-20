@@ -15,6 +15,7 @@ from lochness_create_template import create_lochness_template
 from test_lochness import Tokens, KeyringAndEncrypt, args, Lochness
 from test_lochness import show_tree_then_delete, config_load_test
 from lochness.rpms import initialize_metadata, sync, get_rpms_database
+from lochness.rpms import get_run_sheets_for_datatypes
 
 import pytest
 
@@ -199,3 +200,46 @@ def test_get_rpms_real_example_sync(args):
     for subject in lochness.read_phoenix_metadata(
             Lochness, studies=['StudyA']):
         sync(Lochness, subject, dry)
+
+
+def test_get_runsheets_for_datatypes():
+    outdir = 'tmp_lochness_2'
+    args.outdir = outdir
+    args.s3 = True
+    args.sources = ['RPMS']
+    args.BIDS = True
+    args.studies = ['PrescientME', 'PrescientDA']
+    args.det_csv = 'det_test.csv'
+    args.pii_csv = 'pii_test.csv'
+    args.lochness_sync_history_csv = 'lochness_sync_history_test.csv'
+    args.poll_interval = 1234
+    args.ssh_user = 1234
+    args.ssh_host = 1234
+    args.s3_selective_sync = False
+    args.email = 'kevincho@bwh.harvard.edu'
+    args.lochness_sync_send = False
+    args.lochness_sync_receive = False
+    create_lochness_template(args)
+    create_fake_rpms_repo()
+    KeyringAndEncrypt(Path(outdir))
+
+    dry=False
+    study_name = 'PrescientME'
+    Lochness = config_load_test(f'{args.outdir}/config.yml', '')
+    print(Lochness)
+    print(Lochness['BIDS'])
+    print(Lochness['BIDS'])
+    print(Lochness['BIDS'])
+    # # Lochness['keyring']['rpms.StudyA']['RPMS_PATH'] = '/mnt/prescient/RPMS_incoming'
+
+    initialize_metadata(
+            Lochness,
+            study_name, 
+            Lochness['RPMS_id_colname'],
+            'Consent', False)
+
+    for subject in lochness.read_phoenix_metadata(
+            Lochness, studies=['PrescientME']):
+        sync(Lochness, subject, dry)
+
+    show_tree_then_delete('tmp_lochness_2')

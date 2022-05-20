@@ -397,8 +397,8 @@ def check_source(Lochness: 'lochness', test: bool = False) -> None:
 
 if __name__ == '__main__':
     # testing purposes
-    # config_loc = '/mnt/prescient/Prescient_data_sync/config.yml'
-    config_loc = '/opt/software/Pronet_data_sync/config.yml'
+    config_loc = '/mnt/prescient/Prescient_data_sync/config.yml'
+    # config_loc = '/opt/software/Pronet_data_sync/config.yml'
     Lochness = load(config_loc)
     Lochness['file_check_notify']['__global__'] = ['kevincho@bwh.harvard.edu']
     check_source(Lochness, test=True)

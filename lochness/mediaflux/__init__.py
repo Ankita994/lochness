@@ -145,13 +145,13 @@ def sync_module(Lochness: 'lochness.config',
                                 if protect else subject.general_folder
 
                             mf_local = tree.get(datatype,
-                                            subj_dir,
-                                            processed=processed,
-                                            BIDS=Lochness['BIDS']) / \
-                                                    subpath.parent
+                                                subj_dir,
+                                                processed=processed,
+                                                BIDS=Lochness['BIDS'])
 
                             mf_local = str(mf_local / prod['out_dir'] \
-                                    if 'out_dir' in prod else mf_local)
+                                    if 'out_dir' in prod else mf_local) / \
+                                        subpath.parent
 
                             # do not re-download already transferred &
                             # removed data
