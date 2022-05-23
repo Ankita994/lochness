@@ -130,6 +130,7 @@ def initialize_metadata(Lochness: 'Lochness object',
             subject_dict['Consent'] = item[redcap_consent_colname]
         else:
             subject_dict['Consent'] = '2021-10-01'
+            # continue  ## subject without consent date will be ignored
 
         # Redcap default information
         subject_dict['REDCap'] = \

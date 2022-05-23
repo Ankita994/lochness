@@ -113,6 +113,10 @@ def sync(Lochness: 'lochness.config',
     # subject_ids = get_participants_lamp(LAMP, study_id)
     subject_id = subject.mindlamp[f'mindlamp.{subject.study}'][0]
 
+    # extract consent date to only download data after consent
+    consent_date = datetime.strptime(subject.consent, '%Y-%m-%d').replace(
+            tzinfo=pytz.timezone('UTC'))
+
     # set destination folder
     dst_folder = tree.get('mindlamp',
                           subject.protected_folder,
@@ -122,13 +126,16 @@ def sync(Lochness: 'lochness.config',
     # the loop below downloads all data from mindlamp from the current date
     # to (current date - 100 days), overwriting pre-downloaded files.
     for days_from_ct in reversed(range(days_to_check)):
-
         # get time range: n days before current date
         # 1000 has been multiplied to match timestamp format
         time_utc_00 = ct_utc_00 - timedelta(days=days_from_ct)
         time_utc_00_ts = time.mktime(time_utc_00.timetuple()) * 1000
         time_utc_24 = time_utc_00 + timedelta(hours=24)
         time_utc_24_ts = time.mktime(time_utc_24.timetuple()) * 1000
+
+        # if the before consent_date, do not download the data
+        if consent_date > time_utc_00:
+            continue
 
         # date string to be used in the file name
         date_str = time_utc_00.strftime("%Y_%m_%d")
