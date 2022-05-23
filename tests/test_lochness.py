@@ -358,7 +358,7 @@ def initialize_metadata_test(phoenix_root: 'phoenix root',
             subject_dict = {'Subject ID': id_dict['subject_id']}
 
             # Consent date
-            subject_dict['Consent'] = '1988-09-16'
+            subject_dict['Consent'] = '2022-05-01'
 
             if source.capitalize() == 'Xnat':
                 if v_study_name != None:
