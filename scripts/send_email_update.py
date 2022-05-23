@@ -77,8 +77,8 @@ def send_email_update(config_file: str, days: int, recreate_db: bool,
     else:
         create_s3_transfer_table(Lochness)
 
-    send_out_daily_updates(Lochness, days, test)
-    check_source(Lochness, test)
+    send_out_daily_updates(Lochness, days, test=test)
+    check_source(Lochness, test=test)
 
 
 if __name__ == '__main__':

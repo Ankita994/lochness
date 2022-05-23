@@ -423,6 +423,7 @@ def sync(Lochness, subject, dry=False):
             content = post_to_redcap(api_url,
                                      record_query,
                                      _debug_tup)
+
             # check if response body is nothing but a sad empty array
             if content.strip() == b'[]':
                 logger.info(f'no redcap data for {redcap_subject}')
