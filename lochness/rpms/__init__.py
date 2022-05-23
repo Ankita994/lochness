@@ -193,7 +193,8 @@ def initialize_metadata(Lochness: 'Lochness object',
             if rpms_consent_colname in df_measure:
                 subject_dict['Consent'] = df_measure[rpms_consent_colname]
             else:
-                subject_dict['Consent'] = '1988-09-16'  # pseudo-random date
+                subject_dict['Consent'] = '2021-10-01'  # pseudo-random date
+                # continue  ## subject without consent date will be ignored
 
             # mediaflux source has its foldername as its subject ID
             subject_dict['RPMS'] = f'rpms.{study_name}:' + \
