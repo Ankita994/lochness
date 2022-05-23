@@ -15,6 +15,7 @@ from datetime import datetime, timedelta
 import base64
 import re
 from lochness.cleaner import is_transferred_and_removed
+from lochness.utils.checksum import get_sha
 
 logger = logging.getLogger(__name__)
 
@@ -121,13 +122,13 @@ def sync(Lochness: 'lochness.config',
     # the loop below downloads all data from mindlamp from the current date
     # to (current date - 100 days), overwriting pre-downloaded files.
     for days_from_ct in reversed(range(days_to_check)):
+
         # get time range: n days before current date
         # 1000 has been multiplied to match timestamp format
         time_utc_00 = ct_utc_00 - timedelta(days=days_from_ct)
         time_utc_00_ts = time.mktime(time_utc_00.timetuple()) * 1000
         time_utc_24 = time_utc_00 + timedelta(hours=24)
         time_utc_24_ts = time.mktime(time_utc_24.timetuple()) * 1000
-
 
         # date string to be used in the file name
         date_str = time_utc_00.strftime("%Y_%m_%d")
@@ -136,10 +137,8 @@ def sync(Lochness: 'lochness.config',
 
         # store both data types
         for data_name in ['activity', 'sensor']:
-            dst = os.path.join(
-                    dst_folder,
-                    f'{subject_id}_{subject.study}_{data_name}_'
-                    f'{date_str}.json')
+            dst = Path(dst_folder) / \
+                f'{subject_id}_{subject.study}_{data_name}_{date_str}.json'
 
             function_to_execute = get_activity_events_lamp \
                 if data_name == 'activity' else get_sensor_events_lamp
@@ -150,22 +149,15 @@ def sync(Lochness: 'lochness.config',
 
             # confirm it's a new file
             if Path(dst).is_file():
-                with open(dst, 'r') as existing_file:
-                    # [-1] at the end -> last timepoint data
-                    existing_data = json.load(existing_file)[-1]
-
-                new_data = function_to_execute(
-                    LAMP, subject_id,
-                    from_ts=existing_data['timestamp'],
-                    to_ts=existing_data['timestamp'])[0]
-
-                existing_data_json = json.dumps(existing_data, sort_keys=True)
-                new_data_json = json.dumps(new_data, sort_keys=True)
-
-                if existing_data_json == new_data_json:
+                checksum_file = dst.parent / f'.check_sum_{dst.name}'
+                if checksum_file.is_file():
                     logger.debug(f'{data_name} data exist for {date_str} '
                                  '- not downloading')
                     continue
+
+                prev_file_sha256 = get_sha(dst)
+            else:
+                prev_file_sha256 = ''
 
             # pull data from mindlamp
             begin = time.time()
@@ -198,6 +190,11 @@ def sync(Lochness: 'lochness.config',
                 continue
 
             lochness.atomic_write(dst, content)
+
+            new_file_sha256 = get_sha(dst)
+            if new_file_sha256 == prev_file_sha256:
+                checksum_file.touch()
+
             logger.info(f'Mindlamp {data_name} data is saved for '
                         f'{subject_id} {date_str} (took {end-begin} s)')
 
@@ -356,11 +353,29 @@ def get_sensor_events_lamp(
     Returns:
         activity_dicts: activity records, list of dict.
     '''
+    timestamp_now = lambda: int(round(time.time() * 1000))
+    timestamp_limit = (1 * 24 * 60 * 60 * 1000) # 1 day of data
+
+    timestamp_limit = to_ts - from_ts
+
+    sensor_event_dicts = []
     if from_ts is not None:
-        sensor_event_dicts = lamp.SensorEvent.all_by_participant(
-                        subject_id, _from=from_ts, to=to_ts,
-                        _limit=LIMIT)['data']
+        while True:
+            res = lamp.SensorEvent.all_by_participant(
+                            subject_id, _from=from_ts, to=to_ts,
+                            _limit=LIMIT)
+            if 'error' in res:
+                raise RuntimeError(res["error"])
+
+            chunk = res['data'] if 'data' in res else []
+            sensor_event_dicts += chunk
+
+            if not chunk or int(to_ts) - int(chunk[-1]['timestamp']) == 0:
+                break
+
+            to_ts = chunk[-1]['timestamp']
     else:
         sensor_event_dicts = lamp.SensorEvent.all_by_participant(
                         subject_id, _limit=LIMIT)['data']
+
     return sensor_event_dicts
