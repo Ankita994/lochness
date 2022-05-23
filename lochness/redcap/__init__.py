@@ -77,7 +77,7 @@ def initialize_metadata(Lochness: 'Lochness object',
         Lochness, study_name, f'redcap.{project_name}'))
 
     # sources to add to the metadata, apart from REDCap, XNAT, and Box
-    source_source_name_dict = {'mindlamp': ['Mindlamp', 'chrdig_lamp_id']}
+    source_source_name_dict = {'mindlamp': ['Mindlamp', 'chrdbb_lamp_id']}
 
     record_query = {'token': api_key,
                     'content': 'record',
@@ -238,10 +238,17 @@ def get_run_sheets_for_datatypes(api_url, api_key,
 
             content_dict_list = json.loads(content)
 
-            content_num = 0
-            for content_dict in content_dict_list:
+            # select the right form, and ignore the weird empty dictionary
+            content_dict_list = [x for x in content_dict_list if
+                    x[run_sheet_name+'_complete'] != '']
+
+            # for run sheet at each timepoint - baseline, follow up1, etc.
+            # content_num is set to start with 1 to match the session number
+            for content_num, content_dict in enumerate(content_dict_list, 1):
                 content_df = pd.DataFrame.from_dict(content_dict,
-                                                    orient='index')
+                                                    orient='index',
+                                                    columns=['field_value'])
+                content_df.index.name = 'field_name'
 
                 # if all is empty, or 0
                 all_empty = ((content_df[content_df.columns[0]]=='0') |
@@ -249,8 +256,6 @@ def get_run_sheets_for_datatypes(api_url, api_key,
 
                 if all_empty:
                     continue  # don't have if all empty
-                else:
-                    content_num += 1
 
                 raw_modality_path = raw_path / modality
                 raw_modality_path.mkdir(exist_ok=True, parents=True)
@@ -258,18 +263,19 @@ def get_run_sheets_for_datatypes(api_url, api_key,
                 
                 # output run sheet path
                 suffix = '' if content_num == 1 else f"_{content_num}"
-                if modality == 'surveys':
+                if modality == 'surveys':  # run sheet for PENN CNB
                     run_sheet_output = raw_modality_path / \
-                               f'{output_name}.Run_sheet_PennCNB{suffix}.csv'
+                       f'{output_name}.Run_sheet_PennCNB_{content_num}.csv'
 
                 else:
                     if run_sheet_name.endswith('checkin'):
                         run_sheet_output = raw_modality_path / \
                            f'{output_name}.Run_sheet_{modality}' \
-                           f'_checkin{suffix}.csv'
+                           f'_checkin_{content_num}.csv'
                     else:
                         run_sheet_output = raw_modality_path / \
-                           f'{output_name}.Run_sheet_{modality}{suffix}.csv'
+                           f'{output_name}.' \
+                           f'Run_sheet_{modality}_{content_num}.csv'
 
                 if run_sheet_output.is_file():
                     target_df = pd.read_csv(run_sheet_output, index_col=0)
@@ -417,6 +423,7 @@ def sync(Lochness, subject, dry=False):
             content = post_to_redcap(api_url,
                                      record_query,
                                      _debug_tup)
+
             # check if response body is nothing but a sad empty array
             if content.strip() == b'[]':
                 logger.info(f'no redcap data for {redcap_subject}')
@@ -644,5 +651,7 @@ if __name__ == '__main__':
             Path(Lochness['phoenix_root']) / 'PROTECTED').glob('*/raw/*'):
         subject = subject_path.name
         print(subject)
-        # get_run_sheets_for_datatypes(api_url, api_key, subject, id_field, json_path)
+        json_path = subject_path / 'surveys' / f'{subject}.Pronet.json'
+        get_run_sheets_for_datatypes(
+                api_url, api_key, subject, id_field, json_path)
 

@@ -4,8 +4,8 @@ from lochness import config
 import os
 from pathlib import Path
 import pandas as pd
-pd.set_option('max_columns', 50)
-pd.set_option('max_rows', 500)
+# pd.set_option('max_columns', 50)
+# pd.set_option('max_rows', 500)
 
 import sys
 lochness_root = Path(lochness.__path__[0]).parent
@@ -484,6 +484,32 @@ def test_pronet_mindlamp(args):
     initialize_metadata_test(phoenix_root, 'StudyA',
                              information_to_add_to_metadata)
     Lochness = config_load_test(syncArgs.config)
+    for subject in lochness.read_phoenix_metadata(Lochness, syncArgs.studies):
+        sync(Lochness, subject, False)
+
+
+def test_pronet_mindlamp_with_while(args):
+    args.studies = ['StudyA']
+    syncArgs = SyncArgs(args.outdir)
+    syncArgs.studies = ['StudyA']
+    sources = ['mindlamp']
+    syncArgs.update_source(sources)
+
+    create_lochness_template(args)
+    syncArgs.config = args.outdir / 'config.yml'
+    # _ = KeyringAndEncryptMindlampAdminIP(args.outdir)
+    _ = KeyringAndEncryptMindlamp(args.outdir)
+    # _ = KeyringAndEncryptMindlampYoon(args.outdir)
+
+    phoenix_root = args.outdir / 'PHOENIX'
+    information_to_add_to_metadata = {'mindlamp': [
+        {'subject_id': '0037', 'source_id': 'U2763080389'}
+        ]}
+    
+    initialize_metadata_test(phoenix_root, 'StudyA',
+                             information_to_add_to_metadata)
+    Lochness = config_load_test(syncArgs.config)
+    Lochness['mindlamp_days_to_pull'] = 14
     for subject in lochness.read_phoenix_metadata(Lochness, syncArgs.studies):
         sync(Lochness, subject, False)
 

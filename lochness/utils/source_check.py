@@ -70,23 +70,24 @@ def check_list_all_penn_cnb_subjects(project_name: str,
     content_dict_list = json.loads(content)
 
     df = pd.DataFrame(content_dict_list)
-    df.columns = ['site_orig', 'subject']
+    if len(df) > 1:
+        df.columns = ['site_orig', 'subject']
 
-    # select records that start with the project name
-    df = df[df.site_orig.str.lower().str.startswith(project_name.lower())]
+        # select records that start with the project name
+        df = df[df.site_orig.str.lower().str.startswith(project_name.lower())]
 
-    # change site label to follow other data types
-    df['site'] = project_name[0].upper() + project_name[1:].lower() + \
-            df['site_orig'].str.split('_').str[1].str.upper()
+        # change site label to follow other data types
+        df['site'] = project_name[0].upper() + project_name[1:].lower() + \
+                df['site_orig'].str.split('_').str[1].str.upper()
 
-    df['modality'] = 'PENN_CNB'
-    df['subject_check'] = df['subject'].apply(ampscz_id_validate)
-    df['exist_in_db'] = df['subject'].str.upper().isin(
-            subject_list).fillna(False)
-    df['site_check'] = df['site'].str.split('_').str[1] == \
-            df.subject.str[:2].str.lower()
-    df['final_check'] = df['subject_check'] & df['exist_in_db']
-    df['file_path'] = 'PENN CNB REDCap'
+        df['modality'] = 'PENN_CNB'
+        df['subject_check'] = df['subject'].apply(ampscz_id_validate)
+        df['exist_in_db'] = df['subject'].str.upper().isin(
+                subject_list).fillna(False)
+        df['site_check'] = df['site'].str.split('_').str[1] == \
+                df.subject.str[:2].str.lower()
+        df['final_check'] = df['subject_check'] & df['exist_in_db']
+        df['file_path'] = 'PENN CNB REDCap'
 
     return df
     
@@ -336,6 +337,7 @@ def check_source(Lochness: 'lochness', test: bool = False) -> None:
         keyring = Lochness['keyring']
 
         # Penn CNB
+        print('Loading data list from PENN CNB')
         penn_cnb_df = check_list_all_penn_cnb_subjects(
                 project_name, keyring, subject_id_list)
 
@@ -400,5 +402,6 @@ if __name__ == '__main__':
     config_loc = '/mnt/prescient/Prescient_data_sync/config.yml'
     # config_loc = '/opt/software/Pronet_data_sync/config.yml'
     Lochness = load(config_loc)
-    Lochness['file_check_notify']['__global__'] = ['kevincho@bwh.harvard.edu']
+    Lochness['file_check_notify']['__global__'] = [
+            'kevincho@bwh.harvard.edu']
     check_source(Lochness, test=True)

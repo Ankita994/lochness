@@ -96,6 +96,12 @@ def update_interviews_transcript_check(df: pd.DataFrame) -> pd.DataFrame:
     transcript_int_df['subject_check'] = transcript_int_df['subject'
             ].apply(ampscz_id_validate)
 
+    # make sure there is no duplicated subject directory
+    fourth_item_in_path = nth_item_from_path(transcript_int_df, 4)  # dirname
+    fifth_item_in_path = nth_item_from_path(transcript_int_df, 5)  # file name
+    transcript_int_df['modality_check'] = \
+            fourth_item_in_path != fifth_item_in_path
+
     # check site and AMPSCZ IDs in the transcript file name
     for index, row in transcript_int_df.iterrows():
         if not row['subject_check']:
@@ -175,6 +181,13 @@ def update_by_removing_unused_files(df: pd.DataFrame) -> None:
     df.drop(ds_store_index, inplace=True)
 
 
+def update_by_removing_genetics_and_fluids(df: pd.DataFrame) -> None:
+    '''Remove files under GeneticsAndFluids directory'''
+    # .DS_Store
+    genetics_index = df[df['modality']=='GeneticsAndFluids'].index
+    df.drop(genetics_index, inplace=True)
+
+
 def update_by_checking_against_subject_list(
         df: pd.DataFrame,
         subject_id_list: List[str]) -> None:
@@ -221,6 +234,9 @@ def check_file_path_df(df: pd.DataFrame,
     update_interviews_transcript_check(df)
     update_interviews_video_check(df)
     update_interviews_audio_check(df)
+
+    # ignore genetics and fluids
+    update_by_removing_genetics_and_fluids(df)
 
     # ignore .DS_Store files
     update_by_removing_unused_files(df)
