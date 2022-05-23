@@ -21,6 +21,7 @@ Go to your REDCap project website, then
 .. image:: images/redcap_det_1.png
 
 
+
 Go to your REDCap project website, then
 
 
@@ -37,6 +38,8 @@ Go to your REDCap project website, then
 
    Please note the ``/`` at the end of the address being entered to the data
    entry trigger target.
+   Please contact your REDCap admin if you do not see Data Entry Trigger on the
+   page.
 
 
 Second step: set up nginx
