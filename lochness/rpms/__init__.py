@@ -64,7 +64,7 @@ def get_rpms_database(rpms_root_path: str) -> Dict[str, pd.DataFrame]:
                 'measure_file_date', ascending=False).iterrows():
             if n == 0:
                 try:
-                    df_tmp = pd.read_csv(row.measure_file)
+                    df_tmp = pd.read_csv(row.measure_file, dtype=str)
                 except pd.errors.EmptyDataError:  # ignore csv is empty
                     continue
 
@@ -193,8 +193,8 @@ def initialize_metadata(Lochness: 'Lochness object',
             if rpms_consent_colname in df_measure:
                 subject_dict['Consent'] = df_measure[rpms_consent_colname]
             else:
-                subject_dict['Consent'] = '2021-10-01'  # pseudo-random date
-                # continue  ## subject without consent date will be ignored
+                # subject_dict['Consent'] = '2021-10-01'  # pseudo-random date
+                continue  ## subject without consent date will be ignored
 
             # mediaflux source has its foldername as its subject ID
             subject_dict['RPMS'] = f'rpms.{study_name}:' + \
@@ -264,6 +264,9 @@ def get_subject_data(all_df_dict: Dict[str, pd.DataFrame],
             for unique_visit, table in subject_df.groupby('visit'):
                 if len(table) == 1:
                     pass
+                # entry_status form does not have LastModifiedDate
+                elif measure == 'entry_status':
+                    pass
                 else:
                     most_recent_row_index = pd.to_datetime(
                             table['LastModifiedDate']).idxmax()
@@ -309,18 +312,23 @@ def sync(Lochness, subject, dry=False):
         # if the csv already exists, compare the dataframe
         if Path(target_df_loc).is_file():
             # index might be different, so drop it before comparing it
-            prev_df = pd.read_csv(target_df_loc).reset_index(drop=True)
+            prev_df = pd.read_csv(target_df_loc,
+                                  dtype=str).reset_index(drop=True)
 
-            # in order to use df.equals function, which also checks for data
-            # types of each data, the source_df needs to be saved and re-loaded
-            # to make the datatype consistent to that of prev_df
-            with tf.NamedTemporaryFile(delete=True) as f:
-                source_df.to_csv(f.name, index=False)
-                same_df = pd.read_csv(f.name).reset_index(
-                        drop=True).equals(prev_df)
-                if same_df:
-                    print(f'No new updates in {subject_id}:{measure}')
-                    continue
+            same_df = source_df.equals(prev_df)
+            if same_df:
+                print(f'No new updates in {subject_id}:{measure}')
+                continue
+            # # in order to use df.equals function, which also checks for data
+            # # types of each data, the source_df needs to be saved and re-loaded
+            # # to make the datatype consistent to that of prev_df
+            # with tf.NamedTemporaryFile(delete=True) as f:
+                # source_df.to_csv(f.name, index=False)
+                # same_df = pd.read_csv(f.name, dtype=str).reset_index(
+                        # drop=True).equals(prev_df)
+                # if same_df:
+                    # print(f'No new updates in {subject_id}:{measure}')
+                    # continue
 
         else:
             latest_pull_mtime = 0
