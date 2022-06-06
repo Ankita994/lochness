@@ -462,7 +462,7 @@ def lochness_to_lochness_transfer_s3_protected(Lochness):
                 command = f"aws s3 sync \
                         {source_directory}/ \
                         s3://{s3_bucket_name}/{s3_phoenix_root_dtype} \
-                        --exclude '*.mp3' --delete"
+                        --exclude '*.mp3' --exclude '.check_sum*' --delete"
 
                 logger.debug('Executing aws s3 sync function for '
                              f'{source_directory}')
