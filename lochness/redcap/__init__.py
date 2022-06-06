@@ -129,8 +129,8 @@ def initialize_metadata(Lochness: 'Lochness object',
         if item[redcap_consent_colname] != '':
             subject_dict['Consent'] = item[redcap_consent_colname]
         else:
-            subject_dict['Consent'] = '2021-10-01'
-            # continue  ## subject without consent date will be ignored
+            # subject_dict['Consent'] = '2021-10-01'
+            continue  ## subject without consent date will be ignored
 
         # Redcap default information
         subject_dict['REDCap'] = \
@@ -391,7 +391,7 @@ def sync(Lochness, subject, dry=False):
                     else:
                         logger.debug(f"{subject.study}/{subject.id} "
                                      "No DET updates")
-                        break  # if not modified, don't pull
+                        # break  # if not modified, don't pull
 
             logger.debug(f"Downloading REDCap ({redcap_instance}) data")
             _debug_tup = (redcap_instance, redcap_project, redcap_subject)
