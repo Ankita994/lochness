@@ -4,6 +4,7 @@ from typing import Union, List
 import xnat
 import json
 import pandas as pd
+from pandas.api.types import CategoricalDtype
 from boxsdk import Client, OAuth2
 from typing import List
 from multiprocessing import Pool
@@ -88,6 +89,47 @@ def check_list_all_penn_cnb_subjects(project_name: str,
                 df.subject.str[:2].str.lower()
         df['final_check'] = df['subject_check'] & df['exist_in_db']
         df['file_path'] = 'PENN CNB REDCap'
+
+    return df
+    
+
+def check_list_all_redcap_subjects(project_name: str,
+                                   keyring: dict) -> pd.DataFrame:
+    '''Return a dataframe of records in PENN CNB redcap'''
+    api_url = keyring['redcap.Pronet']['URL'] + '/api/'
+    api_key = keyring['redcap.Pronet']['API_TOKEN']['Pronet']
+
+    record_query = {
+        'token': api_key,
+        'content': 'record',
+        'format': 'json',
+        'fields[0]': 'chric_record_id',
+        'fields[1]': 'chric_consent_date',
+        'events[0]': 'screening_arm_1',
+    }
+
+    content = post_to_redcap(api_url, record_query, '')
+    content_dict_list = json.loads(content)
+
+    df = pd.DataFrame(content_dict_list)
+    if len(df) > 1:
+        df.columns = ['subject', '_', 'consent_date']
+
+        # select records that start with the project name
+        df = df[df.subject.str.match('[A-Z][A-Z]\d{5}')]
+
+        # change site label to follow other data types
+        df['site'] = project_name[0].upper() + project_name[1:].lower() + \
+                df['subject'].str[:2].str.upper()
+        df['modality'] = 'REDCap'
+
+        df['exist_in_db'] = True
+        df['subject_check'] = df['subject'].apply(ampscz_id_validate)
+        df['consent_check'] = ~(df['consent_date'] == '')
+        df['site_check'] = df['site'].str.split('_').str[1] == \
+                df.subject.str[:2].str.lower()
+        df['final_check'] = df['subject_check'] & df['consent_check']
+        df['file_path'] = 'REDCap'
 
     return df
     
@@ -258,11 +300,16 @@ def send_source_qc_summary(qc_fail_df: pd.DataFrame,
     '''Send summary of qc failed files in sources'''
     title = 'List of files out of SOP'
     table_str = ''
+    cat_type = CategoricalDtype(
+            categories=["REDCap", "MRI", "EEG",
+                "Interviews", "Actigraphy", "PENN_CNB"], ordered=True)
+    qc_fail_df['Data Type'] = qc_fail_df['Data Type'].astype(cat_type)
     for site, x in qc_fail_df.groupby('Site'):
         table_str += f'<h2>{site}</h2>'
         for dt, y in x.groupby('Data Type'):
-            table_str += f'<h4>{site} - {dt}</h4>'
-            table_str += y.to_html(index=False)
+            if len(y) >= 1:
+                table_str += f'<h4>{site} - {dt}</h4>'
+                table_str += y.to_html(index=False)
         table_str += '<br>'
 
     send_detail(
@@ -336,6 +383,10 @@ def check_source(Lochness: 'lochness', test: bool = False) -> None:
         db_string = 'REDCap'
         keyring = Lochness['keyring']
 
+        # REDCap
+        print('Loading data list from REDCap')
+        redcap_df = check_list_all_redcap_subjects(project_name, keyring)
+
         # Penn CNB
         print('Loading data list from PENN CNB')
         penn_cnb_df = check_list_all_penn_cnb_subjects(
@@ -343,8 +394,11 @@ def check_source(Lochness: 'lochness', test: bool = False) -> None:
 
         # xnat
         print('Loading data list from XNAT')
-        xnat_df = check_list_all_xnat_subjects(keyring, subject_id_list)
-        print(xnat_df)
+        if test:
+            xnat_df = pd.read_csv('tmp_xnat_db.csv')
+        else:
+            xnat_df = check_list_all_xnat_subjects(keyring, subject_id_list)
+
 
         # box
         print('Loading data list from BOX')
@@ -362,36 +416,58 @@ def check_source(Lochness: 'lochness', test: bool = False) -> None:
             box_df_checked = check_file_path_df(box_df, subject_id_list)
 
         # merge xnat and box check files
-        all_df = pd.concat([xnat_df, box_df, penn_cnb_df])
+        all_df = pd.concat([redcap_df, xnat_df, box_df, penn_cnb_df])
 
     else:
         return
 
+    all_df['consent_check'].fillna(False, inplace=True)
 
     # select final_check failed files, and clean up
+    all_df.to_csv('test.csv')
     qc_fail_df = all_df[
             (~all_df['final_check']) | 
             (~all_df['exist_in_db']) |
+            (~all_df['consent_check']) |
             (~all_df['subject_check'])
             # (~all_df['file_name'].str.contains('.dcm|._dicom_series'))
-            ]
+            ].reset_index()
 
     qc_fail_df['subject_check'] = qc_fail_df['subject_check'].map(
             {True: f'Correct', False: f'Incorrect'})
 
+    qc_fail_df.loc[qc_fail_df[
+        ~qc_fail_df['exist_in_db']].index, 'consent_check'] = '-'
+
     qc_fail_df['exist_in_db'] = qc_fail_df['exist_in_db'].map(
             {True: f'Exist in {db_string}', False: f'Missing in {db_string}'})
+
+    qc_fail_df['consent_check'] = qc_fail_df['consent_check'].map(
+            {True: f'Correct', False: f'Consent date missing', '-': '-'})
+
 
     qc_fail_df['final_check'] = qc_fail_df['final_check'].map(
             {True: 'Correct', False: 'Incorrect'})
 
     cols_to_show = ['file_path', 'site', 'subject', 'modality',
-                    'subject_check', 'exist_in_db', 'final_check']
+                    'subject_check', 'exist_in_db', 'consent_check',
+                    'final_check']
 
     qc_fail_df = qc_fail_df[cols_to_show]
     qc_fail_df.columns = ['File Path', 'Site', 'Subject',
                           'Data Type', 'AMPSCZ-ID checksum',
-                          'Subject ID in database', 'Format']
+                          'Subject ID in database', 'Consent date in DB',
+                          'Format']
+    
+    # to highlight REDCap table separately in the email, since this is the
+    # major bottleneck for the smooth dataflow
+    tmp = qc_fail_df[
+        (qc_fail_df['Consent date in DB'] == 'Consent date missing') |
+        (qc_fail_df['Subject ID in database'] == 'Correct')
+            ]
+    tmp['File Path'] = 'REDCap'
+    tmp['Data Type'] = 'REDCap'
+    qc_fail_df = pd.concat([qc_fail_df, tmp]).drop_duplicates()
 
     lines = []
     send_source_qc_summary(qc_fail_df, lines, Lochness)
@@ -400,7 +476,7 @@ def check_source(Lochness: 'lochness', test: bool = False) -> None:
 if __name__ == '__main__':
     # testing purposes
     # config_loc = '/mnt/prescient/Prescient_data_sync/config.yml'
-    config_loc = '/mnt/ProNET/Lochness/config.yml'
+    config_loc = '/opt/software/Pronet_data_sync/config.yml'
     Lochness = load(config_loc)
     Lochness['file_check_notify']['__global__'] = [
             'kevincho@bwh.harvard.edu']
