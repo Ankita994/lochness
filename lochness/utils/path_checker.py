@@ -181,6 +181,13 @@ def update_by_removing_unused_files(df: pd.DataFrame) -> None:
     df.drop(ds_store_index, inplace=True)
 
 
+def update_by_removing_genetics_and_fluids(df: pd.DataFrame) -> None:
+    '''Remove files under GeneticsAndFluids directory'''
+    # .DS_Store
+    genetics_index = df[df['modality']=='GeneticsAndFluids'].index
+    df.drop(genetics_index, inplace=True)
+
+
 def update_by_checking_against_subject_list(
         df: pd.DataFrame,
         subject_id_list: List[str]) -> None:
@@ -227,6 +234,9 @@ def check_file_path_df(df: pd.DataFrame,
     update_interviews_transcript_check(df)
     update_interviews_video_check(df)
     update_interviews_audio_check(df)
+
+    # ignore genetics and fluids
+    update_by_removing_genetics_and_fluids(df)
 
     # ignore .DS_Store files
     update_by_removing_unused_files(df)

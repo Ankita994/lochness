@@ -462,7 +462,7 @@ def lochness_to_lochness_transfer_s3_protected(Lochness):
                 command = f"aws s3 sync \
                         {source_directory}/ \
                         s3://{s3_bucket_name}/{s3_phoenix_root_dtype} \
-                        --exclude '*.mp3' --delete"
+                        --exclude '*.mp3' --exclude '.check_sum*' --delete"
 
                 logger.debug('Executing aws s3 sync function for '
                              f'{source_directory}')
@@ -478,6 +478,34 @@ def lochness_to_lochness_transfer_s3_protected(Lochness):
 
                 logger.debug(command_str)
                 logger.debug('aws rsync completed')
+
+    # interview run sheets
+    # phoenix_root / PROTECTED / site / raw / subject / datatype
+    interview_dirs = Path(Lochness['phoenix_root']).glob(
+        f'PROTECTED/*/raw/*/interviews')
+
+    for interview_dir in interview_dirs:
+        s3_target = re.sub(Lochness['phoenix_root'],
+                           s3_phoenix_root,
+                           str(interview_dir))
+        command = f"aws s3 sync \
+                {interview_dir} \
+                s3://{s3_bucket_name}/{s3_target} --delete \
+                --exclude='*' --include='*Run_sheet_interviews_*.csv'"
+
+        logger.debug('Executing aws s3 sync function for '
+                     f'{interview_dir} Run sheet only')
+        logger.debug(re.sub(r'\s+', r' ', command))
+
+        now = datetime.now()
+        current_time = now.strftime("%Y-%m-%d %H:%M:%S")
+        with open(s3_sync_stdout, 'a') as fp:
+            command_str = '\n'.join([f'{current_time} {x}' for x in
+                                os.popen(command).read().split('\n')])
+            fp.write(command_str)
+
+        logger.debug(command_str)
+        logger.debug('aws rsync completed')
 
 
 def lochness_to_lochness_transfer_receive_sftp(Lochness):

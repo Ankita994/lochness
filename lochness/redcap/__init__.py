@@ -77,7 +77,7 @@ def initialize_metadata(Lochness: 'Lochness object',
         Lochness, study_name, f'redcap.{project_name}'))
 
     # sources to add to the metadata, apart from REDCap, XNAT, and Box
-    source_source_name_dict = {'mindlamp': ['Mindlamp', 'chrdig_lamp_id']}
+    source_source_name_dict = {'mindlamp': ['Mindlamp', 'chrdbb_lamp_id']}
 
     record_query = {'token': api_key,
                     'content': 'record',
@@ -129,7 +129,8 @@ def initialize_metadata(Lochness: 'Lochness object',
         if item[redcap_consent_colname] != '':
             subject_dict['Consent'] = item[redcap_consent_colname]
         else:
-            subject_dict['Consent'] = '2021-10-01'
+            # subject_dict['Consent'] = '2021-10-01'
+            continue  ## subject without consent date will be ignored
 
         # Redcap default information
         subject_dict['REDCap'] = \
@@ -423,6 +424,7 @@ def sync(Lochness, subject, dry=False):
             content = post_to_redcap(api_url,
                                      record_query,
                                      _debug_tup)
+
             # check if response body is nothing but a sad empty array
             if content.strip() == b'[]':
                 logger.info(f'no redcap data for {redcap_subject}')
