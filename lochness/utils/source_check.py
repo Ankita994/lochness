@@ -298,7 +298,13 @@ def send_source_qc_summary(qc_fail_df: pd.DataFrame,
                            lines,
                            Lochness: 'lochness') -> None:
     '''Send summary of qc failed files in sources'''
-    title = 'List of files out of SOP'
+    server_name = Lochness.get('project_name', 'Data aggregation server')
+
+    if Lochness.get('production', False):
+        title = f'{server_name} Production: List of files out of SOP'
+    else:
+        title = f'{server_name}: List of files out of SOP'
+
     table_str = ''
     cat_type = CategoricalDtype(
             categories=["REDCap", "MRI", "EEG",

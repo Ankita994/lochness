@@ -93,7 +93,6 @@ def send_detail(Lochness,
                                username=getpass.getuser())
 
     msg = MIMEText(html_str, 'html')
-    print(title)
     msg['Subject'] = title
     msg['From'] = sender
     msg['To'] = recipients[0]
