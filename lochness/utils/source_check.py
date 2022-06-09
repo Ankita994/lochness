@@ -399,12 +399,14 @@ def check_source(Lochness: 'lochness', test: bool = False) -> None:
                 project_name, keyring, subject_id_list)
 
         # xnat
-        print('Loading data list from XNAT')
+        tmp_xnat_db = Path(Lochness['phoenix_root']) / \
+                '.tmp_xnat_source_files.csv'
         if test:
-            xnat_df = pd.read_csv('tmp_xnat_db.csv')
+            xnat_df = pd.read_csv(tmp_xnat_db)
         else:
             xnat_df = check_list_all_xnat_subjects(keyring, subject_id_list)
-
+            xnat_df.to_csv(tmp_xnat_db)
+            # xnat_df = pd.read_csv('tmp_xnat_db.csv')
 
         # box
         print('Loading data list from BOX')
@@ -438,6 +440,9 @@ def check_source(Lochness: 'lochness', test: bool = False) -> None:
                     'subject').loc[row.subject, 'consent_check']
         else:
             all_df.loc[index, 'consent_check'] = False
+
+        if row.subject=='CM00045':
+            print(all_df.loc[index])
 
     qc_fail_df = all_df[
             (~all_df['final_check']) | 
