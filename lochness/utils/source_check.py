@@ -391,7 +391,7 @@ def check_source(Lochness: 'lochness', test: bool = False) -> None:
 
         # REDCap
         print('Loading data list from REDCap')
-        redcap_df = check_list_all_redcap_subjects(project_name, keyring)
+        consent_df = check_list_all_redcap_subjects(project_name, keyring)
 
         # Penn CNB
         print('Loading data list from PENN CNB')
@@ -422,15 +422,23 @@ def check_source(Lochness: 'lochness', test: bool = False) -> None:
             box_df_checked = check_file_path_df(box_df, subject_id_list)
 
         # merge xnat and box check files
-        all_df = pd.concat([redcap_df, xnat_df, box_df, penn_cnb_df])
+        all_df = pd.concat([consent_df, xnat_df, box_df, penn_cnb_df])
 
     else:
         return
 
-    all_df['consent_check'].fillna(False, inplace=True)
-
     # select final_check failed files, and clean up
+    all_df.reset_index(inplace=True, drop=True)
     all_df.to_csv('test.csv')
+
+    # consent date
+    for index, row in all_df.iterrows():
+        if row.subject in consent_df.subject.tolist():
+            all_df.loc[index, 'consent_check'] = consent_df.set_index(
+                    'subject').loc[row.subject, 'consent_check']
+        else:
+            all_df.loc[index, 'consent_check'] = False
+
     qc_fail_df = all_df[
             (~all_df['final_check']) | 
             (~all_df['exist_in_db']) |
@@ -450,7 +458,6 @@ def check_source(Lochness: 'lochness', test: bool = False) -> None:
 
     qc_fail_df['consent_check'] = qc_fail_df['consent_check'].map(
             {True: f'Correct', False: f'Consent date missing', '-': '-'})
-
 
     qc_fail_df['final_check'] = qc_fail_df['final_check'].map(
             {True: 'Correct', False: 'Incorrect'})
