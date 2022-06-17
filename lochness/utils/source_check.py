@@ -106,6 +106,7 @@ def check_list_all_redcap_subjects(project_name: str,
         'fields[0]': 'chric_record_id',
         'fields[1]': 'chric_consent_date',
         'events[0]': 'screening_arm_1',
+        'events[1]': 'screening_arm_2',
     }
 
     content = post_to_redcap(api_url, record_query, '')
