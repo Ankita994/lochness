@@ -375,8 +375,8 @@ def create_s3_transfer_table(Lochness, rewrite=False) -> None:
                     continue
                 try:
                     source = re.search(r'upload: (\S+)', line).group(1)
-                    if not source.startswith('/'):
-                        source = '/' + source
+                    # if not source.startswith('/'):
+                        # source = '/' + source
                      # do not save metadata.csv update since it
                      # gets updated every pull
                     if 'metadata.csv' in source:
@@ -385,7 +385,7 @@ def create_s3_transfer_table(Lochness, rewrite=False) -> None:
                                        line).group(2)
 
                     df_tmp = pd.DataFrame({'timestamp': [ts],
-                                           'source': Path(source).relative_to(Path(Lochness['phoenix_root']).parent),
+                                           'source': Path(source),
                                            'destination': Path(target)})
 
                     df = pd.concat([df, df_tmp])
