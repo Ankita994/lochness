@@ -261,7 +261,7 @@ def get_subject_data(all_df_dict: Dict[str, pd.DataFrame],
         # most recent visit row for each visit
         if 'visit' in subject_df.columns:
             for unique_visit, table in subject_df.groupby('visit'):
-                if len(table) == 1:
+                if if len(table) == 1 or 'Row#' in subject_df:
                     pass
                 else:
                     most_recent_row_index = pd.to_datetime(
