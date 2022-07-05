@@ -11,6 +11,7 @@ import lochness.net as net
 import lochness.tree as tree
 from typing import List, Dict, Union
 import pandas as pd
+from datetime import datetime
 import re
 from lochness.redcap.process_piis import process_and_copy_db
 pd.set_option('mode.chained_assignment', None)
@@ -87,7 +88,7 @@ def get_run_sheets_for_datatypes(target_df_loc: Union[Path, str]) -> None:
             {STUDY}/{DATATYPE}/{subject}.{study}.Run_sheet_{DATATYPE}.csv
 
     Key Arguments:
-        - target_df_loc: REDCap json path, Path.
+        - target_df_loc: subject RPMS csv path, Path.
 
     Returns:
         - None
@@ -96,10 +97,11 @@ def get_run_sheets_for_datatypes(target_df_loc: Union[Path, str]) -> None:
     if not target_df_loc.is_file():
         return
 
-    modality_fieldname_dict = {'eeg': 'EEG',
+    modality_fieldname_dict = {'eeg': 'eeg_run_sheet',
                                'actigraphy': 'Actigraphy',
-                               'mri': 'MRI',
-                               'surveys': 'PennCNB'}
+                               'mri': 'mri_run_sheet',
+                               'surveys': 'penncnb',
+                               'interviews': 'speech_sampling_run_sheet'}
 
     for modality, fieldname in modality_fieldname_dict.items():
         if target_df_loc.name.endswith(f"_{fieldname}.csv"):
@@ -164,6 +166,10 @@ def initialize_metadata(Lochness: 'Lochness object',
 
     df = pd.DataFrame()
 
+    ids_with_consent = all_df_dict['informed_consent_run_sheet'][
+            ~all_df_dict['informed_consent_run_sheet'][
+                rpms_consent_colname].isnull()].subjectkey.tolist()
+
     # all_df_dict - key: name of measure, value: pd.DataFrame of the whole file
     for measure, df_measure_all_subj in all_df_dict.items():
         # get the site information from the study name, eg. PrescientAD
@@ -172,6 +178,9 @@ def initialize_metadata(Lochness: 'Lochness object',
 
         # loop through each line of the RPMS database
         for index, df_measure in df_measure_all_subj.iterrows():
+            if not df_measure[rpms_id_colname] in ids_with_consent:
+                continue
+
             # if multistudy:
             # site of the subject for the line
 
@@ -191,7 +200,9 @@ def initialize_metadata(Lochness: 'Lochness object',
 
             # Consent date
             if rpms_consent_colname in df_measure:
-                subject_dict['Consent'] = df_measure[rpms_consent_colname]
+                subject_dict['Consent'] = datetime.strptime(
+                        df_measure[rpms_consent_colname],
+                        '%d/%m/%Y %I:%M:%S %p').strftime('%Y-%m-%d')
             else:
                 # subject_dict['Consent'] = '2021-10-01'  # pseudo-random date
                 continue  ## subject without consent date will be ignored
@@ -214,7 +225,6 @@ def initialize_metadata(Lochness: 'Lochness object',
 
             df_tmp = pd.DataFrame.from_dict(subject_dict, orient='index')
             df = pd.concat([df, df_tmp.T])
-
 
     # if there is no data for the study, return without saving metadata
     if len(df) == 0:
