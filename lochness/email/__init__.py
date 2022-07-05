@@ -75,7 +75,12 @@ def send_detail(Lochness,
 
     server_name = Lochness['project_name'] \
         if 'project_name' in Lochness else 'Data aggregation server'
-    title = f'{server_name}: {title} {datetime.now(tz).date()}'
+
+    if Lochness.get('production', False):
+        title = f'{server_name} Production: {title} {datetime.now(tz).date()}'
+    else:
+        title = f'{server_name}: {title} {datetime.now(tz).date()}'
+
 
     html_str = template.render(title=title,
                                subtitle=subtitle,
@@ -88,7 +93,6 @@ def send_detail(Lochness,
                                username=getpass.getuser())
 
     msg = MIMEText(html_str, 'html')
-    print(title)
     msg['Subject'] = title
     msg['From'] = sender
     msg['To'] = recipients[0]

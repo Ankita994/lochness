@@ -51,6 +51,14 @@ def get_field_names_from_redcap(api_url: str,
     return field_names
 
 
+def remove_file_that_may_exist(file_path: Path) -> None:
+    '''Remove a file that may exist'''
+    try:
+        os.remove(file_path)
+    except:
+        pass
+
+
 def initialize_metadata(Lochness: 'Lochness object',
                         study_name: str,
                         redcap_id_colname: str,
@@ -72,6 +80,10 @@ def initialize_metadata(Lochness: 'Lochness object',
     site_code_study = study_name[-2:]  # 'LA'
     project_name = study_name.split(site_code_study)[0]  # 'Pronet'
 
+    # metadata study location
+    general_path = Path(Lochness['phoenix_root']) / 'GENERAL'
+    metadata_study = general_path / study_name / f"{study_name}_metadata.csv"
+
     # use redcap_project function to load the redcap keyrings for the project
     _, api_url, api_key = next(redcap_projects(
         Lochness, study_name, f'redcap.{project_name}'))
@@ -79,34 +91,31 @@ def initialize_metadata(Lochness: 'Lochness object',
     # sources to add to the metadata, apart from REDCap, XNAT, and Box
     source_source_name_dict = {'mindlamp': ['Mindlamp', 'chrdbb_lamp_id']}
 
-    record_query = {'token': api_key,
-                    'content': 'record',
-                    'format': 'json',
-                    'fields[0]': redcap_id_colname,
-                    'fields[1]': redcap_consent_colname,
-                    }
+    # to extract ID and consent form for all the records that
+    # belong to the site from screening & baseline arms
+    record_query = {
+        'token': api_key,
+        'content': 'record',
+        'format': 'json',
+        'fields[0]': redcap_id_colname,
+        'fields[1]': redcap_consent_colname,
+        'events[0]': 'screening_arm_1',
+        'events[1]': 'screening_arm_2',
+        'events[2]': 'baseline_arm_1',
+        'events[3]': 'baseline_arm_2',
+        'filterLogic': f"contains([{redcap_id_colname}],'{site_code_study}')"
+        }
 
-    # only pull source_names
-    # mindlamp id is manually added to "chrdig_lamp_id" field
-    field_num = 2
-    for source, (source_name, source_field_name) in \
-            source_source_name_dict.items():
-        record_query[f"fields[{field_num}]"] = source_field_name
+
+    # to add mindlamp source ID to the record query
+    for num, (source, (source_name, source_field_name)) in \
+            enumerate(source_source_name_dict.items()):
+        record_query[f"fields[{2+num}]"] = source_field_name
 
     # pull all records from the project's REDCap repo
-    try:
-        content = post_to_redcap(api_url,
-                                 record_query,
-                                 f'initializing data {study_name}')
-    except:  # if subject ID field name are not set, above will raise error
-        record_query = {
-            'token': api_key,
-            'content': 'record',
-            'format': 'json',
-        }
-        content = post_to_redcap(api_url,
-                                 record_query,
-                                 f'initializing data {study_name}')
+    content = post_to_redcap(api_url,
+                             record_query,
+                             f'initializing data {study_name}')
 
     # load pulled information as a list of dictionaries
     with tf.NamedTemporaryFile(suffix='tmp.json') as tmpfilename:
@@ -114,75 +123,90 @@ def initialize_metadata(Lochness: 'Lochness object',
         with open(tmpfilename.name, 'r') as f:
             data = json.load(f)
 
+    # replace empty string as None
+    df = pd.DataFrame(data).replace('', None)
+
+    # if empty REDCap
+    if len(df) == 0:
+        logger.warn(f'There are no records for {site_code_study}')
+        remove_file_that_may_exist(metadata_study)
+        return
+
+    # only keep AMPSCZ rows
+    df = df[df[redcap_id_colname].str.match('[A-Z]{2}\d{5}')]
+
+    # if no data matches AMPSCZ ID
+    if len(df) == 0:
+        logger.warn(f'There are no records for {site_code_study}')
+        remove_file_that_may_exist(metadata_study)
+        return
+
+    # make a single row for each subject record
+    # redcap_event_name column contains timepoint information (different arms)
+    df.drop('redcap_event_name', axis=1, inplace=True)
+
+    df_final = pd.DataFrame()
+    for subject, df_tmp in df.groupby(redcap_id_colname):
+        df_new = pd.concat(
+            [df_tmp[col].dropna().reset_index(drop=True) for col in df_tmp],
+            axis=1)
+        df_final = pd.concat([df_final, df_new], axis=0)
+
+    # drop if consent date is missing
+    df_final = df_final[
+            ~df_final[redcap_consent_colname].isnull()].reset_index()
+
+    # skip no data has consent date
+    if len(df_final) == 0:
+        logger.warn(f'There are no records for {site_code_study}')
+        remove_file_that_may_exist(metadata_study)
+        return
+
     df = pd.DataFrame()
-
     # extract subject ID and source IDs for each sources
-    for item in data:
-        # filter out data from other sites (if multistudy removed)
-        site_code_redcap_id = item[redcap_id_colname][:2]
-        if site_code_redcap_id != site_code_study:
-            continue
-
-        subject_dict = {'Subject ID': item[redcap_id_colname]}
+    for index, row in df_final.iterrows():
+        subject_id = row[redcap_id_colname]
+        # Subject ID
+        subject_dict = {'Subject ID': subject_id}
 
         # Consent date
-        if item[redcap_consent_colname] != '':
-            subject_dict['Consent'] = item[redcap_consent_colname]
-        else:
-            # subject_dict['Consent'] = '2021-10-01'
-            continue  ## subject without consent date will be ignored
+        subject_dict['Consent'] = row[redcap_consent_colname]
 
         # Redcap default information
         subject_dict['REDCap'] = \
-                f'redcap.{project_name}:{item[redcap_id_colname]}'
-        if upenn:
-            subject_dict['REDCap'] += \
-                    f';redcap.UPENN:{item[redcap_id_colname]}'  # UPENN REDCAP
+                f'redcap.{project_name}:{subject_id}'
+        subject_dict['REDCap'] += \
+                f';redcap.UPENN:{row[redcap_id_colname]}'  # UPENN REDCAP
+        subject_dict['Box'] = f'box.{study_name}:{subject_id}'
+        subject_dict['XNAT'] = f'xnat.{study_name}:*:{subject_id}'
 
-        subject_dict['Box'] = f'box.{study_name}:{item[redcap_id_colname]}'
-        subject_dict['XNAT'] = f'xnat.{study_name}:*:{item[redcap_id_colname]}'
-
+        # for the datatype, which requires ID extraction from REDCap
         for source, (source_name, source_field_name) \
                 in source_source_name_dict.items():
-            # if mindlamp_id field is available in REDCap record
-            if source_field_name in item:
-                source_id = item[source_field_name]
-                if source_id != '':
-                    subject_dict[source_name] = \
-                            f"{source}.{study_name}:{source_id}"
-                else:
-                    pass
+            if pd.isnull(row[source_field_name]):
+                pass
+            else:
+                value = row[source_field_name]
+                subject_dict[source_name] = f"{source}.{study_name}:{value}"
 
-        df_tmp = pd.DataFrame.from_dict(subject_dict, orient='index')
-        df = pd.concat([df, df_tmp.T])
-
-    if len(df) == 0:
-        logger.warn(f'There are no records for {site_code_study}')
-        return
-
-    # Each subject may have more than one arms, which will result in more than
-    # single item for the subject in the redcap pulled `content`
-    # remove empty lables
-    df_final = pd.DataFrame()
-    for _, table in df.groupby(['Subject ID']):
-        pad_filled = table.fillna(
-                method='ffill').fillna(method='bfill').iloc[0]
-
-        df_final = pd.concat([df_final, pad_filled], axis=1)
-
-    df_final = df_final.T
+        subject_df_tmp = pd.DataFrame.from_dict(subject_dict, orient='index')
+        df = pd.concat([df, subject_df_tmp.T])
 
     # register all of the lables as active
-    df_final['Active'] = 1
+    df['Active'] = 1
 
-    # reorder columns
+    # reorder columns to match lochness metadata format
     main_cols = ['Active', 'Consent', 'Subject ID']
-    df_final = df_final[main_cols + \
-            [x for x in df_final.columns if x not in main_cols]]
+    df = df[main_cols + \
+            [x for x in df.columns if x not in main_cols]]
 
-    general_path = Path(Lochness['phoenix_root']) / 'GENERAL'
-    metadata_study = general_path / study_name / f"{study_name}_metadata.csv"
-    df_final.to_csv(metadata_study, index=False)
+    # only overwrite when there is an update in the data
+    target_df = pd.read_csv(metadata_study)
+    same_df = df.reset_index(drop=True).equals(target_df)
+    if same_df:
+        pass
+    else:
+        df.to_csv(metadata_study, index=False)
 
 
 def get_run_sheets_for_datatypes(api_url, api_key,

@@ -272,7 +272,7 @@ def get_subject_data(all_df_dict: Dict[str, pd.DataFrame],
         # most recent visit row for each visit
         if 'visit' in subject_df.columns:
             for unique_visit, table in subject_df.groupby('visit'):
-                if len(table) == 1:
+                if len(table) == 1 or 'Row#' in subject_df:
                     pass
                 # entry_status form does not have LastModifiedDate
                 elif measure == 'entry_status':
