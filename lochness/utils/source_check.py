@@ -393,6 +393,7 @@ def check_source(Lochness: 'lochness', test: bool = False) -> None:
         # REDCap
         print('Loading data list from REDCap')
         consent_df = check_list_all_redcap_subjects(project_name, keyring)
+        subject_id_list = consent_df.subject.tolist()
 
         # Penn CNB
         print('Loading data list from PENN CNB')
@@ -442,9 +443,6 @@ def check_source(Lochness: 'lochness', test: bool = False) -> None:
         else:
             all_df.loc[index, 'consent_check'] = False
 
-        if row.subject=='CM00045':
-            print(all_df.loc[index])
-
     qc_fail_df = all_df[
             (~all_df['final_check']) | 
             (~all_df['exist_in_db']) |
@@ -459,8 +457,14 @@ def check_source(Lochness: 'lochness', test: bool = False) -> None:
     qc_fail_df.loc[qc_fail_df[
         ~qc_fail_df['exist_in_db']].index, 'consent_check'] = '-'
 
-    qc_fail_df['exist_in_db'] = qc_fail_df['exist_in_db'].map(
-            {True: f'Exist in {db_string}', False: f'Missing in {db_string}'})
+    if project_name == 'ProNET':
+        qc_fail_df['exist_in_db'] = qc_fail_df['exist_in_db'].map(
+                {True: f'Exist in {db_string}',
+                 False: f'No {db_string} screening'})
+    else:
+        qc_fail_df['exist_in_db'] = qc_fail_df['exist_in_db'].map(
+                {True: f'Exist in {db_string}',
+                 False: f'Missing in {db_string}'})
 
     qc_fail_df['consent_check'] = qc_fail_df['consent_check'].map(
             {True: f'Correct', False: f'Consent date missing', '-': '-'})
