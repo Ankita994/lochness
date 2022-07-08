@@ -297,7 +297,6 @@ def lochness_to_lochness_transfer_s3(Lochness, general_only: bool = True):
         - The name of the s3 bucket needs to be in the config.yml
             eg) AWS_BUCKET_NAME: ampscz-dev
                 AWS_BUCKET_PHOENIX_ROOT: TEST_PHOENIX_ROOT
-
     '''
 
     s3_bucket_name = Lochness['AWS_BUCKET_NAME']
@@ -363,37 +362,41 @@ def create_s3_transfer_table(Lochness, rewrite=False) -> None:
          df_prev = pd.DataFrame()
          max_ts_prev_df = pd.to_datetime('2000-01-01')
 
+    max_ts_prev_df = pd.to_datetime('2022-07-01')
     df = pd.DataFrame()
     with open(log_file, 'r') as fp:
         for line in fp.readlines():
-            ts = re.search(r'^(\S+ \w+:\w+:\w+)', line).group(1)
-            ts = pd.to_datetime(ts)
+            try:
+                re_line = re.search(r'^(\S+ \w+:\w+:\w+) upload: (\S+)', line)
+                ts = pd.to_datetime(re_line.group(1))
+            except AttributeError:
+                continue
+
             more_recent = ts > max_ts_prev_df
+            if not more_recent:
+                continue
 
-            if line.startswith(f'{ts} upload: '):
-                if not more_recent:
-                    continue
-                try:
-                    source = re.search(r'upload: (\S+)', line).group(1)
+            source = re_line.group(2)
 
-                    # AWS stdout has been changed to return a different path
-                    if not source.startswith('/'):
-                        source = '/' + source
+            # make source relative to PHOENIX root parent
+            if not source.startswith('PHOENIX'):
+                source = 'PHOENIX/' + source.split('/PHOENIX/')[1]
 
-                     # do not save metadata.csv update since it
-                     # gets updated every pull
-                    if 'metadata.csv' in source:
-                        continue
-                    target = re.search(r'upload: (\S+) to (\S+)',
-                                       line).group(2)
+            source = Path(source)
+            # do not save metadata.csv update since it
+            # gets updated every pull
+            if 'metadata.csv' in source.name:
+                continue
 
-                    df_tmp = pd.DataFrame({'timestamp': [ts],
-                                           'source': Path(source),
-                                           'destination': Path(target)})
+            target = re.search(r'upload: (\S+) to (\S+)',
+                               line).group(2)
 
-                    df = pd.concat([df, df_tmp])
-                except AttributeError:
-                    pass
+            df_tmp = pd.DataFrame({'timestamp': [ts],
+                                   'source': source,
+                                   'destination': Path(target)})
+
+            df = pd.concat([df, df_tmp])
+
 
     if len(df) == 0:
         print('No new data has been transferred to s3 bucket since last'
