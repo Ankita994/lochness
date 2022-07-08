@@ -362,7 +362,6 @@ def create_s3_transfer_table(Lochness, rewrite=False) -> None:
          df_prev = pd.DataFrame()
          max_ts_prev_df = pd.to_datetime('2000-01-01')
 
-    max_ts_prev_df = pd.to_datetime('2022-07-01')
     df = pd.DataFrame()
     with open(log_file, 'r') as fp:
         for line in fp.readlines():
