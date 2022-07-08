@@ -375,8 +375,11 @@ def create_s3_transfer_table(Lochness, rewrite=False) -> None:
                     continue
                 try:
                     source = re.search(r'upload: (\S+)', line).group(1)
-                    # if not source.startswith('/'):
-                        # source = '/' + source
+
+                    # AWS stdout has been changed to return a different path
+                    if not source.startswith('/'):
+                        source = '/' + source
+
                      # do not save metadata.csv update since it
                      # gets updated every pull
                     if 'metadata.csv' in source:

@@ -203,6 +203,7 @@ def initialize_metadata(Lochness: 'Lochness object',
     # only overwrite when there is an update in the data
     target_df = pd.read_csv(metadata_study)
     same_df = df.reset_index(drop=True).equals(target_df)
+
     if same_df:
         pass
     else:
@@ -509,7 +510,7 @@ def sync(Lochness, subject, dry=False):
                         # update_study_metadata(subject, json.loads(content))
                     else:
                         logger.info('No new update in newly downloaded '
-                                    'content for {redcap_subject}. '
+                                    f'content for {redcap_subject}. '
                                     'Not saving the data')
                         # update the dst file's mtime so it can prevent the
                         # same file being pulled from REDCap
