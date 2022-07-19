@@ -21,7 +21,6 @@ def load_encrypted_keyring(enc_keyring_loc: str) -> dict:
 
 def passphrase(Lochness, study):
     '''get passphrase for study from keyring'''
-
     if study not in Lochness['keyring']['lochness']['SECRETS']:
         raise KeyringError('lochness.SECRETS.{0} not found'.format(study))
     return Lochness['keyring']['lochness']['SECRETS'][study]
