@@ -114,23 +114,21 @@ def check_list_all_redcap_subjects(project_name: str,
 
     df = pd.DataFrame(content_dict_list)
     if len(df) > 1:
-        df.columns = ['subject', '_', 'consent_date']
-
         # select records that start with the project name
         df = df[df.subject.str.match('[A-Z][A-Z]\d{5}')]
 
         # change site label to follow other data types
         df['site'] = project_name[0].upper() + project_name[1:].lower() + \
                 df['subject'].str[:2].str.upper()
-        df['modality'] = 'REDCap'
+        df['modality'] = 'RPMS'
 
         df['exist_in_db'] = True
         df['subject_check'] = df['subject'].apply(ampscz_id_validate)
-        df['consent_check'] = ~(df['consent_date'] == '')
+        df['consent_check'] = True
         df['site_check'] = df['site'].str.split('_').str[1] == \
                 df.subject.str[:2].str.lower()
         df['final_check'] = df['subject_check'] & df['consent_check']
-        df['file_path'] = 'REDCap'
+        df['file_path'] = 'RPMS'
 
     return df
     
@@ -368,6 +366,38 @@ def get_subject_list_from_metadata(Lochness: 'lochness') -> List[str]:
     return subject_id_list
 
 
+def get_all_rpms_subjects_with_consent(Lochness) -> pd.DataFrame:
+    '''Return df with subject column of all subjects IDs with consentID'''
+    general_path = Path(Lochness['phoenix_root']) / 'GENERAL'
+    metadata_file_paths = general_path.glob('*/*_metadata.csv')
+    project_name = Lochness['project_name']
+
+    df = pd.DataFrame()
+    # consent check True
+    for metadata_file in metadata_file_paths:
+        df = pd.concat([df, pd.read_csv(metadata_file)[['Subject ID']]])
+    df.columns = ['subject']
+
+    if len(df) > 1:
+        # select records that start with the project name
+        df = df[df.subject.str.match('[A-Z][A-Z]\d{5}')]
+
+        # change site label to follow other data types
+        df['site'] = project_name[0].upper() + project_name[1:].lower() + \
+                df['subject'].str[:2].str.upper()
+        df['modality'] = 'REDCap'
+
+        df['exist_in_db'] = True
+        df['subject_check'] = df['subject'].apply(ampscz_id_validate)
+        df['consent_check'] = True
+        df['site_check'] = df['site'].str.split('_').str[1] == \
+                df.subject.str[:2].str.lower()
+        df['final_check'] = df['subject_check'] & df['consent_check']
+        df['file_path'] = 'REDCap'
+
+    return df
+
+
 def check_source(Lochness: 'lochness', test: bool = False) -> None:
     '''Check if there is any file that deviates from SOP'''
 
@@ -385,6 +415,7 @@ def check_source(Lochness: 'lochness', test: bool = False) -> None:
         all_df = check_file_path_df(mediaflux_df, subject_id_list)
         all_df = all_df[all_df['site'].str.startswith('Prescient')]
         all_df = pd.concat([all_df, penn_cnb_df])
+        consent_df = get_all_rpms_subjects_with_consent(Lochness)
 
     elif project_name == 'ProNET':
         db_string = 'REDCap'

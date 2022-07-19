@@ -74,7 +74,9 @@ def main():
     parser.add_argument('--continuous', action='store_true',
                         help='Continuously download data')
     parser.add_argument('--studies', nargs='+', default=[],
-                        help='Study to sync')
+                        help='Studies to sync')
+    parser.add_argument('--subject', nargs='+', default=[],
+                        help='Subjects to sync')
     parser.add_argument('--fork', action='store_true',
                         help='Daemonize the process')
     parser.add_argument('--until', type=scheduler.parse,
@@ -215,6 +217,10 @@ def do(args, Lochness):
                                      multiple_site, upenn_redcap)
 
     for subject in lochness.read_phoenix_metadata(Lochness, args.studies):
+        if args.subject:
+            if subject.id not in args.subject:
+                continue
+
         if not subject.active and args.skip_inactive:
             logger.info(f'skipping inactive subject={subject.id}, '
                         f'study={subject.study}')
@@ -235,7 +241,7 @@ def do(args, Lochness):
     #            s3_selective_sync = Lochness['s3_selective_sync'])
     #else:
     #    dpanonymize.lock_lochness(
-    #            Lochness, pii_table_loc=Lochness['pii_table'])
+    #            Lochnesss, pii_table_loc=Lochness['pii_table'])
 
     # transfer new files after all sync attempts are done
     if args.lochness_sync_send:
