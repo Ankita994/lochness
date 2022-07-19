@@ -196,7 +196,7 @@ def initialize_metadata(Lochness: 'Lochness object',
             if site_code_rpms_id != site_code_study:
                 continue
 
-            subject_dict = {'Subject ID': df_measure[rpms_id_colname]}
+            subject_dict = {'Subject ID': df_measure[rpms_id_colname], 'Study': site_code_study}}
 
             # Consent date
             if rpms_consent_colname in df_measure:
