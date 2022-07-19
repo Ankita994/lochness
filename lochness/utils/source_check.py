@@ -403,8 +403,11 @@ def check_source(Lochness: 'lochness', test: bool = False) -> None:
         # xnat
         tmp_xnat_db = Path(Lochness['phoenix_root']) / \
                 '.tmp_xnat_source_files.csv'
+        print('Loading data list from XNAT')
         if test:
             xnat_df = pd.read_csv(tmp_xnat_db)
+            xnat_df = check_list_all_xnat_subjects(keyring, subject_id_list)
+            print(xnat_df)
         else:
             xnat_df = check_list_all_xnat_subjects(keyring, subject_id_list)
             xnat_df.to_csv(tmp_xnat_db)

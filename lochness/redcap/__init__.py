@@ -201,7 +201,11 @@ def initialize_metadata(Lochness: 'Lochness object',
             [x for x in df.columns if x not in main_cols]]
 
     # only overwrite when there is an update in the data
-    target_df = pd.read_csv(metadata_study)
+    if metadata_study.is_file():
+        target_df = pd.read_csv(metadata_study)
+    else:
+        target_df = pd.DataFrame()
+
     same_df = df.reset_index(drop=True).equals(target_df)
 
     if same_df:
