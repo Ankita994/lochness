@@ -167,7 +167,7 @@ def initialize_metadata(Lochness: 'Lochness object',
     for index, row in df_final.iterrows():
         subject_id = row[redcap_id_colname]
         # Subject ID
-        subject_dict = {'Subject ID': subject_id}
+        subject_dict = {'Subject ID': subject_id, 'Study': site_code_study}
 
         # Consent date
         subject_dict['Consent'] = row[redcap_consent_colname]
