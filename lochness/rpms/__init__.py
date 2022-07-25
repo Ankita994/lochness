@@ -133,6 +133,16 @@ def get_run_sheets_for_datatypes(target_df_loc: Union[Path, str]) -> None:
             target_df['timepoint'] = target_df['visit'].map(time_to_timepoint)
             for tp, table in target_df.groupby('timepoint'):
                 run_sheet_output = f'{run_sheet_output_prefix}_{tp}.csv'
+
+                # compare existing table
+                if Path(run_sheet_output).is_file():
+                    run_sheet_prev = pd.read_csv(
+                        run_sheet_output, dtype=str).reset_index(drop=True)
+                    same_df = table.astype(str).equals(
+                            run_sheet_prev.astype(str))
+                    if same_df:
+                        continue
+
                 table.to_csv(run_sheet_output, index=False)
                 os.chmod(run_sheet_output, 0o0755)
 
