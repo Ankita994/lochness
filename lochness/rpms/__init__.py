@@ -328,24 +328,8 @@ def sync(Lochness, subject, dry=False):
             # source_df still has an index from the larger RPMS export
             # drop the index before the comparison to target_df
             same_df = source_df.reset_index(drop=True).equals(prev_df)
-
             if same_df:
-                print(f'No new updates in {subject_id}:{measure}')
                 continue
-
-            # # in order to use df.equals function, which also checks for data
-            # # types of each data, the source_df needs to be saved and re-loaded
-            # # to make the datatype consistent to that of prev_df
-            # with tf.NamedTemporaryFile(delete=True) as f:
-                # source_df.to_csv(f.name, index=False)
-                # same_df = pd.read_csv(f.name, dtype=str).reset_index(
-                        # drop=True).equals(prev_df)
-                # if same_df:
-                    # print(f'No new updates in {subject_id}:{measure}')
-                    # continue
-
-        else:
-            latest_pull_mtime = 0
 
         if len(source_df) == 0:  # do not save if the dataframe is empty
             continue
