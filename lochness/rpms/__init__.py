@@ -325,10 +325,14 @@ def sync(Lochness, subject, dry=False):
             prev_df = pd.read_csv(target_df_loc,
                                   dtype=str).reset_index(drop=True)
 
-            same_df = source_df.equals(prev_df)
+            # source_df still has an index from the larger RPMS export
+            # drop the index before the comparison to target_df
+            same_df = source_df.reset_index(drop=True).equals(prev_df)
+
             if same_df:
                 print(f'No new updates in {subject_id}:{measure}')
                 continue
+
             # # in order to use df.equals function, which also checks for data
             # # types of each data, the source_df needs to be saved and re-loaded
             # # to make the datatype consistent to that of prev_df
