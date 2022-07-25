@@ -133,6 +133,16 @@ def get_run_sheets_for_datatypes(target_df_loc: Union[Path, str]) -> None:
             target_df['timepoint'] = target_df['visit'].map(time_to_timepoint)
             for tp, table in target_df.groupby('timepoint'):
                 run_sheet_output = f'{run_sheet_output_prefix}_{tp}.csv'
+
+                # compare existing table
+                if Path(run_sheet_output).is_file():
+                    run_sheet_prev = pd.read_csv(
+                        run_sheet_output, dtype=str).reset_index(drop=True)
+                    same_df = table.astype(str).equals(
+                            run_sheet_prev.astype(str))
+                    if same_df:
+                        continue
+
                 table.to_csv(run_sheet_output, index=False)
                 os.chmod(run_sheet_output, 0o0755)
 
@@ -325,23 +335,11 @@ def sync(Lochness, subject, dry=False):
             prev_df = pd.read_csv(target_df_loc,
                                   dtype=str).reset_index(drop=True)
 
-            same_df = source_df.equals(prev_df)
+            # source_df still has an index from the larger RPMS export
+            # drop the index before the comparison to target_df
+            same_df = source_df.reset_index(drop=True).equals(prev_df)
             if same_df:
-                print(f'No new updates in {subject_id}:{measure}')
                 continue
-            # # in order to use df.equals function, which also checks for data
-            # # types of each data, the source_df needs to be saved and re-loaded
-            # # to make the datatype consistent to that of prev_df
-            # with tf.NamedTemporaryFile(delete=True) as f:
-                # source_df.to_csv(f.name, index=False)
-                # same_df = pd.read_csv(f.name, dtype=str).reset_index(
-                        # drop=True).equals(prev_df)
-                # if same_df:
-                    # print(f'No new updates in {subject_id}:{measure}')
-                    # continue
-
-        else:
-            latest_pull_mtime = 0
 
         if len(source_df) == 0:  # do not save if the dataframe is empty
             continue

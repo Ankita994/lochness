@@ -160,7 +160,6 @@ def sync_module(Lochness: 'lochness.config',
                                 continue
 
                             # ENH set different permissions
-                            # GENERAL: 0o755, PROTECTED: 0700
                             os.makedirs(mf_local, exist_ok=True)
                             os.chmod(mf_local, 0o0770)
 
