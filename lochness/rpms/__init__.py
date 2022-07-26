@@ -187,7 +187,7 @@ def initialize_metadata(Lochness: 'Lochness object',
             if site_code_rpms_id != site_code_study:
                 continue
 
-            subject_dict = {'Subject ID': df_measure[rpms_id_colname]}
+            subject_dict = {'Subject ID': df_measure[rpms_id_colname], 'Study': site_code_study}
 
             # Consent date
             if rpms_consent_colname in df_measure:
@@ -261,7 +261,7 @@ def get_subject_data(all_df_dict: Dict[str, pd.DataFrame],
         # most recent visit row for each visit
         if 'visit' in subject_df.columns:
             for unique_visit, table in subject_df.groupby('visit'):
-                if len(table) == 1:
+                if len(table) == 1 or 'Row#' in subject_df:
                     pass
                 else:
                     most_recent_row_index = pd.to_datetime(
