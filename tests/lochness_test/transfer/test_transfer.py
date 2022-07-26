@@ -439,3 +439,77 @@ def test_create_s3_transfer_table():
     print(df)
     df.to_csv('ha.csv')
 
+
+def test_aws_s3_no_sync_when_no_data():
+    args = Args('tmp_lochness')
+    args.rsync = True
+    args.s3_selective_sync = ['actigraphy']
+    create_lochness_template(args)
+    k = KeyringAndEncrypt(args.outdir)
+    k.update_var_subvars('lochness_sync', 'transfer')
+
+    lochness = config_load_test('tmp_lochness/config.yml', '')
+    # print(lochness)
+
+    # create fake files
+    tmp_file = Path(lochness['phoenix_root']) / \
+            'PROTECTED/StudyA/raw/subject01/actigraphy/haha.txt'
+    tmp_file.parent.mkdir(parents=True, exist_ok=True)
+    # if not tmp_file.is_file():
+    tmp_file.touch()
+
+    tmp_file = Path(lochness['phoenix_root']) / \
+            'PROTECTED/StudyA/raw/subject01/actigraphy/haha2.txt'
+    # if not tmp_file.is_file():
+    tmp_file.touch()
+
+    tmp_file = Path(lochness['phoenix_root']) / \
+            'PROTECTED/StudyA/raw/subject02/actigraphy/haha2.txt'
+    tmp_file.parent.mkdir(parents=True, exist_ok=True)
+    # if not tmp_file.is_file():
+    tmp_file.touch()
+
+    tmp_file = Path(lochness['phoenix_root']) / \
+            'PROTECTED/StudyA/processed/subject02/actigraphy/haha2.txt'
+    tmp_file.parent.mkdir(parents=True, exist_ok=True)
+    # if not tmp_file.is_file():
+    tmp_file.touch()
+
+    lochness['AWS_BUCKET_NAME'] = 'prod-ampscz-pronet'
+    lochness['AWS_BUCKET_ROOT'] = 'TEST_aws'
+    lochness_to_lochness_transfer_s3_protected(lochness)
+
+    print('second upload')
+    # s3_log = Path(lochness['phoenix_root']) / 'aws_s3_sync_stdouts.log'
+    # with open(s3_log, 'a') as fp:
+        # fp.write('second run\n')
+
+    lochness_to_lochness_transfer_s3_protected(lochness)
+    print('completed')
+
+
+    # print('permission change')
+    os.chmod(tmp_file, 0o777)
+    # os.chown(tmp_file, 0, 1004)
+    lochness_to_lochness_transfer_s3_protected(lochness)
+    print('completed')
+
+
+def test_aws_s3_sync_pure():
+    temp_dir = Path('tmp_pure_dir')
+    temp_dir.mkdir(exist_ok=True)
+
+    temp_file_1 = temp_dir / 'test1.csv'
+    temp_file_2 = temp_dir / 'test2.csv'
+
+    for i in temp_file_1, temp_file_2:
+        if not i.is_file():
+            i.touch()
+
+    command = f'aws s3 sync {temp_dir} s3://prod-ampscz-pronet/TEST_aws2'
+    print(command)
+
+    print(os.popen(command).read())
+
+
+
