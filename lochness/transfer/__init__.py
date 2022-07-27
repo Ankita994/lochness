@@ -509,7 +509,8 @@ def lochness_to_lochness_transfer_s3_protected(Lochness):
         current_time = now.strftime("%Y-%m-%d %H:%M:%S")
         with open(s3_sync_stdout, 'a') as fp:
             command_str = '\n'.join([f'{current_time} {x}' for x in
-                                os.popen(command).read().split('\n')])
+                                os.popen(command).read().split('\n')
+                                        if 'upload' in x])
             fp.write(command_str)
 
         logger.debug(command_str)
