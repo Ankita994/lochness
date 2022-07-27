@@ -310,7 +310,7 @@ def lochness_to_lochness_transfer_s3(Lochness, general_only: bool = True):
 
     command = f'aws s3 sync \
             {source_directory}/ \
-            s3://{s3_bucket_name}/{s3_phoenix_root} --delete'
+            s3://{s3_bucket_name}/{s3_phoenix_root}'
 
     logger.debug('Executing aws s3 sync function')
 
@@ -320,10 +320,11 @@ def lochness_to_lochness_transfer_s3(Lochness, general_only: bool = True):
     current_time = now.strftime("%Y-%m-%d %H:%M:%S")
     with open(s3_sync_stdout, 'a') as fp:
         command_str = '\n'.join([f'{current_time} {x}' for x in
-                            os.popen(command).read().split('\n')])
+                                 os.popen(command).read().split('\n')
+                                 if 'upload' in x])
         fp.write(command_str)
 
-    logger.debug(command_str)
+    # logger.debug(command_str)
     logger.debug('aws rsync completed')
 
 
@@ -365,6 +366,9 @@ def create_s3_transfer_table(Lochness, rewrite=False) -> None:
     df = pd.DataFrame()
     with open(log_file, 'r') as fp:
         for line in fp.readlines():
+            if not 'upload' in line:
+                continue
+
             try:
                 re_line = re.search(r'^(\S+ \w+:\w+:\w+) upload: (\S+)', line)
                 ts = pd.to_datetime(re_line.group(1))
@@ -469,22 +473,24 @@ def lochness_to_lochness_transfer_s3_protected(Lochness):
                 command = f"aws s3 sync \
                         {source_directory}/ \
                         s3://{s3_bucket_name}/{s3_phoenix_root_dtype} \
-                        --exclude '*.mp3' --exclude '.check_sum*' --delete"
+                        --exclude '*.mp3' --exclude '.check_sum*'"
 
                 logger.debug('Executing aws s3 sync function for '
                              f'{source_directory}')
-                logger.debug(re.sub(r'\s+', r' ', command))
+                # logger.debug(re.sub(r'\s+', r' ', command))
 
                 now = datetime.now()
                 current_time = now.strftime("%Y-%m-%d %H:%M:%S")
                 with open(s3_sync_stdout, 'a') as fp:
                     command_str = '\n'.join(
                             [f'{current_time} {x}' for x in
-                                os.popen(command).read().split('\n')
-                                        if 'upload' in x])
+                             os.popen(command).read().split('\n')
+                             if 'upload' in x])
                     fp.write(command_str)
+                    print(command_str)
 
-                logger.debug(command_str)
+
+                # logger.debug(command_str)
                 logger.debug('aws rsync completed')
 
     # interview run sheets
@@ -498,12 +504,12 @@ def lochness_to_lochness_transfer_s3_protected(Lochness):
                            str(interview_dir))
         command = f"aws s3 sync \
                 {interview_dir} \
-                s3://{s3_bucket_name}/{s3_target} --delete \
+                s3://{s3_bucket_name}/{s3_target} \
                 --exclude='*' --include='*Run_sheet_interviews_*.csv'"
 
         logger.debug('Executing aws s3 sync function for '
                      f'{interview_dir} Run sheet only')
-        logger.debug(re.sub(r'\s+', r' ', command))
+        # logger.debug(re.sub(r'\s+', r' ', command))
 
         now = datetime.now()
         current_time = now.strftime("%Y-%m-%d %H:%M:%S")
@@ -513,7 +519,7 @@ def lochness_to_lochness_transfer_s3_protected(Lochness):
                                         if 'upload' in x])
             fp.write(command_str)
 
-        logger.debug(command_str)
+        # logger.debug(command_str)
         logger.debug('aws rsync completed')
 
 
