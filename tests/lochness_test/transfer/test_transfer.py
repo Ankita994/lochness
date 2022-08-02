@@ -9,8 +9,10 @@ from lochness.transfer import decompress_transferred_file_and_copy
 from lochness.transfer import lochness_to_lochness_transfer_receive_sftp
 from lochness.transfer import lochness_to_lochness_transfer_s3
 from lochness.transfer import lochness_to_lochness_transfer_s3_protected
+from lochness.transfer import create_s3_transfer_table
 
 from pathlib import Path
+import re
 
 import sys
 lochness_root = Path(lochness.__path__[0]).parent
@@ -512,4 +514,79 @@ def test_aws_s3_sync_pure():
     print(os.popen(command).read())
 
 
+def test_create_s3_transfer_table():
+    args = Args('tmp_lochness')
+    args.rsync = True
+    args.s3_selective_sync = ['actigraphy']
+    create_lochness_template(args)
+    k = KeyringAndEncrypt(args.outdir)
+    k.update_var_subvars('lochness_sync', 'transfer')
 
+    lochness = config_load_test('tmp_lochness/config.yml', '')
+    create_s3_transfer_table(lochness)
+
+def test_create_s3_transfer_table_with_prev_data():
+    args = Args('tmp_lochness')
+    args.rsync = True
+    args.s3_selective_sync = ['actigraphy']
+    create_lochness_template(args)
+    k = KeyringAndEncrypt(args.outdir)
+    k.update_var_subvars('lochness_sync', 'transfer')
+
+    lochness = config_load_test('tmp_lochness/config.yml', '')
+    shutil.copy(
+        '/mnt/ProNET/Lochness/PHOENIX/aws_s3_sync_stdouts.log',
+        lochness['phoenix_root'])
+
+    log_file = Path(lochness['phoenix_root']) / 'aws_s3_sync_stdouts.log'
+    out_file = Path(lochness['phoenix_root']) / 's3_log.csv'
+
+    max_ts_prev_df = pd.to_datetime('2000-01-01')
+    df = pd.DataFrame()
+    with open(log_file, 'r') as fp:
+        for line in fp.readlines():
+            if 'LA00145' not in line:
+                continue
+
+            if not 'upload' in line:
+                continue
+
+            try:
+                re_line = re.search(r'^(\S+ \w+:\w+:\w+) upload: (\S+)', line)
+                ts = pd.to_datetime(re_line.group(1))
+                print(line)
+                print(len(line))
+                # if len(line) > 500:
+                    # print(line)
+                    # return
+            except AttributeError:
+                print(line)
+                return
+                continue
+
+            more_recent = ts > max_ts_prev_df
+            if not more_recent:
+                continue
+
+            source = re_line.group(2)
+
+            # make source relative to PHOENIX root parent
+            if not source.startswith('PHOENIX'):
+                source = 'PHOENIX/' + source.split('/PHOENIX/')[1]
+
+            source = Path(source)
+            # do not save metadata.csv update since it
+            # gets updated every pull
+            if 'metadata.csv' in source.name:
+                continue
+
+            target = re.search(r'upload: (\S+) to (\S+)',
+                               line).group(2)
+
+            df_tmp = pd.DataFrame({'timestamp': [ts],
+                                   'source': source,
+                                   'destination': Path(target)})
+
+            df = pd.concat([df, df_tmp])
+
+    print(df)

@@ -321,7 +321,7 @@ def lochness_to_lochness_transfer_s3(Lochness, general_only: bool = True):
     with open(s3_sync_stdout, 'a') as fp:
         command_str = '\n'.join([f'{current_time} {x}' for x in
                                  os.popen(command).read().split('\n')
-                                 if 'upload' in x])
+                                 if 'upload' in x]) + '\n'
         fp.write(command_str)
 
     # logger.debug(command_str)
@@ -352,7 +352,6 @@ def create_s3_transfer_table(Lochness, rewrite=False) -> None:
     file and appends rows of more recent data transfer information to
     that file.
     '''
-    log_file = Lochness['log_file']
     log_file = Path(Lochness['phoenix_root']) / 'aws_s3_sync_stdouts.log'
     out_file = Path(Lochness['phoenix_root']) / 's3_log.csv'
 
@@ -485,7 +484,7 @@ def lochness_to_lochness_transfer_s3_protected(Lochness):
                     command_str = '\n'.join(
                             [f'{current_time} {x}' for x in
                              os.popen(command).read().split('\n')
-                             if 'upload' in x])
+                             if 'upload' in x]) + '\n'
                     fp.write(command_str)
                     print(command_str)
 
@@ -516,7 +515,8 @@ def lochness_to_lochness_transfer_s3_protected(Lochness):
         with open(s3_sync_stdout, 'a') as fp:
             command_str = '\n'.join(
                     [f'{current_time} {x}' for x in
-                     os.popen(command).read().split('\n') if 'upload' in x])
+                     os.popen(command).read().split('\n')
+                     if 'upload' in x]) + '\n'
             fp.write(command_str)
 
         # logger.debug(command_str)
