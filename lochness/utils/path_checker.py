@@ -89,7 +89,7 @@ def update_interviews_transcript_check(df: pd.DataFrame) -> pd.DataFrame:
     '''Check logics in rows for Interviews transcripts'''
     transcript_int_index = df[
             (df.modality=='Interviews') &
-            (df.subject.isin(['For_review', 'Approved']))].index
+            (df.subject.isin(['For_review', 'For review', 'Approved']))].index
 
     transcript_int_df = df.loc[transcript_int_index]
     transcript_int_df['subject'] = nth_item_from_path(transcript_int_df, 4)
@@ -115,7 +115,7 @@ def update_interviews_transcript_check(df: pd.DataFrame) -> pd.DataFrame:
         site = row['site']
         transcript_int_df.loc[index, 'file_check'] = re.match(
                 f'{site}_{subject}_'
-                'interviewAudioTranscript_open_day\d+_session\d+.txt',
+                'interviewAudioTranscript_(open|psychs)_day\d+_session\d+.txt',
                 row['file_name'])
 
     df.loc[transcript_int_index] = transcript_int_df

@@ -132,13 +132,13 @@ def get_run_sheets_for_datatypes(target_df_loc: Union[Path, str]) -> None:
             target_df = pd.read_csv(target_df_loc)
             target_df['timepoint'] = target_df['visit'].map(time_to_timepoint)
             for tp, table in target_df.groupby('timepoint'):
-                run_sheet_output = f'{run_sheet_output_prefix}_{tp}.csv'
+                run_sheet_output = f'{run_sheet_output_prefix}_{int(tp)}.csv'
 
                 # compare existing table
                 if Path(run_sheet_output).is_file():
                     run_sheet_prev = pd.read_csv(
                         run_sheet_output, dtype=str).reset_index(drop=True)
-                    same_df = table.astype(str).equals(
+                    same_df = table.reset_index(drop=True).astype(str).equals(
                             run_sheet_prev.astype(str))
                     if same_df:
                         continue
@@ -329,6 +329,7 @@ def sync(Lochness, subject, dry=False):
                                BIDS=Lochness['BIDS'])
         proc_dst = Path(proc_folder) / f"{subject_id}_{measure}.csv"
 
+        get_run_sheets_for_datatypes(target_df_loc)
         # if the csv already exists, compare the dataframe
         if Path(target_df_loc).is_file():
             # index might be different, so drop it before comparing it
