@@ -10,6 +10,7 @@ from lochness.transfer import lochness_to_lochness_transfer_receive_sftp
 from lochness.transfer import lochness_to_lochness_transfer_s3
 from lochness.transfer import lochness_to_lochness_transfer_s3_protected
 from lochness.transfer import create_s3_transfer_table
+from lochness.transfer import send_file_to_s3_phoenix
 
 from pathlib import Path
 import re
@@ -525,6 +526,7 @@ def test_create_s3_transfer_table():
     lochness = config_load_test('tmp_lochness/config.yml', '')
     create_s3_transfer_table(lochness)
 
+
 def test_create_s3_transfer_table_with_prev_data():
     args = Args('tmp_lochness')
     args.rsync = True
@@ -590,3 +592,15 @@ def test_create_s3_transfer_table_with_prev_data():
             df = pd.concat([df, df_tmp])
 
     print(df)
+
+
+def test_send_file_to_s3_phoenix():
+    print()
+    Lochness = {'AWS_BUCKET_NAME': 'test',
+                'AWS_BUCKET_ROOT': 'test-phoenix',
+                'phoenix_root': '/data/predict/PHOENIX'}
+
+    prac_file = Path(Lochness['phoenix_root']) / \
+            'GENERAL/PronetAB/raw/AB00000/survey/hoho.csv'
+    send_file_to_s3_phoenix(Lochness, prac_file)
+

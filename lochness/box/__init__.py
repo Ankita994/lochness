@@ -536,9 +536,7 @@ def sync_module(Lochness: 'lochness.config',
                             client, product['data_dir'], subject_obj.id)
 
                 # full path
-                bx_head = join(bx_base,
-                               product['data_dir'],
-                               bx_sid)
+                bx_head = join(bx_base, product['data_dir'], bx_sid)
 
                 logger.debug('walking %s', bx_head)
 
