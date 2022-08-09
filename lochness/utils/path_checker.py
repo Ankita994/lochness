@@ -115,7 +115,7 @@ def update_interviews_transcript_check(df: pd.DataFrame) -> pd.DataFrame:
         site = row['site']
         transcript_int_df.loc[index, 'file_check'] = re.match(
                 f'{site}_{subject}_'
-                'interviewAudioTranscript_(open|psychs)_day\d+_session\d+.txt',
+                'interviewAudioTranscript_(open|psychs)_day[-\d]+_session\d+.txt',
                 row['file_name'])
 
     df.loc[transcript_int_index] = transcript_int_df
@@ -160,13 +160,20 @@ def update_interviews_audio_check(df: pd.DataFrame) -> pd.DataFrame:
 
     df.loc[audio_int_index] = audio_int_df
 
-
     # ignore playback.m3u audio files
     audio_int_index = df[(df.modality=='Interviews') &
                          (df.file_name == 'playback.m3u')].index
     audio_int_df = df.loc[audio_int_index]
     audio_int_df['file_check'] = True
     df.loc[audio_int_index] = audio_int_df
+
+    # ignore 'Audio Record' folder
+    rec_index = df[(df.modality=='Interviews') &
+                   (df.file_name.str.endswith('Audio Record'))].index
+    rec_df = df.loc[rec_index]
+    rec_df['file_check'] = True
+    df.loc[rec_index] = rec_df
+
 
 
 def update_by_adding_notes(df: pd.DataFrame) -> None:
