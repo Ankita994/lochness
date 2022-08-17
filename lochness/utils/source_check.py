@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import Union, List
 import xnat
 import json
-import pandas as pd
 from pandas.api.types import CategoricalDtype
 from boxsdk import Client, OAuth2
 from typing import List
@@ -297,6 +296,7 @@ def send_source_qc_summary(qc_fail_df: pd.DataFrame,
                            lines,
                            Lochness: 'lochness') -> None:
     '''Send summary of qc failed files in sources'''
+    site_email_csv = Lochness.get('site_email_csv', False)
     server_name = Lochness.get('project_name', 'Data aggregation server')
 
     if Lochness.get('production', False):
@@ -304,11 +304,12 @@ def send_source_qc_summary(qc_fail_df: pd.DataFrame,
     else:
         title = f'{server_name}: List of files out of SOP'
 
-    table_str = ''
     cat_type = CategoricalDtype(
             categories=["REDCap", "MRI", "EEG",
                 "Interviews", "Actigraphy", "PENN_CNB"], ordered=True)
     qc_fail_df['Data Type'] = qc_fail_df['Data Type'].astype(cat_type)
+    table_str = ''
+
     for site, x in qc_fail_df.groupby('Site'):
         table_str += f'<h2>{site}</h2>'
         for dt, y in x.groupby('Data Type'):
@@ -317,20 +318,49 @@ def send_source_qc_summary(qc_fail_df: pd.DataFrame,
                 table_str += y.to_html(index=False)
         table_str += '<br>'
 
+    message = \
+        'Dear team,<br><br>Please find the list of files on the source, ' \
+        'which do not follow the SOP. Please move, rename or delete the ' \
+        'files according to the SOP. Please do not hesitate to get back ' \
+        'to us.<br><br>Best wishes,<br>DPACC<br><br><br>'
+
     send_detail(
         Lochness,
         Lochness['sender'],
         Lochness['file_check_notify'],
         'Files on source out of SOP',
         f'Daily updates {datetime.now(tz).date()}',
-        'Dear team,<br><br>Please find the list of files on the source, which '
-        'do not follow the SOP. Please move, rename or delete the files '
-        'according to the SOP. Please do not hesitate to get back to us. '
-        '<br><br>Best wishes,<br>DPACC<br><br><br>',
+        message,
         table_str,
         lines,
-        'Please let us know if any of the files above should have passed QC'
-        )
+        'Please let us know if any of the files above should have passed QC')
+
+    if site_email_csv:
+        site_email_df = pd.read_csv(site_email_csv)
+        for site, x in qc_fail_df.groupby('Site'):
+            site_code = site[-2:]
+            recipients = site_email_df[
+                    site_email_df['site_short'] == site_code].email.tolist()
+
+            table_str = f'<h2>{site}</h2>'
+            for dt, y in x.groupby('Data Type'):
+                if len(y) >= 1:
+                    table_str += f'<h4>{site} - {dt}</h4>'
+                    table_str += y.to_html(index=False)
+            table_str += '<br>'
+
+            send_detail(
+                Lochness,
+                Lochness['sender'],
+                Lochness['file_check_notify'],
+                'Files on source out of SOP',
+                f'Daily updates {datetime.now(tz).date()}',
+                message,
+                table_str,
+                lines,
+                'Please let us know if any of the files above should '
+                'have passed QC',
+                recipients=recipients)
 
 
 def collect_mediaflux_files_info(Lochness: 'lochness') -> pd.DataFrame:
