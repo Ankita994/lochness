@@ -22,6 +22,15 @@ from lochness.redcap import post_to_redcap
 tz = timezone('EST')
 
 
+# ids to ignore
+test_id_list_file = Path('/mnt/ProNET/Lochness/AMPSCZ_test_ids.txt')
+if test_id_list_file.is_file():
+    with open(test_id_list_file, 'r') as fp:
+        test_id_list = [x.strip() for x in fp.readlines()]
+else:
+    test_id_list = []
+
+
 def get_xnat_credentials_from_config(config_loc:str) -> dict:
     '''Get xnat credentials from the config_loc linked keyring'''
     Lochness = load(config_loc)
@@ -153,6 +162,10 @@ def check_list_all_xnat_subjects(keyring: dict,
         project = session.projects[matching_project]
 
         for num, (id, subject) in enumerate(project.subjects.items(), 1):
+            # skip test IDs
+            if subject.label in test_id_list:
+                continue
+
             for exp_id, experiment in subject.experiments.items():
                 df_tmp = pd.DataFrame({
                     'file_path': [f'XNAT/{project.id}/{subject.label}/'
@@ -165,7 +178,6 @@ def check_list_all_xnat_subjects(keyring: dict,
 
     df['modality'] = 'MRI'
 
-    # df['subject_check'] = df['subject'].str.match('^[A-Za-z]{2}\d{5}$')
     df['subject_check'] = df['subject'].apply(ampscz_id_validate)
     df['site'] = df['project'].str.split('_').str[0]
 
@@ -201,7 +213,11 @@ def get_df_walk(root_dir_name: str, root_obj: 'box.Folder') -> pd.DataFrame:
     '''
     box_df = pd.DataFrame()
     for root, dirs, files in walk_from_folder_object(root_dir_name, root_obj):
-        print(f'Looking into box: {root}')
+        # if it is a test ID folder ignore this.
+        bname = Path(root).name
+        if bname in test_id_list or 'GeneticsAndFluids' in bname:
+            continue
+
         for file in files:
             file_get = file.get()
             mtime = file_get['content_modified_at']
@@ -413,7 +429,8 @@ def check_source(Lochness: 'lochness', test: bool = False) -> None:
             xnat_df.to_csv(tmp_xnat_db)
             # xnat_df = pd.read_csv('tmp_xnat_db.csv')
 
-        # box
+        print(xnat_df)
+
         print('Loading data list from BOX')
         tmp_box_db = Path(Lochness['phoenix_root']) / \
                 '.tmp_box_source_files.csv'
