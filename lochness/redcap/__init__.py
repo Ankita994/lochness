@@ -475,7 +475,9 @@ def sync(Lochness, subject, dry=False):
                             try:
                                 content_dict.pop(field['field_name'])
                             except:
-                                print(field['field_name'], ': not in record')
+                                print("lochness did not pull " \
+                                      f"{field['field_name']}, which is a " \
+                                      "deidentified field")
 
             content = json.dumps(content_dict_list).encode('utf-8')
 
