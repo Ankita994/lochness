@@ -180,7 +180,13 @@ def initialize_metadata(Lochness: 'Lochness object',
             ~all_df_dict['informed_consent_run_sheet'][
                 rpms_consent_colname].isnull()].subjectkey.tolist()
 
-    # all_df_dict - key: name of measure, value: pd.DataFrame of the whole file
+    # test ids - if it's a production lochness ignore test IDs
+    if Lochness.get('ignore_id_csv', False):
+        ignore_id_list = pd.read_csv(Lochness.get('ignore_id_csv'))[
+                'id'].tolist()
+    else:
+        ignore_id_list = []
+
     for measure, df_measure_all_subj in all_df_dict.items():
         # get the site information from the study name, eg. PrescientAD
         site_code_study = study_name[-2:]  # 'AD'
@@ -191,8 +197,9 @@ def initialize_metadata(Lochness: 'Lochness object',
             if not df_measure[rpms_id_colname] in ids_with_consent:
                 continue
 
-            # if multistudy:
-            # site of the subject for the line
+            # ignore if testcase
+            if df_measure[rpms_id_colname] in ignore_id_list:
+                continue
 
             # if the rpms table is not ready (e.g.doesn't have the subject col)
             if rpms_id_colname not in df_measure.index or \
@@ -206,7 +213,8 @@ def initialize_metadata(Lochness: 'Lochness object',
             if site_code_rpms_id != site_code_study:
                 continue
 
-            subject_dict = {'Subject ID': df_measure[rpms_id_colname], 'Study': site_code_study}
+            subject_dict = {'Subject ID': df_measure[rpms_id_colname],
+                            'Study': site_code_study}
 
             # Consent date
             if rpms_consent_colname in df_measure:

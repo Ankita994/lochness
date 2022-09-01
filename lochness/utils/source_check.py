@@ -321,8 +321,8 @@ def send_source_qc_summary(qc_fail_df: pd.DataFrame,
     message = \
         'Dear team,<br><br>Please find the list of files on the source, ' \
         'which do not follow the SOP. Please move, rename or delete the ' \
-        'files according to the SOP. Please do not hesitate to get back ' \
-        'to us.<br><br>Best wishes,<br>DPACC<br><br><br>'
+        'files according to the SOP. Let us know if you see any issues.' \
+        '<br><br>Best wishes,<br>DPACC<br><br><br>'
 
     send_detail(
         Lochness,
@@ -335,6 +335,7 @@ def send_source_qc_summary(qc_fail_df: pd.DataFrame,
         lines,
         'Please let us know if any of the files above should have passed QC')
 
+    # copy the emails to sites
     if site_email_csv:
         site_email_df = pd.read_csv(site_email_csv)
         for site, x in qc_fail_df.groupby('Site'):
