@@ -6,7 +6,7 @@ from pathlib import Path
 
 from lochness.redcap import sync, initialize_metadata
 from lochness.redcap import get_run_sheets_for_datatypes, post_to_redcap, \
-        deidentify_flag
+        deidentify_flag, iterate, redcap_projects
 from lochness.redcap.data_trigger_capture import save_post_from_redcap
 from lochness.redcap.data_trigger_capture import back_up_db
 
@@ -21,7 +21,7 @@ from test_lochness import show_tree_then_delete, rmtree, config_load_test
 from lochness_create_template import create_lochness_template
 
 import pytest
-pd.set_option('max_columns', 50)
+pd.set_option('display.max_columns', 50)
 
 
 @pytest.fixture
@@ -353,3 +353,41 @@ def test_deidentification():
         test = str(content_dict_list).encode('utf-8')
         lochness.atomic_write('test.json', test)
         return
+
+
+def test_upenn_longitudinal_data():
+    '''Check if the redcap module successively pulls longitudinal data'''
+    from lochness.config import load
+    config_loc = '/mnt/ProNET/Lochness/config.yml'
+    Lochness = load(config_loc)
+
+    # get URL
+    keyring = Lochness['keyring']
+    api_url = keyring['redcap.UPENN']['URL'] + '/api/'
+    api_key = keyring['redcap.UPENN']['API_TOKEN']['UPENN']
+    id_field = Lochness['redcap_id_colname']
+    for subject_path in (
+            Path(Lochness['phoenix_root']) / 'PROTECTED').glob('*/raw/*'):
+        subject = subject_path.name
+        if 'YA015' in subject:
+            break
+    redcap_subject = subject
+    redcap_subject_sl = redcap_subject.lower()
+    record_query = {
+        'token': api_key,
+        'content': 'record',
+        'format': 'json',
+        'filterLogic': f"[session_subid] = '{redcap_subject}' or "
+                       f"[session_subid] = '{redcap_subject_sl}'"
+    }
+
+    content = post_to_redcap(api_url,
+                             record_query,
+                             '')
+    content_dict_list = json.loads(content)
+
+
+    for subject in lochness.read_phoenix_metadata(Lochness,
+                                                  studies=['PronetYA']):
+        if 'YA015' in subject.id:
+            sync(Lochness, subject, False)

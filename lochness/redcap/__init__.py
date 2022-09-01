@@ -459,6 +459,7 @@ def sync(Lochness, subject, dry=False):
                 logger.info(f'no redcap data for {redcap_subject}')
                 continue
 
+            content_dict_list = json.loads(content)
             if deidentify:
                 # get fields that contains PII
                 metadata_query = {'token': api_key,

@@ -504,13 +504,13 @@ def check_source(Lochness: 'lochness', test: bool = False) -> None:
     
     # to highlight REDCap table separately in the email, since this is the
     # major bottleneck for the smooth dataflow
-    tmp = qc_fail_df[
-        (qc_fail_df['Consent date in DB'] == 'Consent date missing') |
-        (qc_fail_df['Subject ID in database'] == 'Correct')
-            ]
-    tmp['File Path'] = 'REDCap'
-    tmp['Data Type'] = 'REDCap'
-    qc_fail_df = pd.concat([qc_fail_df, tmp]).drop_duplicates()
+    # tmp = qc_fail_df[
+        # (qc_fail_df['Consent date in DB'] == 'Consent date missing') |
+        # (qc_fail_df['Subject ID in database'] == 'Correct')
+            # ]
+    # tmp['File Path'] = 'REDCap'
+    # tmp['Data Type'] = 'REDCap'
+    # qc_fail_df = pd.concat([qc_fail_df, tmp]).drop_duplicates()
 
     lines = []
     send_source_qc_summary(qc_fail_df, lines, Lochness)
