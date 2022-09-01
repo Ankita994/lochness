@@ -179,7 +179,7 @@ def main():
                     fp.write(str(date.today()))
 
             poll_interval = int(Lochness['poll_interval'])
-            logger.info('sleeping for {0} seconds'.format(poll_interval))
+            logger.info(f'sleeping for {poll_interval} seconds')
             time.sleep(Lochness['poll_interval'])
     else:
         # remove already transferred files

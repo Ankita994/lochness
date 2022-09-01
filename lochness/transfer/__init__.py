@@ -281,6 +281,37 @@ def lochness_to_lochness_transfer_rsync(Lochness, general_only: bool = True):
     outs, _ = proc.communicate()
 
 
+def send_file_to_s3_phoenix(Lochness, source_file: Path) -> None:
+    '''Send a file to corresponding path under s3 phoenix and update s3 log
+
+    Key arguments:
+        Lochness: Lochness object.
+        source_file: full file path to send to s3 phoenix, Path.
+    '''
+    s3_bucket_name = Lochness['AWS_BUCKET_NAME']
+    s3_phoenix_root = Lochness['AWS_BUCKET_ROOT']
+    phoenix_root = Lochness['phoenix_root']
+    s3_sync_stdout = Path(phoenix_root) / 'aws_s3_sync_stdouts.log'
+
+    source_file_rel_path = Path(source_file).relative_to(
+            Path(phoenix_root))
+    target_path = Path(s3_phoenix_root) / source_file_rel_path
+
+    command = f"aws s3 cp \
+            {source_file} s3://{s3_bucket_name}/{target_path} \
+            --exclude '*.mp3' --exclude '.checksum*'"
+    command_out = os.popen(command).read()
+
+    # update s3 log
+    now = datetime.now()
+    current_time = now.strftime("%Y-%m-%d %H:%M:%S")
+    if 'upload' in command_out:
+        with open(s3_sync_stdout, 'a') as fp:
+            line = f'{current_time} {command_out}'
+            fp.write(line)
+
+
+
 def lochness_to_lochness_transfer_s3(Lochness, general_only: bool = True):
     '''Lochness to Lochness transfer using aws s3 sync
 
