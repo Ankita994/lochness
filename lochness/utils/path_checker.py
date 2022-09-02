@@ -141,6 +141,28 @@ def update_interviews_video_check(df: pd.DataFrame) -> pd.DataFrame:
     df.loc[video_int_index] = video_int_df
 
 
+def update_interviews_teams_data_check(df: pd.DataFrame) -> pd.DataFrame:
+    '''Check logics in rows for Interviews video'''
+    # interviews transcript
+    video_int_index = df[
+            (df.modality=='Interviews') &
+            (df.file_name.str.endswith('.wav'))
+            ].index
+
+    video_int_df = df.loc[video_int_index]
+
+    # directory check
+    video_int_df['directory_check'] = video_int_df['parent_dir'] \
+            == video_int_df['subject']
+
+    # file name pattern check
+    video_int_df['file_pattern_check'] = video_int_df['file_name'].str.match(
+                r'\d{4}\d{2}\d{2}\d{6}_[A-Z]{2}\d{5}_(OPEN|PSYSCS).wav')
+    video_int_df['file_check'] = video_int_df['directory_check'] & \
+        video_int_df['file_name']
+    df.loc[video_int_index] = video_int_df
+
+
 def update_interviews_audio_check(df: pd.DataFrame) -> pd.DataFrame:
     '''Check logics in rows for Interviews audio'''
     # interviews audio
@@ -239,6 +261,7 @@ def check_file_path_df(df: pd.DataFrame,
 
     update_interviews_check(df)
     update_interviews_transcript_check(df)
+    update_interviews_teams_data_check(df)
     update_interviews_video_check(df)
     update_interviews_audio_check(df)
 
