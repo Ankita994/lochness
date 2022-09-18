@@ -178,7 +178,7 @@ def initialize_metadata(Lochness: 'Lochness object',
 
     ids_with_consent = all_df_dict['informed_consent_run_sheet'][
             ~all_df_dict['informed_consent_run_sheet'][
-                rpms_consent_colname].isnull()].subjectkey.tolist()
+                rpms_consent_colname].isnull()]['RPMS_id_colname'].tolist()
 
     # test ids - if it's a production lochness ignore test IDs
     if Lochness.get('ignore_id_csv', False):
@@ -187,7 +187,27 @@ def initialize_metadata(Lochness: 'Lochness object',
     else:
         ignore_id_list = []
 
+    # inclusion list - if it's a development lochness only get IDs
+    if Lochness.get('id_list_csv', False):
+        id_list = pd.read_csv(Lochness.get('id_list_csv'))[
+                'id'].tolist()
+    else:
+        id_list = []
+
+    # case_with_consent
+    subject_with_consent = []
     for measure, df_measure_all_subj in all_df_dict.items():
+        if rpms_consent_colname in df_measure_all_subj.columns:
+            subject_with_consent = df_measure_all_subj[
+                ~df_measure_all_subj[rpms_consent_colname].isnull()][
+                        rpms_id_colname].unique()
+
+
+    for measure, df_measure_all_subj in all_df_dict.items():
+        df_measure_all_subj = df_measure_all_subj[
+            df_measure_all_subj[rpms_id_colname].isin(subject_with_consent)
+            ]
+
         # get the site information from the study name, eg. PrescientAD
         site_code_study = study_name[-2:]  # 'AD'
         project_name = study_name.split(site_code_study)[0]  # 'Prescient'
@@ -201,12 +221,17 @@ def initialize_metadata(Lochness: 'Lochness object',
             if df_measure[rpms_id_colname] in ignore_id_list:
                 continue
 
+            # if ids to pull exist
+            if len(id_list) > 0:
+                # don't pull if it's not in the list
+                if df_measure[rpms_id_colname] not in id_list:
+                    continue
+
             # if the rpms table is not ready (e.g.doesn't have the subject col)
             if rpms_id_colname not in df_measure.index or \
                 pd.isna(df_measure[rpms_id_colname]):
                 continue
 
-            # print(df_measure)
             site_code_rpms_id = df_measure[rpms_id_colname][:2]
 
             # if the subject does not belong to the site, pass it
@@ -216,26 +241,26 @@ def initialize_metadata(Lochness: 'Lochness object',
             subject_dict = {'Subject ID': df_measure[rpms_id_colname],
                             'Study': site_code_study}
 
+            # if mindlamp_id exists in the rpms table
+            if 'chrdbb_lamp_id' in df_measure:
+                if not pd.isna(df_measure[f'chrdbb_lamp_id']):
+                    subject_dict['Mindlamp'] = f'mindlamp.{study_name}:' \
+                            + df_measure[f'chrdbb_lamp_id']
+
             # Consent date
-            if rpms_consent_colname in df_measure:
+            if rpms_consent_colname in df_measure.index:
                 subject_dict['Consent'] = datetime.strptime(
                         df_measure[rpms_consent_colname],
                         '%d/%m/%Y %I:%M:%S %p').strftime('%Y-%m-%d')
-            else:
+            # else:
                 # subject_dict['Consent'] = '2021-10-01'  # pseudo-random date
-                continue  ## subject without consent date will be ignored
+                # continue  ## subject without consent date will be ignored
 
             # mediaflux source has its foldername as its subject ID
             subject_dict['RPMS'] = f'rpms.{study_name}:' + \
                                    df_measure[rpms_id_colname]
             subject_dict['Mediaflux'] = f'mediaflux.{study_name}:' + \
                                         df_measure[rpms_id_colname]
-
-            # if mindlamp_id exists in the rpms table
-            if 'chrdbb_lamp_id' in df_measure:
-                if not pd.isna(df_measure[f'chrdbb_lamp_id']):
-                    subject_dict['Mindlamp'] = f'mindlamp.{study_name}:' \
-                            + df_measure[f'chrdbb_lamp_id']
 
             if upenn:
                 subject_dict['REDCap'] = \
