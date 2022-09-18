@@ -50,9 +50,11 @@ def get_box_client_from_box_keyrings(box_k: dict) -> Client:
     return client
 
 
-def check_list_all_penn_cnb_subjects(project_name: str,
-                                     keyring: dict,
-                                     subject_list: List[str]) -> pd.DataFrame:
+def check_list_all_penn_cnb_subjects(
+        project_name: str,
+        keyring: dict,
+        subject_list: List[str],
+        ignore_id_list: List[str] = []) -> pd.DataFrame:
     '''Return a dataframe of records in PENN CNB redcap'''
 
     api_url = keyring['redcap.UPENN']['URL'] + '/api/'
@@ -72,6 +74,11 @@ def check_list_all_penn_cnb_subjects(project_name: str,
     df = pd.DataFrame(content_dict_list)
     if len(df) > 1:
         df.columns = ['site_orig', 'subject']
+
+        print(ignore_id_list)
+        # drop subjects included in ignore_id_list
+        df = df[~df.subject.str.lower().isin(
+            [x.lower() for x in ignore_id_list])]
 
         # select records that start with the project name
         df = df[df.site_orig.str.lower().str.startswith(project_name.lower())]
@@ -364,8 +371,20 @@ def send_source_qc_summary(qc_fail_df: pd.DataFrame,
                 recipients=recipients)
 
 
-def collect_mediaflux_files_info(Lochness: 'lochness') -> pd.DataFrame:
-    '''Collect list of files from mediaflux in a pandas dataframe'''
+def collect_mediaflux_files_info(Lochness: 'lochness',
+                                 ids_to_ignore: list = []) -> pd.DataFrame:
+    '''Collect list of files from mediaflux in a pandas dataframe
+
+    Key arguments:
+        lochness: Lochness object, obj.
+        ids_to_ignore: list of AMP-SCZ ids to ignore.
+
+    Returns:
+        pd.DataFrame
+    ids_to_ignore for production lochness would be the list of IDs used for
+    testing, and for test lochness the ids_to_ignore would be the list of real
+    participant IDs.
+    '''
     mflux_cfg = Path(Lochness['phoenix_root']) / 'mflux.cfg'
     mf_remote_root = '/projects/proj-5070_prescient-1128.4.380'
     with tf.TemporaryDirectory() as tmpdir:
@@ -382,7 +401,16 @@ def collect_mediaflux_files_info(Lochness: 'lochness') -> pd.DataFrame:
         p.wait()
 
         mediaflux_df = load_mediaflux_df(diff_path)
-        return mediaflux_df
+
+    # remove rows for subjects included in the ids_to_ignore
+    mediaflux_df = mediaflux_df[
+        ~mediaflux_df['file_path'].str.split('/').str[2].isin(ids_to_ignore)]
+
+    # audio files have subdirectories
+    mediaflux_df = mediaflux_df[
+        ~mediaflux_df['file_path'].str.split('/').str[3].isin(ids_to_ignore)]
+
+    return mediaflux_df
 
 
 def get_subject_list_from_metadata(Lochness: 'lochness') -> List[str]:
@@ -398,7 +426,7 @@ def get_subject_list_from_metadata(Lochness: 'lochness') -> List[str]:
 
 
 def get_all_rpms_subjects_with_consent(Lochness) -> pd.DataFrame:
-    '''Return df with subject column of all subjects IDs with consentID'''
+    '''Get df with the 'subject' column of subjects IDs from metadata file'''
     general_path = Path(Lochness['phoenix_root']) / 'GENERAL'
     metadata_file_paths = general_path.glob('*/*_metadata.csv')
     project_name = Lochness['project_name']
@@ -435,14 +463,36 @@ def check_source(Lochness: 'lochness', test: bool = False) -> None:
     subject_id_list = get_subject_list_from_metadata(Lochness)
     project_name = Lochness['project_name']
 
+    # if the configuration provided ignore_id_csv field
+    if Lochness.get('ignore_id_csv', False):
+        ignore_id_list = pd.read_csv(
+                Lochness.get('ignore_id_csv'))['id'].tolist()
+    else:
+        ignore_id_list = []
+
     if project_name == 'Prescient':
+        # if the configuration provided id_list_csv
+        if Lochness.get('id_list_csv', False):
+            # Prescient network read full subject list from RPMS
+            check_only_subject_id_list = True
+            unique_subjects = []
+            for csv in Path(Lochness['RPMS_PATH']).glob('*csv'):
+                try:
+                    [unique_subjects.append(x) for x in
+                            pd.read_csv(csv)[Lochness['RPMS_id_colname']]
+                            if x not in unique_subjects]
+                except:
+                    pass
+            ignore_id_list += [x for x in unique_subjects
+                    if x not in subject_id_list]
+            ignore_id_list = [x for x in ignore_id_list if type(x) == str]
+
         db_string = 'RPMS'
-        mediaflux_df = collect_mediaflux_files_info(Lochness)
+        mediaflux_df = collect_mediaflux_files_info(Lochness, ignore_id_list)
         # Penn CNB
         keyring = Lochness['keyring']
         penn_cnb_df = check_list_all_penn_cnb_subjects(
-                project_name, keyring, subject_id_list)
-
+                project_name, keyring, subject_id_list, ignore_id_list)
         all_df = check_file_path_df(mediaflux_df, subject_id_list)
         all_df = all_df[all_df['site'].str.startswith('Prescient')]
         all_df = pd.concat([all_df, penn_cnb_df])
@@ -503,9 +553,6 @@ def check_source(Lochness: 'lochness', test: bool = False) -> None:
                     'subject').loc[row.subject, 'consent_check']
         else:
             all_df.loc[index, 'consent_check'] = False
-
-        if row.subject=='CM00045':
-            print(all_df.loc[index])
 
     qc_fail_df = all_df[
             (~all_df['final_check']) | 
