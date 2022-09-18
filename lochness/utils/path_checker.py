@@ -58,7 +58,7 @@ def update_mri_check(df: pd.DataFrame) -> pd.DataFrame:
     mri_index = df[df['modality'] == 'MRI'].index
     mri_df = df.loc[mri_index]
     mri_df['file_check'] = mri_df['file_name'].str.match(
-            '[A-Z]{2}\d{5}_MR_\d{4}_\d{2}_\d{2}_\d.zip')
+            '[A-Z]{2}\d{5}_MR_\d{4}_\d{2}_\d{2}_\d.[Zz][Ii][Pp]')
 
     df.loc[mri_index] = mri_df
 
