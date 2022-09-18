@@ -75,7 +75,6 @@ def check_list_all_penn_cnb_subjects(
     if len(df) > 1:
         df.columns = ['site_orig', 'subject']
 
-        print(ignore_id_list)
         # drop subjects included in ignore_id_list
         df = df[~df.subject.str.lower().isin(
             [x.lower() for x in ignore_id_list])]
@@ -410,6 +409,10 @@ def collect_mediaflux_files_info(Lochness: 'lochness',
     mediaflux_df = mediaflux_df[
         ~mediaflux_df['file_path'].str.split('/').str[3].isin(ids_to_ignore)]
 
+    # transcript files have subdirectories
+    mediaflux_df = mediaflux_df[
+        ~mediaflux_df['file_path'].str.split('/').str[4].isin(ids_to_ignore)]
+
     return mediaflux_df
 
 
@@ -604,6 +607,7 @@ def check_source(Lochness: 'lochness', test: bool = False) -> None:
 if __name__ == '__main__':
     # testing purposes
     config_loc = '/mnt/prescient/Prescient_data_sync/config.yml'
+    config_loc = '/mnt/prescient/Prescient_production/config.yml'
     # config_loc = '/opt/software/Pronet_data_sync/config.yml'
     Lochness = load(config_loc)
     Lochness['file_check_notify']['__global__'] = [
