@@ -116,8 +116,9 @@ def sync_module(Lochness: 'lochness.config',
                             if remote is nan:
                                 continue
 
-                            if not re.search(patt.replace('*', '(.+?)'),
-                                             remote):
+                            if not re.search(
+                                    patt.replace('*', '(.+?)').lower(),
+                                    remote.lower()):
                                 continue
                             else:
                                 remote = remote.split(':')[1]
