@@ -36,7 +36,8 @@ def sync(Lochness, subject, dry=False):
                 dirname = tree.get('mri',
                                    subject.protected_folder,
                                    processed=False,
-                                   BIDS=Lochness['BIDS'])
+                                   BIDS=Lochness['BIDS'],
+                                   makedirs=True)
                 dst = os.path.join(dirname, experiment.label.upper())
 
                 # do not re-download already transferred & removed data

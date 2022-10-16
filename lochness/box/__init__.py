@@ -577,7 +577,8 @@ def sync_module(Lochness: 'lochness.config',
                                 datatype,
                                 output_base,
                                 processed=processed,
-                                BIDS=Lochness['BIDS'])
+                                BIDS=Lochness['BIDS'],
+                                makedirs=True)
 
                         if 'out_dir' in product:
                             output_dir = output_dir / product['out_dir']

@@ -148,7 +148,8 @@ def sync_module(Lochness: 'lochness.config',
                             mf_local = tree.get(datatype,
                                                 subj_dir,
                                                 processed=processed,
-                                                BIDS=Lochness['BIDS'])
+                                                BIDS=Lochness['BIDS'],
+                                                makedirs=True)
 
                             mf_local = str(mf_local / prod['out_dir'] \
                                     if 'out_dir' in prod else mf_local) / \
@@ -161,8 +162,8 @@ def sync_module(Lochness: 'lochness.config',
                                 continue
 
                             # ENH set different permissions
-                            os.makedirs(mf_local, exist_ok=True)
-                            os.chmod(mf_local, 0o0770)
+                            # os.makedirs(mf_local, exist_ok=True)
+                            # os.chmod(mf_local, 0o0770)
 
                             # subprocess call unimelb-mf-download
                             cmd = (' ').join(['unimelb-mf-download',
@@ -191,7 +192,7 @@ def sync_module(Lochness: 'lochness.config',
                                         file_p = Path(root) / file
                                         perm = oct(file_p.stat().st_mode)[-3:]
                                         if perm != '770':
-                                            os.chmod(file_p, 0o0770)
+                                            os.chmod(file_p, 0o01770)
 
 
 def sync(Lochness, subject, dry):

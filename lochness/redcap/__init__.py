@@ -387,7 +387,8 @@ def sync(Lochness, subject, dry=False):
             dst_folder = tree.get('surveys',
                                   subject.protected_folder,
                                   processed=False,
-                                  BIDS=Lochness['BIDS'])
+                                  BIDS=Lochness['BIDS'],
+                                  makedirs=True)
             fname = f'{redcap_subject}.{_redcap_project}.json'
             dst = Path(dst_folder) / fname
 
@@ -395,7 +396,8 @@ def sync(Lochness, subject, dry=False):
             proc_folder = tree.get('surveys',
                                    subject.general_folder,
                                    processed=True,
-                                   BIDS=Lochness['BIDS'])
+                                   BIDS=Lochness['BIDS'],
+                                   makedirs=True)
 
             proc_dst = Path(proc_folder) / fname
 

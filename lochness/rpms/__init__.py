@@ -178,7 +178,8 @@ def initialize_metadata(Lochness: 'Lochness object',
 
     ids_with_consent = all_df_dict['informed_consent_run_sheet'][
             ~all_df_dict['informed_consent_run_sheet'][
-                rpms_consent_colname].isnull()]['RPMS_id_colname'].tolist()
+                rpms_consent_colname].isnull()][
+                        Lochness['RPMS_id_colname']].tolist()
 
     # test ids - if it's a production lochness ignore test IDs
     if Lochness.get('ignore_id_csv', False):
@@ -349,17 +350,22 @@ def sync(Lochness, subject, dry=False):
                                        Lochness['RPMS_id_colname'])
 
     for measure, source_df in subject_df_dict.items():
+        if len(source_df) == 0:  # do not save if the dataframe is empty
+            continue
+
         # target data
         dirname = tree.get('surveys',
                            subject.protected_folder,
                            processed=False,
-                           BIDS=Lochness['BIDS'])
+                           BIDS=Lochness['BIDS'],
+                           makedirs=True)
         target_df_loc = Path(dirname) / f"{subject_id}_{measure}.csv"
 
         proc_folder = tree.get('surveys',
                                subject.general_folder,
                                processed=True,
-                               BIDS=Lochness['BIDS'])
+                               BIDS=Lochness['BIDS'],
+                               makedirs=True)
         proc_dst = Path(proc_folder) / f"{subject_id}_{measure}.csv"
 
         get_run_sheets_for_datatypes(target_df_loc)
@@ -374,9 +380,6 @@ def sync(Lochness, subject, dry=False):
             same_df = source_df.reset_index(drop=True).equals(prev_df)
             if same_df:
                 continue
-
-        if len(source_df) == 0:  # do not save if the dataframe is empty
-            continue
 
         if not dry:
             Path(dirname).mkdir(exist_ok=True)
