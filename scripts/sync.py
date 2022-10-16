@@ -14,6 +14,7 @@ import lochness.hdd as HDD
 import lochness.xnat as XNAT
 import lochness.beiwe as Beiwe
 import lochness.redcap as REDCap
+from lochness.redcap import save_redcap_metadata
 import lochness.mindlamp as Mindlamp
 import lochness.dropbox as Dropbox
 import lochness.box as Box
@@ -214,7 +215,10 @@ def do(args, Lochness):
         lochness.initialize_metadata(Lochness, args,
                                      multiple_site, upenn_redcap)
 
+    n = 0
     for subject in lochness.read_phoenix_metadata(Lochness, args.studies):
+        if n == 0:
+            save_redcap_metadata(Lochness, subject)
         if not subject.active and args.skip_inactive:
             logger.info(f'skipping inactive subject={subject.id}, '
                         f'study={subject.study}')
@@ -225,6 +229,7 @@ def do(args, Lochness):
         else:
             for Module in args.source:
                 lochness.attempt(Module.sync, Lochness, subject, dry=args.dry)
+        n += 1
 
     # anonymize PII
 

@@ -214,15 +214,106 @@ def initialize_metadata(Lochness: 'Lochness object',
         df.to_csv(metadata_study, index=False)
 
 
+def get_run_sheets_for_datatypes_rm(api_url, api_key,
+                                    redcap_subject, id_field,
+                                    json_path: Union[Path, str]) -> None:
+    return
+
+    if not json_path.is_file():
+        return
+
+    with open(json_path, 'r') as fp:
+        json_data = json.load(fp)
+
+    raw_path = Path(json_path).parent.parent
+
+    mod_run_sheet_name_dict = {
+            'eeg':['eeg_run_sheet'],
+            'mri':['mri_run_sheet'],
+            'interviews':['speech_sampling_run_sheet'],
+            'phone':['digital_biomarkers_mindlamp_onboarding',
+                     'digital_biomarkers_mindlamp_checkin'],
+            'actigraphy':['digital_biomarkers_axivity_onboarding',
+                          'digital_biomarkers_axivity_checkin'],
+            'surveys': ['penncnb'] }
+
+    for modality, run_sheet_names in mod_run_sheet_name_dict.items():
+        for run_sheet_name in run_sheet_names:
+            run_sheet_dicts = [x for x in json_data
+                    if x['redcap_repeated_instrument'] == run_sheet_name]
+
+            # if no run sheet
+            if len(run_sheet_dicts) == 0:
+                continue
+
+            for content_dict in run_sheet_dicts:
+                repeat_instance = content_dict['redcap_repeat_instance']
+                content_df = pd.DataFrame.from_dict(content_dict,
+                                                    orient='index',
+                                                    columns=['field_value'])
+                content_df.index.name = 'field_name'
+
+                # if all is empty, or 0
+                all_empty = ((content_df[content_df.columns[0]]=='0') |
+                             (content_df[content_df.columns[0]]=='')).all()
+
+                if all_empty:
+                    continue  # don't have if all empty
+
+                raw_modality_path = raw_path / modality
+                raw_modality_path.mkdir(exist_ok=True, parents=True)
+                output_name = Path(json_path).name.split('.json')[0]
+
+                if modality == 'surveys':  # run sheet for PENN CNB
+                    run_sheet_output = raw_modality_path / \
+                       f'{output_name}.Run_sheet_PennCNB_{repeat_instance}.csv'
+
+                else:
+                    if run_sheet_name.endswith('checkin'):
+                        run_sheet_output = raw_modality_path / \
+                           f'{output_name}.Run_sheet_{modality}' \
+                           f'_checkin_{repeat_instance}.csv'
+                    else:
+                        run_sheet_output = raw_modality_path / \
+                           f'{output_name}.' \
+                           f'Run_sheet_{modality}_{repeat_instance}.csv'
+
+                if run_sheet_output.is_file():
+                    target_df = pd.read_csv(run_sheet_output, index_col=0)
+                    with tf.NamedTemporaryFile(suffix='tmp.csv') as tmp_file:
+                        content_df.to_csv(tmp_file.name)
+                        check_df = pd.read_csv(tmp_file.name, index_col=0)
+                    
+                    same_df = check_df.equals(target_df)
+
+                    if same_df:
+                        print('Not saving run sheet')
+                        continue
+
+                content_df.to_csv(run_sheet_output)
+                os.chmod(run_sheet_output, 0o0755)
+
+
 def get_run_sheets_for_datatypes(api_url, api_key,
                                  redcap_subject, id_field,
                                  json_path: Union[Path, str]) -> None:
     '''Extract run sheet information from REDCap JSON and save as csv file
 
-    For each data types, there should be Run Sheets completed by RAs on REDCap.
-    This information is extracted and saved as a csv flie in the 
+    For each data types, there should a record of the data acquisition in the
+    REDCap json file. This information is extracted and saved as a csv flie in
         PHOENIX/PROTECTED/raw/
             {STUDY}/{DATATYPE}/{subject}.{study}.Run_sheet_{DATATYPE}.csv
+
+    Some measures will have 'repeated instrument' configuration on the REDCap,
+    which will lead the REDCap exported json file to have a different format.
+    There will be extra list of dictionaries for each repeated instrument. The
+    'redcap_repeated_instrument' item in the list labels which measure the list
+    is for. For example, when there are two repeated run sheets for MRI, there
+    would be two more lists of dictionaries included in the REDCap-json file. 
+    Each list will be labelled as "mri_run_sheet" in
+    "redcap_repeated_instrument", while "redcap_event_name" will be
+    "baseline_arm_1". Each list will have information about of the repeated run
+    sheets.
 
     Key Arguments:
         - json_path: REDCap json path, Path.
@@ -444,10 +535,9 @@ def sync(Lochness, subject, dry=False):
                     'token': api_key,
                     'content': 'record',
                     'format': 'json',
-                    'filterLogic': f"[{id_field}] = '{redcap_subject}' or "
-                                   f"[{id_field}] = '{redcap_subject_sl}'"
+                    'records[0]': redcap_subject,
+                    'records[1]': redcap_subject_sl
                    }
-                    # 'records': redcap_subject
 
             # post query to redcap
             content = post_to_redcap(api_url,
@@ -468,6 +558,7 @@ def sync(Lochness, subject, dry=False):
                 content = post_to_redcap(api_url,
                                          metadata_query,
                                          _debug_tup)
+
                 metadata = json.loads(content)
                 for content_dict in content_dict_list:
                     for field in metadata:
@@ -525,6 +616,32 @@ def sync(Lochness, subject, dry=False):
 
 class REDCapError(Exception):
     pass
+
+
+def save_redcap_metadata(Lochness, subject):
+    # get fields that contains PII
+    for redcap_instance, redcap_subject in iterate(subject):
+        for redcap_project, api_url, api_key in redcap_projects(
+                Lochness, subject.study, redcap_instance):
+
+            if 'UPENN' in redcap_instance:
+                continue
+            _debug_tup = (redcap_instance, redcap_project, redcap_subject)
+            metadata_query = {'token': api_key,
+                              'content': 'metadata',
+                              'format': 'csv',
+                              'returnFormat': 'json'}
+            content = post_to_redcap(api_url,
+                                     metadata_query,
+                                     _debug_tup)
+
+            meta_data_dst = Path(Lochness['phoenix_root']) / 'GENERAL' / \
+                    'redcap_metadata.csv'
+            crc_src = lochness.crc32(content.decode('utf-8'))
+            crc_dst = lochness.crc32file(meta_data_dst)
+            if crc_dst != crc_src:
+                logger.info('metadata different - crc32: downloading data')
+                lochness.atomic_write(meta_data_dst, content)
 
 
 def redcap_projects(Lochness, phoenix_study, redcap_instance):
