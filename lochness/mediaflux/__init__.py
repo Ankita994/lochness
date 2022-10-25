@@ -162,8 +162,8 @@ def sync_module(Lochness: 'lochness.config',
                                 continue
 
                             # ENH set different permissions
-                            # os.makedirs(mf_local, exist_ok=True)
-                            # os.chmod(mf_local, 0o0770)
+                            os.makedirs(mf_local, exist_ok=True)
+                            os.chmod(mf_local, 0o0770)
 
                             # subprocess call unimelb-mf-download
                             cmd = (' ').join(['unimelb-mf-download',
@@ -174,8 +174,8 @@ def sync_module(Lochness: 'lochness.config',
 
                             p = Popen(cmd, shell=True,
                                       stdout=DEVNULL, stderr=STDOUT)
-
                             p.wait()
+
                             # verify checksum after download completes if
                             # checksum does not match, data will be downloaded
                             # again ENH should we verify checksum 5 times?
