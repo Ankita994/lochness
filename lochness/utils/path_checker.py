@@ -105,12 +105,16 @@ def update_interviews_transcript_check(df: pd.DataFrame) -> pd.DataFrame:
     # check site and AMPSCZ IDs in the transcript file name
     for index, row in transcript_int_df.iterrows():
         if not row['subject_check']:
-            transcript_int_df.loc[index, 'subject'] = re.search(
-                r'[A-Z]{2}\d{5}', row['subject']).group(0)
-            row['subject'] = transcript_int_df.loc[index, 'subject']
-            row['subject_check'] = ampscz_id_validate(row['subject'])
-            transcript_int_df.loc[index,
-                                  'subject_check'] = row['subject_check']
+            try:
+                #TODO: fix this
+                transcript_int_df.loc[index, 'subject'] = re.search(
+                    r'[A-Z]{2}\d{5}', row['subject']).group(0)
+                row['subject'] = transcript_int_df.loc[index, 'subject']
+                row['subject_check'] = ampscz_id_validate(row['subject'])
+                transcript_int_df.loc[index,
+                                      'subject_check'] = row['subject_check']
+            except:
+                pass
         subject = row['subject']
         site = row['site']
         transcript_int_df.loc[index, 'file_check'] = re.match(
