@@ -67,7 +67,8 @@ def get_rpms_database(rpms_root_path: str) -> Dict[str, pd.DataFrame]:
                 try:
                     df_tmp = pd.read_csv(row.measure_file, dtype=str)
                 except pd.errors.EmptyDataError:  # ignore csv is empty
-                    continue
+                    shutil.move(row.measure_file,
+                                rpms_old_files_root / row.measure_file.name)
 
                 all_df_dict[measure_name] = df_tmp
                 measure_date_dict[measure_name] = row.measure_file_date
