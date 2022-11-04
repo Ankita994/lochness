@@ -205,7 +205,10 @@ def initialize_metadata(Lochness: 'Lochness object',
                         rpms_id_colname].unique()
 
 
-    for measure, df_measure_all_subj in all_df_dict.items():
+    # for measure, df_measure_all_subj in all_df_dict.items():
+    for df_measure_all_subj in [
+            all_df_dict['informed_consent_run_sheet'],
+            all_df_dict['digital_biomarkers_mindlamp_onboarding']]:
         df_measure_all_subj = df_measure_all_subj[
             df_measure_all_subj[rpms_id_colname].isin(subject_with_consent)
             ]
