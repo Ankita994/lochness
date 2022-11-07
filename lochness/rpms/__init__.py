@@ -217,62 +217,71 @@ def initialize_metadata(Lochness: 'Lochness object',
         site_code_study = study_name[-2:]  # 'AD'
         project_name = study_name.split(site_code_study)[0]  # 'Prescient'
 
-        # loop through each line of the RPMS database
-        for index, df_measure in df_measure_all_subj.iterrows():
-            if not df_measure[rpms_id_colname] in ids_with_consent:
-                continue
+        # loop through each subject in the RPMS database
+        if not rpms_id_colname in df_measure_all_subj.columns:
+            continue
 
-            # ignore if testcase
-            if df_measure[rpms_id_colname] in ignore_id_list:
-                continue
-
-            # if ids to pull exist
-            if len(id_list) > 0:
-                # don't pull if it's not in the list
-                if df_measure[rpms_id_colname] not in id_list:
+        for subject, df_table in df_measure_all_subj.groupby(
+                rpms_id_colname):
+            for index, df_measure in df_table.iterrows():
+                if not df_measure[rpms_id_colname] in ids_with_consent:
                     continue
 
-            # if the rpms table is not ready (e.g.doesn't have the subject col)
-            if rpms_id_colname not in df_measure.index or \
-                pd.isna(df_measure[rpms_id_colname]):
-                continue
+                # ignore if testcase
+                if df_measure[rpms_id_colname] in ignore_id_list:
+                    continue
 
-            site_code_rpms_id = df_measure[rpms_id_colname][:2]
+                # if ids to pull exist
+                if len(id_list) > 0:
+                    # don't pull if it's not in the list
+                    if df_measure[rpms_id_colname] not in id_list:
+                        continue
 
-            # if the subject does not belong to the site, pass it
-            if site_code_rpms_id != site_code_study:
-                continue
+                # if the rpms table is not ready
+                # (e.g.doesn't have the subject col)
+                if rpms_id_colname not in df_measure.index or \
+                    pd.isna(df_measure[rpms_id_colname]):
+                    continue
 
-            subject_dict = {'Subject ID': df_measure[rpms_id_colname],
-                            'Study': site_code_study}
+                site_code_rpms_id = df_measure[rpms_id_colname][:2]
 
-            # if mindlamp_id exists in the rpms table
-            if 'chrdbb_lamp_id' in df_measure:
-                if not pd.isna(df_measure[f'chrdbb_lamp_id']):
-                    subject_dict['Mindlamp'] = f'mindlamp.{study_name}:' \
-                            + df_measure[f'chrdbb_lamp_id']
+                # if the subject does not belong to the site, pass it
+                if site_code_rpms_id != site_code_study:
+                    continue
 
-            # Consent date
-            if rpms_consent_colname in df_measure.index:
-                subject_dict['Consent'] = datetime.strptime(
-                        df_measure[rpms_consent_colname],
-                        '%d/%m/%Y %I:%M:%S %p').strftime('%Y-%m-%d')
-            # else:
-                # subject_dict['Consent'] = '2021-10-01'  # pseudo-random date
-                # continue  ## subject without consent date will be ignored
+                subject_dict = {'Subject ID': df_measure[rpms_id_colname],
+                                'Study': site_code_study}
 
-            # mediaflux source has its foldername as its subject ID
-            subject_dict['RPMS'] = f'rpms.{study_name}:' + \
-                                   df_measure[rpms_id_colname]
-            subject_dict['Mediaflux'] = f'mediaflux.{study_name}:' + \
-                                        df_measure[rpms_id_colname]
+                # if mindlamp_id exists in the rpms table
+                if 'chrdbb_lamp_id' in df_measure:
+                    # most_recent_lamp_id = df_table
+                    df_table['LastModifiedDate'] = pd.to_datetime(
+                            df_table['LastModifiedDate'])
+                    df_table = df_table.sort_values('LastModifiedDate')
+                    most_recent_lamp_id = df_table.iloc[-1][
+                            'chrdbb_lamp_id']
+                    if not pd.isna(most_recent_lamp_id):
+                        subject_dict['Mindlamp'] = \
+                            f'mindlamp.{study_name}:{most_recent_lamp_id}'
 
-            if upenn:
-                subject_dict['REDCap'] = \
-                    'redcap.UPENN:' + df_measure[rpms_id_colname]
+                # Consent date
+                if rpms_consent_colname in df_measure.index:
+                    subject_dict['Consent'] = datetime.strptime(
+                            df_measure[rpms_consent_colname],
+                            '%d/%m/%Y %I:%M:%S %p').strftime('%Y-%m-%d')
 
-            df_tmp = pd.DataFrame.from_dict(subject_dict, orient='index')
-            df = pd.concat([df, df_tmp.T])
+                # mediaflux source has its foldername as its subject ID
+                subject_dict['RPMS'] = f'rpms.{study_name}:' + \
+                                       df_measure[rpms_id_colname]
+                subject_dict['Mediaflux'] = f'mediaflux.{study_name}:' + \
+                                            df_measure[rpms_id_colname]
+
+                if upenn:
+                    subject_dict['REDCap'] = \
+                        'redcap.UPENN:' + df_measure[rpms_id_colname]
+
+                df_tmp = pd.DataFrame.from_dict(subject_dict, orient='index')
+                df = pd.concat([df, df_tmp.T])
 
     # if there is no data for the study, return without saving metadata
     if len(df) == 0:
@@ -318,20 +327,21 @@ def get_subject_data(all_df_dict: Dict[str, pd.DataFrame],
         # RPMS should overwrite the row whenever there is an update in any 
         # field of the visit. The snippet below is a safety measure, to store
         # most recent visit row for each visit
-        if 'visit' in subject_df.columns:
-            for unique_visit, table in subject_df.groupby('visit'):
-                if len(table) == 1 or 'Row#' in subject_df:
-                    pass
-                # entry_status form does not have LastModifiedDate
-                elif measure == 'entry_status':
-                    pass
-                else:
-                    most_recent_row_index = pd.to_datetime(
-                            table['LastModifiedDate']).idxmax()
-                    non_recent_row_index = [x for x in table.index
-                             if x != most_recent_row_index]
-                    print(f'RPMS export has duplicated rows for {measure}')
-                    subject_df.drop(non_recent_row_index, inplace=True)
+        # if 'visit' in subject_df.columns:
+            # for unique_visit, table in subject_df.groupby('visit'):
+                # if len(table) == 1 or 'Row#' in subject_df:
+                    # pass
+                # # entry_status form does not have LastModifiedDate
+                # elif measure == 'entry_status':
+                    # pass
+                # else:
+                    # pass
+                    # most_recent_row_index = pd.to_datetime(
+                            # table['LastModifiedDate']).idxmax()
+                    # non_recent_row_index = [x for x in table.index
+                             # if x != most_recent_row_index]
+                    # print(f'RPMS export has duplicated rows for {measure}')
+                    # subject_df.drop(non_recent_row_index, inplace=True)
 
         subject_df_dict[measure] = subject_df
 
