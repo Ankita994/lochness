@@ -446,10 +446,18 @@ def create_s3_transfer_table(Lochness, rewrite=False) -> None:
     df['datatypes'] = df['source'].apply(lambda x: x.parts[5]
                                          if len(x.parts) > 5 else '')
 
-    # add ctime
-    df['ctime'] = df['source'].apply(lambda x: \
-            datetime.fromtimestamp(
-                os.path.getctime(Path(Lochness['phoenix_root']).parent / x)))
+    def get_ctime_or_nan(x):
+        try:
+            ctime = datetime.fromtimestamp(
+                os.path.getctime(Path(Lochness['phoenix_root']).parent / x))
+        except:
+            ctime = pd.NA
+        return ctime
+
+    # df['ctime'] = df['source'].apply(lambda x: \
+            # datetime.fromtimestamp(
+                # os.path.getctime(Path(Lochness['phoenix_root']).parent / x)))
+    df['ctime'] = df['source'].apply(lambda x: get_ctime_or_nan(x))
     df['ctime'] = pd.to_datetime(df['ctime'])
 
     # clean up rows for metadata.csv
