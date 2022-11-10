@@ -2,6 +2,8 @@ import lochness
 import os
 import shutil
 from datetime import datetime
+from lochness.config import load
+from lochness.transfer import get_updated_files, compress_list_of_files
 from lochness.transfer import get_updated_files, compress_list_of_files
 from lochness.transfer import compress_new_files
 from lochness.transfer import lochness_to_lochness_transfer_sftp
@@ -523,8 +525,13 @@ def test_create_s3_transfer_table():
     k = KeyringAndEncrypt(args.outdir)
     k.update_var_subvars('lochness_sync', 'transfer')
 
-    lochness = config_load_test('tmp_lochness/config.yml', '')
-    create_s3_transfer_table(lochness)
+    Lochness = config_load_test('tmp_lochness/config.yml', '')
+    create_s3_transfer_table(Lochness)
+
+
+def test_create_s3_transfer_table_real():
+    Lochness = load('/mnt/ProNET/Lochness/config.yml')
+    create_s3_transfer_table(Lochness)
 
 
 def test_create_s3_transfer_table_with_prev_data():
