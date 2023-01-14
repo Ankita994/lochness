@@ -88,7 +88,7 @@ def make_deleted_structure(phoenix_root: Path,
 
 def rm_transferred_files_under_phoenix(
         phoenix_root: Path,
-        days_to_keep: int = 15,
+        days_to_keep: int = 30,
         removed_df_loc: Path = None,
         removed_phoenix_root: Path = None) -> None:
     '''Remove s3 transferred files from PHOENIX
@@ -102,8 +102,9 @@ def rm_transferred_files_under_phoenix(
                               removed files, Path. If None, the function does
                               not create this new phoenix directory.
     '''
+    phoenix_root = Path(phoenix_root)
 
-    df_okay_to_remove = get_ok2remove_df_from_s3_log(Path(phoenix_root),
+    df_okay_to_remove = get_ok2remove_df_from_s3_log(phoenix_root,
                                                      days_to_keep)
 
     if removed_df_loc is None:
@@ -118,7 +119,7 @@ def rm_transferred_files_under_phoenix(
         for file in files:
             file_path = Path(root) / file
             if is_path_ok2remove(phoenix_root, file_path, df_okay_to_remove):
-                # os.remove(file_path)
+                os.remove(file_path)
                 df_removed_tmp = pd.DataFrame({
                     'source': [file_path],
                     'removal_date': datetime.now()})
