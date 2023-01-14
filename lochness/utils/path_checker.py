@@ -118,7 +118,7 @@ def update_interviews_transcript_check(df: pd.DataFrame) -> pd.DataFrame:
         subject = row['subject']
         site = row['site']
         transcript_int_df.loc[index, 'file_check'] = re.match(
-                f'{site}_{subject}_'
+                f'(Prescient|){site}_{subject}_'
                 'interviewAudioTranscript_(open|psychs)_day[-\d]+_session\d+.txt',
                 row['file_name'])
 
@@ -150,7 +150,7 @@ def update_interviews_teams_data_check(df: pd.DataFrame) -> pd.DataFrame:
     # interviews transcript
     video_int_index = df[
             (df.modality=='Interviews') &
-            (df.file_name.str.endswith('.wav'))
+            (df.file_name.str.lower().str.endswith('.wav'))
             ].index
 
     video_int_df = df.loc[video_int_index]
@@ -161,7 +161,7 @@ def update_interviews_teams_data_check(df: pd.DataFrame) -> pd.DataFrame:
 
     # file name pattern check
     video_int_df['file_pattern_check'] = video_int_df['file_name'].str.match(
-                r'\d{4}\d{2}\d{2}\d{6}_[A-Z]{2}\d{5}_(OPEN|PSYSCS).wav')
+                r'\d{4}\d{2}\d{2}\d{6}_[A-Z]{2}\d{5}_(OPEN|PSYSCS).(wav|WAV)')
     video_int_df['file_check'] = video_int_df['directory_check'] & \
         video_int_df['file_name']
     df.loc[video_int_index] = video_int_df
