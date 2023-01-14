@@ -144,7 +144,7 @@ def is_transferred_and_removed(Lochness,
         removed_df_loc: path of a 'removed_files.csv', str.
     '''
     if removed_df_loc is None:
-        removed_df_loc = Path(Lochness['phoenix_root']) / 'removed_files.csv'
+        removed_df_loc = Path(Lochness['removed_df_loc'])
 
     if Path(removed_df_loc).is_file():
         df_removed = pd.read_csv(removed_df_loc, index_col=0)
@@ -152,6 +152,7 @@ def is_transferred_and_removed(Lochness,
         df_removed = pd.DataFrame()
         df_removed['source'] = []
 
+    print(df_removed)
     if str(destination) in df_removed.source.tolist():
         return True
     else:
