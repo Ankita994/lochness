@@ -119,7 +119,6 @@ def get(data_type, base, **kwargs):
 
     if kwargs.get('makedirs', True):#  and \
             # processed_folder and not os.path.exists(processed_folder):
-        logger.debug(f'creating processed folder {processed_folder}')
 
         protected_str = Path(re.sub('GENERAL', 'PROTECTED',
                              str(processed_folder)))
@@ -137,8 +136,6 @@ def get(data_type, base, **kwargs):
 
     if kwargs.get('makedirs', True):# and \
             # raw_folder and not os.path.exists(raw_folder):
-        logger.debug(f'creating raw folder {raw_folder}')
-
         protected_str = Path(re.sub('GENERAL', 'PROTECTED', str(raw_folder)))
         general_str = Path(re.sub('GENERAL', 'PROTECTED', str(raw_folder)))
         protected_str.mkdir(exist_ok=True, parents=True)
