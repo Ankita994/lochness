@@ -192,7 +192,7 @@ def sync_module(Lochness: 'lochness.config',
                                         file_p = Path(root) / file
                                         perm = oct(file_p.stat().st_mode)[-3:]
                                         if perm != '770':
-                                            os.chmod(file_p, 0o01770)
+                                            os.chmod(file_p, 0o0770)
 
 
 def sync(Lochness, subject, dry):
