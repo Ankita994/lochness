@@ -2,6 +2,9 @@ import lochness
 from lochness.xnat import sync
 from lochness import config
 from pathlib import Path
+from lochness.config import load
+import lochness
+import time
 
 import sys
 lochness_root = Path(lochness.__path__[0]).parent
@@ -13,6 +16,7 @@ from test_lochness import Args, KeyringAndEncrypt, Tokens
 from test_lochness import show_tree_then_delete, rmtree, config_load_test
 from test_lochness import initialize_metadata_test
 from lochness_create_template import create_lochness_template
+from lochness.xnat import sync
 
 import pytest
 
@@ -83,10 +87,12 @@ def test_xnat_sync_module_default(args_and_Lochness):
 
 
 def test_on_pronet_server():
-    with open('tmp_to_remove.txt', 'r') as f:
-        url, username, password = [x.strip() for x in f.readlines()]
+    Lochness = load('/mnt/ProNET/Lochness/config.yml')
+    keyring = Lochness['keyring']
+    xnat_k = keyring['xnat.PronetLA']
 
-    auth = yaxil.XnatAuth(url=url, username=username, password=password)
+    auth = yaxil.XnatAuth(url=xnat_k['URL'],
+            username=xnat_k['USERNAME'], password=xnat_k['PASSWORD'])
     xnat_subject = yaxil.subjects(auth, 'WU00007', 'PronetWU_washu')
     xnat_subject = next(xnat_subject)
     for experiment in yaxil.experiments(auth, subject=xnat_subject):
@@ -96,6 +102,104 @@ def test_on_pronet_server():
                        scan_ids=['ALL'], out_dir='test',
                        in_mem=False, attempts=1,
                        out_format='native')
+
+def test_on_pronet_make_it_zip():
+    Lochness = load('/mnt/ProNET/Lochness/config.yml')
+    keyring = Lochness['keyring']
+    xnat_k = keyring['xnat.PronetLA']
+
+    auth = yaxil.XnatAuth(url=xnat_k['URL'],
+            username=xnat_k['USERNAME'], password=xnat_k['PASSWORD'])
+    xnat_subject = yaxil.subjects(auth, 'WU00007', 'PronetWU_washu')
+    xnat_subject = next(xnat_subject)
+    for experiment in yaxil.experiments(auth, subject=xnat_subject):
+        print(experiment)
+        print(experiment.index)
+        print(experiment.id)
+        print(dir(experiment))
+                       # scan_ids=['ALL'], out_file='test.zip',
+        yaxil.download(auth, experiment.label,
+                       project=experiment.project,
+                       scan_ids=['1'], out_file='/opt/software/lochness/tests/lochness_test/hoho.zip',
+                       in_mem=False, attempts=1,
+                       out_format='native', extract=False, progress=True)
+
+
+def test_CA_transfer_time():
+    Lochness = load('/mnt/ProNET/Lochness/config.yml')
+    keyring = Lochness['keyring']
+    xnat_k = keyring['xnat.PronetLA']
+
+    auth = yaxil.XnatAuth(url=xnat_k['URL'],
+            username=xnat_k['USERNAME'], password=xnat_k['PASSWORD'])
+    xnat_subject = yaxil.subjects(auth, 'CA03409', 'PronetCA_calgary')
+    # xnat_subject = yaxil.subjects(auth, 'WU00007', 'PronetWU_washu')
+    xnat_subject = next(xnat_subject)
+    for experiment in yaxil.experiments(auth, subject=xnat_subject):
+        print(experiment)
+        start_time = time.time()
+        # yaxil.download(auth, experiment.label,
+                       # project=experiment.project,
+                       # scan_ids=['ALL'], out_dir='test',
+                       # in_mem=False, attempts=1,
+                       # out_format='native')
+        yaxil.download_tmp(auth, experiment.label,
+                           project=experiment.project,
+                           scan_ids=['ALL'], out_dir='test',
+                           in_mem=False, attempts=1,
+                           out_format='native')
+    print()
+    print(f'{time.time() - start_time:.2f}s')
+
+def test_CA_transfer_time_separate_sessions():
+    Lochness = load('/mnt/ProNET/Lochness/config.yml')
+    keyring = Lochness['keyring']
+    xnat_k = keyring['xnat.PronetLA']
+
+    auth = yaxil.XnatAuth(url=xnat_k['URL'],
+                          username=xnat_k['USERNAME'],
+                          password=xnat_k['PASSWORD'])
+    xnat_subject = yaxil.subjects(auth, 'CA01089', 'PronetCA_calgary')
+    # xnat_subject = yaxil.subjects(auth, 'WU00007', 'PronetWU_washu')
+    xnat_subject = next(xnat_subject)
+    for experiment in yaxil.experiments(auth, subject=xnat_subject):
+        print(experiment)
+        print()
+        # for session in ['6', '16', '12', '14', '22', '24']:
+        # for session in ['1']:
+        for session in ['12', '14', '22', '24']:
+            print(session)
+            start_time = time.time()
+            # yaxil.download(auth, experiment.label,
+                           # project=experiment.project,
+                           # scan_ids=['ALL'], out_dir='test',
+                           # in_mem=False, attempts=1,
+                           # out_format='native')
+            yaxil.download_tmp(auth, experiment.label,
+                               project=experiment.project,
+                               scan_ids=[session],
+                               out_dir='test',
+                               in_mem=False, attempts=1,
+                               out_format='native')
+            # yaxil.download(auth, experiment.label,
+                           # project=experiment.project,
+                           # scan_ids=[session],
+                           # out_file=f'tmp_{session}.zip',
+                           # in_mem=False, attempts=1,
+                           # out_format='native',
+                           # extract=False, progress=True)
+            print(f'{time.time() - start_time:.2f}s')
+
+
+
+def test_new_sync_function():
+    Lochness = load('/mnt/ProNET/Lochness/config.yml')
+    for subject in lochness.read_phoenix_metadata(Lochness, ['PronetYA']):
+        if subject.id == 'YA08362':
+            break
+
+    # sync_new(Lochness, subject)
+
 
 
 # def test_box_sync_module_default(args_and_Lochness):

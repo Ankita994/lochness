@@ -124,9 +124,7 @@ def check_list_all_redcap_subjects(project_name: str,
     df = pd.DataFrame(content_dict_list)
     if len(df) > 1:
         print(df)
-        df.columns = ['subject', 'redcap_event_name',
-                      'redcap_repeat_instrument', 'redcap_repeat_instance',
-                      'consent_date']
+        df.columns = ['subject', '_', 'consent_date']
 
         # select records that start with the project name
         df = df[df.subject.str.match('[A-Z][A-Z]\d{5}')]
@@ -456,7 +454,6 @@ def check_source(Lochness: 'lochness', test: bool = False) -> None:
 
     # select final_check failed files, and clean up
     all_df.reset_index(inplace=True, drop=True)
-    all_df.to_csv('test.csv')
 
     # consent date
     for index, row in all_df.iterrows():
@@ -525,4 +522,5 @@ if __name__ == '__main__':
     Lochness = load(config_loc)
     Lochness['file_check_notify']['__global__'] = [
             'kevincho@bwh.harvard.edu']
-    check_source(Lochness, test=True)
+    # check_source(Lochness, test=True)
+    check_source(Lochness, test=False)
