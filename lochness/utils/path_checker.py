@@ -89,7 +89,7 @@ def update_interviews_transcript_check(df: pd.DataFrame) -> pd.DataFrame:
     '''Check logics in rows for Interviews transcripts'''
     transcript_int_index = df[
             (df.modality=='Interviews') &
-            (df.subject.isin(['For_review', 'For review', 'Approved']))].index
+            (df.subject.isin(['For_review', 'Approved']))].index
 
     transcript_int_df = df.loc[transcript_int_index]
     transcript_int_df['subject'] = nth_item_from_path(transcript_int_df, 4)
