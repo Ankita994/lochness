@@ -799,9 +799,12 @@ def save_redcap_metadata(Lochness, subject):
             meta_data_dst = Path(Lochness['phoenix_root']) / 'GENERAL' / \
                     'redcap_metadata.csv'
             crc_src = lochness.crc32(content.decode('utf-8'))
-            crc_dst = lochness.crc32file(meta_data_dst)
-            if crc_dst != crc_src:
-                logger.info('metadata different - crc32: downloading data')
+            if meta_data_dst.is_file():
+                crc_dst = lochness.crc32file(meta_data_dst)
+                if crc_dst != crc_src:
+                    logger.info('metadata different - crc32: downloading data')
+                    lochness.atomic_write(meta_data_dst, content)
+            else:
                 lochness.atomic_write(meta_data_dst, content)
 
 
