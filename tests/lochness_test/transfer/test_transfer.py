@@ -534,6 +534,20 @@ def test_create_s3_transfer_table_real():
     create_s3_transfer_table(Lochness)
 
 
+def test_parallel_transfer():
+    Lochness = load('/mnt/ProNET/Lochness/config.yml')
+    # lochness_to_lochness_transfer_s3_protected(
+            # Lochness,
+            # ['PronetYA', 'PronetCA'],
+            # sources=['redcap', 'box', 'mindlamp'])
+    lochness_to_lochness_transfer_s3(
+            Lochness,
+            ['PronetYA', 'PronetCA'],
+            sources=['box'])
+
+    # create_s3_transfer_table(Lochness)
+
+
 def test_create_s3_transfer_table_with_prev_data():
     args = Args('tmp_lochness')
     args.rsync = True
