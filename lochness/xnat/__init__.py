@@ -9,6 +9,7 @@ import collections as col
 import lochness.net as net
 import lochness.tree as tree
 import lochness.config as config
+from lochness.cleaner import is_transferred_and_removed
 
 yaml.SafeDumper.add_representer(
         col.OrderedDict, yaml.representer.SafeRepresenter.represent_dict)
@@ -23,13 +24,10 @@ def sync(Lochness, subject, dry=False):
         Keyring = Lochness['keyring'][alias]
         auth = yaxil.XnatAuth(url=Keyring['URL'], username=Keyring['USERNAME'],
                               password=Keyring['PASSWORD'])
-        
-        
         '''
-        pull XNAT data agnostic to the case of subject IDs
-        loop over lower and upper case IDs
-        if the data for one ID do not exist, experiments(auth, xnat_uid) returns nothing
-        preventing the execution of inner loop
+        pull XNAT data agnostic to the case of subject IDs loop over lower and
+        upper case IDs if the data for one ID do not exist, experiments(auth,
+        xnat_uid) returns nothing preventing the execution of inner loop
         '''
         _xnat_uids= xnat_uids + [(x[0], x[1].lower()) for x in xnat_uids]
         for xnat_uid in _xnat_uids:
@@ -40,14 +38,24 @@ def sync(Lochness, subject, dry=False):
                                    processed=False,
                                    BIDS=Lochness['BIDS'])
                 dst = os.path.join(dirname, experiment.label.upper())
+
+                # do not re-download already transferred & removed data
+                if is_transferred_and_removed(Lochness, dst):
+                    continue
+
                 if os.path.exists(dst):
                     try:
                         check_consistency(dst, experiment)
                         continue
                     except ConsistencyError as e:
                         logger.warn(e)
-                        message = 'A conflict was detected in study' \
-                                  f'{subject.study}'
+                        message = 'A conflict was detected in study ' \
+                                  f'{subject.study}\n' \
+                                  f'There is existing data in {dst}, but ' \
+                                  'it does not match the data on XNAT.' \
+                                  'Please check MRI data saved in {dst} and ' \
+                                  'compared to the XNAT data.'
+                            
                         lochness.notify(Lochness, message, study=subject.study)
                         #lochness.backup(dst)
                         continue
@@ -56,6 +64,7 @@ def sync(Lochness, subject, dry=False):
                 logger.debug(message.format(PROJECT=experiment.project,
                                             LABEL=experiment.label,
                                             FOLDER=dst))
+
                 if not dry:
                     tmpdir = tf.mkdtemp(dir=dirname, prefix='.')
                     os.chmod(tmpdir, 0o0755)
@@ -79,7 +88,8 @@ def check_consistency(d, experiment):
     local_uid = experiment_local['id']
     remote_uid = experiment.id
     if local_uid != remote_uid:
-        raise ConsistencyError('conflict detected {0} != {1}'.format(local_uid, remote_uid))
+        raise ConsistencyError('conflict detected {0} != {1}'.format(
+            local_uid, remote_uid))
 
 
 class ConsistencyError(Exception):
@@ -109,8 +119,7 @@ def experiments(auth, uid):
         xnat_subject = yaxil.subjects(auth, subject, project)
         xnat_subject = next(xnat_subject)
     except yaxil.exceptions.AccessionError as e:
-        logger.info('no xnat subject registered for {0}'.format(uid))
-        logger.warn('double check your xnat credentials')
+        logger.info('Accession Error for {0}'.format(uid))
         return
     except yaxil.exceptions.NoSubjectsError as e:
         logger.info('no xnat subject registered for {0}'.format(uid))

@@ -13,9 +13,8 @@ from pathlib import Path
 import pandas as pd
 import re
 import time
-import hashlib
 import shutil
-
+from lochness.utils.checksum import get_sha
 
 class S(BaseHTTPRequestHandler):
     def _set_response(self):
@@ -121,25 +120,13 @@ def save_post_from_redcap(body: str, db_location: str):
         'record': record,
         'instrument': instrument})
 
-    db_df = db_df.append(df_tmp)
+    db_df = pd.concat([db_df, df_tmp])
     db_df[columns].to_csv(db_location)
 
 
 def get_info_from_post_body(var_name, body):
     pattern_catcher = '([A-Za-z%0-9:\./?\=_]+)'
     return re.search(f'{var_name}={pattern_catcher}', body).group(1)
-
-
-def get_sha(file_loc: str) -> str:
-    '''return sha256 hexdigest of a file'''
-    BUF_SIZE = 65536
-    sha256 = hashlib.sha256()
-
-    with open(file_loc, 'rb') as f:
-        data = f.read(BUF_SIZE)
-        sha256.update(data)
-
-    return sha256.hexdigest()
 
 
 def back_up_db(db_location) -> None:

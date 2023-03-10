@@ -166,7 +166,7 @@ def _subjects(Lochness, study, general_folder, protected_folder, metadata_file):
         phoenix_id = row['Subject ID'].strip()
 
         # these columns are optional
-        phoenix_study = row.get('Study', study).strip()
+        phoenix_study = study
 
         saliva = dict()
         if 'Saliva' in row:
@@ -218,7 +218,8 @@ def _subjects(Lochness, study, general_folder, protected_folder, metadata_file):
 
         # sanity check on very critical bits of information
         if not phoenix_id or not phoenix_study:
-            raise StudyMetadataError('bad row in metadata file {0}'.format(meta_basename))
+            raise StudyMetadataError(
+                    'bad row in metadata file {0}'.format(meta_basename))
         general = os.path.join(general_folder, phoenix_study, phoenix_id)
         protected = os.path.join(protected_folder, phoenix_study, phoenix_id)
         subject = Subject(active, phoenix_study, phoenix_id, consent, beiwe,
@@ -226,7 +227,6 @@ def _subjects(Lochness, study, general_folder, protected_folder, metadata_file):
                           box, mediaflux, mindlamp, daris, rpms,
                           general, protected, metadata_file)
 
-        logger.debug('subject metadata blob:\n{0}'.format(json.dumps(subject.asdict(), indent=2)))
         yield subject
 
 
@@ -305,6 +305,8 @@ def _parse_redcap(value, default_id=None):
 def _parse_mindlamp(value, default_id=None):
     '''helper function to parse a mindlamp metadata value'''
     default = 'mindlamp.*:{ID}'.format(ID=default_id)
+    if value == 'nan':
+        return col.defaultdict(list)
     return _simple_parser(value, default=default)
 
 
@@ -482,9 +484,11 @@ def notify(Lochness, s, study=None):
     :type study: str
     '''
     if 'notify' not in Lochness:
-        raise NotificationError("no 'notify' section found in the configuration file")
+        raise NotificationError(
+                "no 'notify' section found in the configuration file")
     if 'sender' not in Lochness:
-        raise NotificationError("no 'sender' section found in the configuration file")
+        raise NotificationError(
+                "no 'sender' section found in the configuration file")
     # schema validation would help here instead of making assumptions
     recipients = set()
     if study and study in Lochness['notify']:
@@ -493,8 +497,15 @@ def notify(Lochness, s, study=None):
     if '__global__' in Lochness['notify']:
         for address in Lochness['notify']['__global__']:
             recipients.add(address)
-    lochness.email.send(recipients, Lochness['sender'], 'lochness notification', s)
 
+    lochness.email.send_detail(Lochness,
+                               Lochness['sender'],
+                               Lochness['notify'],
+                               'Issue at Lochness system',
+                               datetime.now(tz).date(),
+                               s, '',
+                               [],
+                               '')
 
 class NotificationError(Exception):
     pass
@@ -542,7 +553,8 @@ def iso8601(tz="UTC"):
     return dt.datetime.now(pytz.timezone(tz)).isoformat()
 
 
-def atomic_write(filename, content, overwrite=True, permissions=0o0644, encoding='utf-8'):
+def atomic_write(filename, content, overwrite=True,
+                 permissions=0o0644, encoding='utf-8'):
     '''
     Write a file atomically by writing the file content to a
     temporary location first, then renaming the file. 
@@ -573,7 +585,12 @@ def atomic_write(filename, content, overwrite=True, permissions=0o0644, encoding
             tmp.write(content)
         tmp.flush()
         os.fsync(tmp.fileno())
-    os.chmod(tmp.name, permissions)
+
+    try:  #
+        os.chmod(tmp.name, permissions)
+    except PermissionError:  # when admin forces output file permissions
+        pass
+
     os.rename(tmp.name, filename)
 
 

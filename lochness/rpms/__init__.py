@@ -9,8 +9,9 @@ import tempfile as tf
 import collections as col
 import lochness.net as net
 import lochness.tree as tree
-from typing import List, Dict
+from typing import List, Dict, Union
 import pandas as pd
+from datetime import datetime
 import re
 from lochness.redcap.process_piis import process_and_copy_db
 pd.set_option('mode.chained_assignment', None)
@@ -64,7 +65,7 @@ def get_rpms_database(rpms_root_path: str) -> Dict[str, pd.DataFrame]:
                 'measure_file_date', ascending=False).iterrows():
             if n == 0:
                 try:
-                    df_tmp = pd.read_csv(row.measure_file)
+                    df_tmp = pd.read_csv(row.measure_file, dtype=str)
                 except pd.errors.EmptyDataError:  # ignore csv is empty
                     continue
 
@@ -76,6 +77,74 @@ def get_rpms_database(rpms_root_path: str) -> Dict[str, pd.DataFrame]:
             n += 1
 
     return all_df_dict
+
+
+def get_run_sheets_for_datatypes(target_df_loc: Union[Path, str]) -> None:
+    '''Extract run sheet information from RPMS outputs and save as csv file
+
+    For each data types, there should be Run Sheets completed by RAs on RPMS
+    This information is extracted and saved as a csv flie in the 
+        PHOENIX/PROTECTED/raw/
+            {STUDY}/{DATATYPE}/{subject}.{study}.Run_sheet_{DATATYPE}.csv
+
+    Key Arguments:
+        - target_df_loc: subject RPMS csv path, Path.
+
+    Returns:
+        - None
+    '''
+    target_df_loc = Path(target_df_loc)
+    if not target_df_loc.is_file():
+        return
+
+    modality_fieldname_dict = {'eeg': 'eeg_run_sheet',
+                               'actigraphy': 'Actigraphy',
+                               'mri': 'mri_run_sheet',
+                               'surveys': 'penncnb',
+                               'interviews': 'speech_sampling_run_sheet'}
+
+    for modality, fieldname in modality_fieldname_dict.items():
+        if target_df_loc.name.endswith(f"_{fieldname}.csv"):
+            raw_subject_path = target_df_loc.parent.parent
+            subject = raw_subject_path.name
+            study = 'Prescient' + subject[:2]
+            raw_modality_path = raw_subject_path / modality
+            raw_modality_path.mkdir(exist_ok=True, parents=True)
+
+            if modality == 'surveys':
+                run_sheet_output_prefix = raw_modality_path / \
+                        f'{subject}.{study[:-2]}.Run_sheet_PennCNB'
+            else:
+                run_sheet_output_prefix = raw_modality_path / \
+                        f'{subject}.{study[:-2]}.Run_sheet_{modality}'
+
+            # convert month to datapoint
+            if modality in ['eeg', 'mri']:
+                # two month : first timepoint
+                # four month : second timpeoint
+                time_to_timepoint = {2: 1, 4: 2}
+            elif fieldname == 'PennCNB':
+                time_to_timepoint = {2: 1, 4: 2, 8: 3, 14: 4, 16: 5}
+            else:  # actigraphy & EMA
+                time_to_timepoint = dict(zip(range(2, 15), range(1, 14)))
+
+            # save run sheet
+            target_df = pd.read_csv(target_df_loc)
+            target_df['timepoint'] = target_df['visit'].map(time_to_timepoint)
+            for tp, table in target_df.groupby('timepoint'):
+                run_sheet_output = f'{run_sheet_output_prefix}_{tp}.csv'
+
+                # compare existing table
+                if Path(run_sheet_output).is_file():
+                    run_sheet_prev = pd.read_csv(
+                        run_sheet_output, dtype=str).reset_index(drop=True)
+                    same_df = table.astype(str).equals(
+                            run_sheet_prev.astype(str))
+                    if same_df:
+                        continue
+
+                table.to_csv(run_sheet_output, index=False)
+                os.chmod(run_sheet_output, 0o0755)
 
 
 def initialize_metadata(Lochness: 'Lochness object',
@@ -107,6 +176,10 @@ def initialize_metadata(Lochness: 'Lochness object',
 
     df = pd.DataFrame()
 
+    ids_with_consent = all_df_dict['informed_consent_run_sheet'][
+            ~all_df_dict['informed_consent_run_sheet'][
+                rpms_consent_colname].isnull()].subjectkey.tolist()
+
     # all_df_dict - key: name of measure, value: pd.DataFrame of the whole file
     for measure, df_measure_all_subj in all_df_dict.items():
         # get the site information from the study name, eg. PrescientAD
@@ -115,21 +188,34 @@ def initialize_metadata(Lochness: 'Lochness object',
 
         # loop through each line of the RPMS database
         for index, df_measure in df_measure_all_subj.iterrows():
-            if multistudy:
-                # site of the subject for the line
-                site_code_rpms_id = df_measure[rpms_id_colname][:2]
+            if not df_measure[rpms_id_colname] in ids_with_consent:
+                continue
 
-                # if the subject does not belong to the site, pass it
-                if site_code_rpms_id != site_code_study:
-                    continue
+            # if multistudy:
+            # site of the subject for the line
 
-            subject_dict = {'Subject ID': df_measure[rpms_id_colname]}
+            # if the rpms table is not ready (e.g.doesn't have the subject col)
+            if rpms_id_colname not in df_measure.index or \
+                pd.isna(df_measure[rpms_id_colname]):
+                continue
+
+            # print(df_measure)
+            site_code_rpms_id = df_measure[rpms_id_colname][:2]
+
+            # if the subject does not belong to the site, pass it
+            if site_code_rpms_id != site_code_study:
+                continue
+
+            subject_dict = {'Subject ID': df_measure[rpms_id_colname], 'Study': site_code_study}
 
             # Consent date
             if rpms_consent_colname in df_measure:
-                subject_dict['Consent'] = df_measure[rpms_consent_colname]
+                subject_dict['Consent'] = datetime.strptime(
+                        df_measure[rpms_consent_colname],
+                        '%d/%m/%Y %I:%M:%S %p').strftime('%Y-%m-%d')
             else:
-                subject_dict['Consent'] = '1988-09-16'  # pseudo-random date
+                # subject_dict['Consent'] = '2021-10-01'  # pseudo-random date
+                continue  ## subject without consent date will be ignored
 
             # mediaflux source has its foldername as its subject ID
             subject_dict['RPMS'] = f'rpms.{study_name}:' + \
@@ -138,9 +224,10 @@ def initialize_metadata(Lochness: 'Lochness object',
                                         df_measure[rpms_id_colname]
 
             # if mindlamp_id exists in the rpms table
-            if 'mindlamp_id' in df_measure:
-                subject_dict['mindlamp'] = f'mindlamp.{study_name}:' \
-                        + df_measure[f'mindlamp_id']
+            if 'chrdbb_lamp_id' in df_measure:
+                if not pd.isna(df_measure[f'chrdbb_lamp_id']):
+                    subject_dict['Mindlamp'] = f'mindlamp.{study_name}:' \
+                            + df_measure[f'chrdbb_lamp_id']
 
             if upenn:
                 subject_dict['REDCap'] = \
@@ -148,7 +235,6 @@ def initialize_metadata(Lochness: 'Lochness object',
 
             df_tmp = pd.DataFrame.from_dict(subject_dict, orient='index')
             df = pd.concat([df, df_tmp.T])
-
 
     # if there is no data for the study, return without saving metadata
     if len(df) == 0:
@@ -185,8 +271,30 @@ def get_subject_data(all_df_dict: Dict[str, pd.DataFrame],
 
     subject_df_dict = {}
     for measure, measure_df in all_df_dict.items():
+        if id_colname not in measure_df.columns:
+            continue
+
         measure_df[id_colname] = measure_df[id_colname].astype(str)
         subject_df = measure_df[measure_df[id_colname] == subject.id]
+
+        # RPMS should overwrite the row whenever there is an update in any 
+        # field of the visit. The snippet below is a safety measure, to store
+        # most recent visit row for each visit
+        if 'visit' in subject_df.columns:
+            for unique_visit, table in subject_df.groupby('visit'):
+                if len(table) == 1 or 'Row#' in subject_df:
+                    pass
+                # entry_status form does not have LastModifiedDate
+                elif measure == 'entry_status':
+                    pass
+                else:
+                    most_recent_row_index = pd.to_datetime(
+                            table['LastModifiedDate']).idxmax()
+                    non_recent_row_index = [x for x in table.index
+                             if x != most_recent_row_index]
+                    print(f'RPMS export has duplicated rows for {measure}')
+                    subject_df.drop(non_recent_row_index, inplace=True)
+
         subject_df_dict[measure] = subject_df
 
     return subject_df_dict
@@ -221,22 +329,19 @@ def sync(Lochness, subject, dry=False):
                                BIDS=Lochness['BIDS'])
         proc_dst = Path(proc_folder) / f"{subject_id}_{measure}.csv"
 
-        # load the time of the lastest data pull from daris
-        # estimated from the mtime of the zip file downloaded
+        # if the csv already exists, compare the dataframe
         if Path(target_df_loc).is_file():
-            latest_pull_mtime = target_df_loc.stat().st_mtime
-        else:
-            latest_pull_mtime = 0
+            # index might be different, so drop it before comparing it
+            prev_df = pd.read_csv(target_df_loc,
+                                  dtype=str).reset_index(drop=True)
+
+            # source_df still has an index from the larger RPMS export
+            # drop the index before the comparison to target_df
+            same_df = source_df.reset_index(drop=True).equals(prev_df)
+            if same_df:
+                continue
 
         if len(source_df) == 0:  # do not save if the dataframe is empty
-            continue
-
-        # if last_modified date > latest_pull_mtime, pull the data
-        source_df['LastModifiedDate'] = pd.to_datetime(
-                source_df['LastModifiedDate'])
-        if source_df['LastModifiedDate'].max() <= \
-                pd.to_datetime(latest_pull_mtime):
-            print('No new updates')
             continue
 
         if not dry:
@@ -244,6 +349,7 @@ def sync(Lochness, subject, dry=False):
             os.chmod(dirname, 0o0755)
             source_df.to_csv(target_df_loc, index=False)
             os.chmod(target_df_loc, 0o0755)
+            get_run_sheets_for_datatypes(target_df_loc)
             # process_and_copy_db(Lochness, subject, target_df_loc, proc_dst)
 
 

@@ -21,7 +21,7 @@ from boxsdk.exception import BoxOAuthException
 import cryptease as enc
 import re
 import requests
-
+from lochness.cleaner import is_transferred_and_removed
 
 logger = logging.getLogger(__name__)
 Module = lochness.lchop(__name__, 'lochness.')
@@ -281,7 +281,8 @@ def walk_from_folder_object(root: str, box_folder_object) -> \
             yield x
 
 
-def save(box_file_object: boxsdk.object.file,
+def save(Lochness: 'lochness',
+         box_file_object: boxsdk.object.file,
          box_path_tuple: Tuple[str, str],
          out_base: str,
          key=None,
@@ -306,6 +307,9 @@ def save(box_file_object: boxsdk.object.file,
 
     if not dry:
         try:
+            # do not re-download already transferred data
+            if is_transferred_and_removed(Lochness, local_fullfile):
+                return
             _save(box_file_object, box_fullpath, local_fullfile, key, compress)
             if delete:
                 logger.debug(f'deleting file on box {box_fullpath}')
@@ -513,8 +517,6 @@ def sync_module(Lochness: 'lochness.config',
                     if datatype_root_obj == None:
                         logger.debug(f'{subject.study} {datatype} {product} '
                                      f'is not found under {bx_base_obj}')
-                        for file_or_folder in bx_base_obj.get_items():
-                            print(f'{bx_base_obj}/{file_or_folder}')
                         continue
 
                     # for BIDS root datatype_obj has bx_sid
@@ -586,7 +588,8 @@ def sync_module(Lochness: 'lochness.config',
 
                         compress = product.get('compress', False)
 
-                        save(box_file_object,
+                        save(Lochness,
+                             box_file_object,
                              (root, box_file_object.name),
                              output_dir_full, key=key,
                              compress=compress, delete=False,

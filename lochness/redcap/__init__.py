@@ -51,6 +51,14 @@ def get_field_names_from_redcap(api_url: str,
     return field_names
 
 
+def remove_file_that_may_exist(file_path: Path) -> None:
+    '''Remove a file that may exist'''
+    try:
+        os.remove(file_path)
+    except:
+        pass
+
+
 def initialize_metadata(Lochness: 'Lochness object',
                         study_name: str,
                         redcap_id_colname: str,
@@ -72,39 +80,42 @@ def initialize_metadata(Lochness: 'Lochness object',
     site_code_study = study_name[-2:]  # 'LA'
     project_name = study_name.split(site_code_study)[0]  # 'Pronet'
 
+    # metadata study location
+    general_path = Path(Lochness['phoenix_root']) / 'GENERAL'
+    metadata_study = general_path / study_name / f"{study_name}_metadata.csv"
+
     # use redcap_project function to load the redcap keyrings for the project
     _, api_url, api_key = next(redcap_projects(
         Lochness, study_name, f'redcap.{project_name}'))
 
     # sources to add to the metadata, apart from REDCap, XNAT, and Box
-    source_source_name_dict = {'mindlamp': ['Mindlamp', 'chrdig_lamp_id']}
+    source_source_name_dict = {'mindlamp': ['Mindlamp', 'chrdbb_lamp_id']}
 
-    record_query = {'token': api_key,
-                    'content': 'record',
-                    'format': 'json',
-                    'fields[0]': redcap_id_colname}
+    # to extract ID and consent form for all the records that
+    # belong to the site from screening & baseline arms
+    record_query = {
+        'token': api_key,
+        'content': 'record',
+        'format': 'json',
+        'fields[0]': redcap_id_colname,
+        'fields[1]': redcap_consent_colname,
+        'events[0]': 'screening_arm_1',
+        'events[1]': 'screening_arm_2',
+        'events[2]': 'baseline_arm_1',
+        'events[3]': 'baseline_arm_2',
+        'filterLogic': f"contains([{redcap_id_colname}],'{site_code_study}')"
+        }
 
-    # only pull source_names
-    # mindlamp id is manually added to "chrdig_lamp_id" field
-    field_num = 2
-    for source, (source_name, source_field_name) in \
-            source_source_name_dict.items():
-        record_query[f"fields[{field_num}]"] = source_field_name
+
+    # to add mindlamp source ID to the record query
+    for num, (source, (source_name, source_field_name)) in \
+            enumerate(source_source_name_dict.items()):
+        record_query[f"fields[{2+num}]"] = source_field_name
 
     # pull all records from the project's REDCap repo
-    try:
-        content = post_to_redcap(api_url,
-                                 record_query,
-                                 f'initializing data {study_name}')
-    except:  # if subject ID field name are not set, above will raise error
-        record_query = {
-            'token': api_key,
-            'content': 'record',
-            'format': 'json',
-        }
-        content = post_to_redcap(api_url,
-                                 record_query,
-                                 f'initializing data {study_name}')
+    content = post_to_redcap(api_url,
+                             record_query,
+                             f'initializing data {study_name}')
 
     # load pulled information as a list of dictionaries
     with tf.NamedTemporaryFile(suffix='tmp.json') as tmpfilename:
@@ -112,75 +123,95 @@ def initialize_metadata(Lochness: 'Lochness object',
         with open(tmpfilename.name, 'r') as f:
             data = json.load(f)
 
+    # replace empty string as None
+    df = pd.DataFrame(data).replace('', None)
+
+    # if empty REDCap
+    if len(df) == 0:
+        logger.warn(f'There are no records for {site_code_study}')
+        remove_file_that_may_exist(metadata_study)
+        return
+
+    # only keep AMPSCZ rows
+    df = df[df[redcap_id_colname].str.match('[A-Z]{2}\d{5}')]
+
+    # if no data matches AMPSCZ ID
+    if len(df) == 0:
+        logger.warn(f'There are no records for {site_code_study}')
+        remove_file_that_may_exist(metadata_study)
+        return
+
+    # make a single row for each subject record
+    # redcap_event_name column contains timepoint information (different arms)
+    df.drop('redcap_event_name', axis=1, inplace=True)
+
+    df_final = pd.DataFrame()
+    for subject, df_tmp in df.groupby(redcap_id_colname):
+        df_new = pd.concat(
+            [df_tmp[col].dropna().reset_index(drop=True) for col in df_tmp],
+            axis=1)
+        df_final = pd.concat([df_final, df_new], axis=0)
+
+    # drop if consent date is missing
+    df_final = df_final[
+            ~df_final[redcap_consent_colname].isnull()].reset_index()
+
+    # skip no data has consent date
+    if len(df_final) == 0:
+        logger.warn(f'There are no records for {site_code_study}')
+        remove_file_that_may_exist(metadata_study)
+        return
+
     df = pd.DataFrame()
     # extract subject ID and source IDs for each sources
-    for item in data:
-        if multistudy:  # filter out data from other sites
-            site_code_redcap_id = item[redcap_id_colname][:2]
-            if site_code_redcap_id != site_code_study:
-                continue
-
-        subject_dict = {'Subject ID': item[redcap_id_colname]}
+    for index, row in df_final.iterrows():
+        subject_id = row[redcap_id_colname]
+        # Subject ID
+        subject_dict = {'Subject ID': subject_id, 'Study': site_code_study}
 
         # Consent date
-        try:
-            subject_dict['Consent'] = item[redcap_consent_colname]
-        except:
-            subject_dict['Consent'] = '1900-01-01'
+        subject_dict['Consent'] = row[redcap_consent_colname]
 
         # Redcap default information
         subject_dict['REDCap'] = \
-                f'redcap.{project_name}:{item[redcap_id_colname]}'
-        if upenn:
-            subject_dict['REDCap'] += \
-                    f';redcap.UPENN:{item[redcap_id_colname]}'  # UPENN REDCAP
+                f'redcap.{project_name}:{subject_id}'
+        subject_dict['REDCap'] += \
+                f';redcap.UPENN:{row[redcap_id_colname]}'  # UPENN REDCAP
+        subject_dict['Box'] = f'box.{study_name}:{subject_id}'
+        subject_dict['XNAT'] = f'xnat.{study_name}:*:{subject_id}'
 
-        subject_dict['Box'] = f'box.{study_name}:{item[redcap_id_colname]}'
-        subject_dict['XNAT'] = f'xnat.{study_name}:*:{item[redcap_id_colname]}'
-
+        # for the datatype, which requires ID extraction from REDCap
         for source, (source_name, source_field_name) \
                 in source_source_name_dict.items():
-            # if mindlamp_id field is available in REDCap record
-            source_id = item[source_field_name]
-            if source_id != '':
-                subject_dict[source_name] = \
-                        f"{source}.{study_name}:{source_id}"
-            else:
+            if pd.isnull(row[source_field_name]):
                 pass
+            else:
+                value = row[source_field_name]
+                subject_dict[source_name] = f"{source}.{study_name}:{value}"
 
-        df_tmp = pd.DataFrame.from_dict(subject_dict, orient='index')
-        df = pd.concat([df, df_tmp.T])
-
-    if len(df) == 0:
-        logger.warn(f'There are no records for {site_code_study}')
-        return
-
-    # Each subject may have more than one arms, which will result in more than
-    # single item for the subject in the redcap pulled `content`
-    # remove empty lables
-    df_final = pd.DataFrame()
-    for _, table in df.groupby(['Subject ID']):
-        pad_filled = table.fillna(
-                method='ffill').fillna(method='bfill').iloc[0]
-
-        df_final = pd.concat([df_final, pad_filled], axis=1)
-
-    df_final = df_final.T
+        subject_df_tmp = pd.DataFrame.from_dict(subject_dict, orient='index')
+        df = pd.concat([df, subject_df_tmp.T])
 
     # register all of the lables as active
-    df_final['Active'] = 1
+    df['Active'] = 1
 
-    # reorder columns
+    # reorder columns to match lochness metadata format
     main_cols = ['Active', 'Consent', 'Subject ID']
-    df_final = df_final[main_cols + \
-            [x for x in df_final.columns if x not in main_cols]]
+    df = df[main_cols + \
+            [x for x in df.columns if x not in main_cols]]
 
-    general_path = Path(Lochness['phoenix_root']) / 'GENERAL'
-    metadata_study = general_path / study_name / f"{study_name}_metadata.csv"
-    df_final.to_csv(metadata_study, index=False)
+    # only overwrite when there is an update in the data
+    target_df = pd.read_csv(metadata_study)
+    same_df = df.reset_index(drop=True).equals(target_df)
+    if same_df:
+        pass
+    else:
+        df.to_csv(metadata_study, index=False)
 
 
-def get_run_sheets_for_datatypes(json_path: Union[Path, str]) -> None:
+def get_run_sheets_for_datatypes(api_url, api_key,
+                                 redcap_subject, id_field,
+                                 json_path: Union[Path, str]) -> None:
     '''Extract run sheet information from REDCap JSON and save as csv file
 
     For each data types, there should be Run Sheets completed by RAs on REDCap.
@@ -197,50 +228,94 @@ def get_run_sheets_for_datatypes(json_path: Union[Path, str]) -> None:
     if not json_path.is_file():
         return
 
-    with open(json_path, 'r') as f:
-        data = json.load(f)
-
-    if type(data) == list:  # most cases, because U24 has follow up data
-        pass
-    elif type(data) == dict:  # single timepoint cases
-        data = [data]
-    else:
-        raise TypeError(f'Type of the data in {json_path} is not correct')
-
-
     raw_path = Path(json_path).parent.parent
 
-    modality_fieldname_dict = {'eeg': 'eeg',
-                               'actigraphy': 'axivity',
-                               'mri': 'mri'}
-    for modality, fieldname in modality_fieldname_dict.items():
-        modality_df = pd.DataFrame()
-        raw_modality_path = raw_path / modality
-        for data_num, data_timepoint in enumerate(data):
-            modality_key_names = [x for x in data_timepoint.keys()
-                    if fieldname in x.lower()]
-            for _, modality_key_name in enumerate(modality_key_names):
-                modality_df_tmp = pd.DataFrame({
-                    'data_num': [data_num],
-                    'field name': modality_key_name,
-                    'field value': data_timepoint[modality_key_name]})
-                modality_df = pd.concat([modality_df, modality_df_tmp])
+    mod_run_sheet_name_dict = {
+            'eeg':['eeg_run_sheet'],
+            'mri':['mri_run_sheet'],
+            'interviews':['speech_sampling_run_sheet'],
+            'phone':['digital_biomarkers_mindlamp_onboarding',
+                     'digital_biomarkers_mindlamp_checkin'],
+            'actigraphy':['digital_biomarkers_axivity_onboarding',
+                          'digital_biomarkers_axivity_checkin'],
+            'surveys': ['penncnb'] }
 
-        if 'field value' in modality_df.columns:
-            # if all value is empty, don't load it
-            if (modality_df['field value'] == '').all():
+    for modality, run_sheet_names in mod_run_sheet_name_dict.items():
+        for run_sheet_name in run_sheet_names:
+            redcap_subject_sl = redcap_subject.lower()
+
+            metadata_query = {'token': api_key,
+                    'content': 'record',
+                    'format': 'json',
+                    'forms[0]': run_sheet_name,
+                    'filterLogic': f"[{id_field}] = '{redcap_subject}' or "
+                                   f"[{id_field}] = '{redcap_subject_sl}'",
+                    'rawOrLabel': 'raw',
+                    }
+
+            try:
+                content = post_to_redcap(api_url, metadata_query, '').decode(
+                        'utf-8')
+            except:
+                print(f"{redcap_subject}: {run_sheet_name} does not exist"
+                      " in REDCap")
                 continue
 
-            elif (modality_df[modality_df['field value'] != ''][
-                'field name'].str.contains('sheet_complete').all()):
-                continue
+            content_dict_list = json.loads(content)
 
-            raw_modality_path.mkdir(exist_ok=True, parents=True)
-            output_name = Path(json_path).name.split('.json')[0]
-            modality_df.to_csv(
-                    raw_modality_path / 
-                    f'{output_name}.Run_sheet_{modality}.csv')
+            # select the right form, and ignore the weird empty dictionary
+            content_dict_list = [x for x in content_dict_list if
+                    x[run_sheet_name+'_complete'] != '']
 
+            # for run sheet at each timepoint - baseline, follow up1, etc.
+            # content_num is set to start with 1 to match the session number
+            for content_num, content_dict in enumerate(content_dict_list, 1):
+                content_df = pd.DataFrame.from_dict(content_dict,
+                                                    orient='index',
+                                                    columns=['field_value'])
+                content_df.index.name = 'field_name'
+
+                # if all is empty, or 0
+                all_empty = ((content_df[content_df.columns[0]]=='0') |
+                             (content_df[content_df.columns[0]]=='')).all()
+
+                if all_empty:
+                    continue  # don't have if all empty
+
+                raw_modality_path = raw_path / modality
+                raw_modality_path.mkdir(exist_ok=True, parents=True)
+                output_name = Path(json_path).name.split('.json')[0]
+                
+                # output run sheet path
+                suffix = '' if content_num == 1 else f"_{content_num}"
+                if modality == 'surveys':  # run sheet for PENN CNB
+                    run_sheet_output = raw_modality_path / \
+                       f'{output_name}.Run_sheet_PennCNB_{content_num}.csv'
+
+                else:
+                    if run_sheet_name.endswith('checkin'):
+                        run_sheet_output = raw_modality_path / \
+                           f'{output_name}.Run_sheet_{modality}' \
+                           f'_checkin_{content_num}.csv'
+                    else:
+                        run_sheet_output = raw_modality_path / \
+                           f'{output_name}.' \
+                           f'Run_sheet_{modality}_{content_num}.csv'
+
+                if run_sheet_output.is_file():
+                    target_df = pd.read_csv(run_sheet_output, index_col=0)
+                    with tf.NamedTemporaryFile(suffix='tmp.csv') as tmp_file:
+                        content_df.to_csv(tmp_file.name)
+                        check_df = pd.read_csv(tmp_file.name, index_col=0)
+                    
+                    same_df = check_df.equals(target_df)
+
+                    if same_df:
+                        print('Not saving run sheet')
+                        continue
+
+                content_df.to_csv(run_sheet_output)
+                os.chmod(run_sheet_output, 0o0755)
 
 
 def check_if_modified(subject_id: str,
@@ -268,11 +343,20 @@ def check_if_modified(subject_id: str,
         return False
 
 
-def get_data_entry_trigger_df(Lochness: 'Lochness') -> pd.DataFrame:
-    '''Read Data Entry Trigger database as dataframe'''
+def get_data_entry_trigger_df(Lochness: 'Lochness',
+                              study: str) -> pd.DataFrame:
+    '''Read Data Entry Trigger database as dataframe
+
+    Key Arguments:
+        Lochness: Lochness config object, obj.
+        study: study string, str. eg) PronetYA
+
+    Returns:
+        pandas dataframe for data entry trigger database
+    '''
     if 'redcap' in Lochness:
-        if 'data_entry_trigger_csv' in Lochness['redcap']:
-            db_loc = Lochness['redcap']['data_entry_trigger_csv']
+        if 'data_entry_trigger_csv' in Lochness['redcap'][study]:
+            db_loc = Lochness['redcap'][study]['data_entry_trigger_csv']
             if Path(db_loc).is_file():
                 db_df = pd.read_csv(db_loc)
                 try:
@@ -282,15 +366,11 @@ def get_data_entry_trigger_df(Lochness: 'Lochness') -> pd.DataFrame:
                 return db_df
 
     db_df = pd.DataFrame({'record':[]})
-    # db_df = pd.DataFrame()
     return db_df
 
 
 @net.retry(max_attempts=5)
 def sync(Lochness, subject, dry=False):
-
-    # load dataframe for redcap data entry trigger
-    db_df = get_data_entry_trigger_df(Lochness)
 
     logger.debug(f'exploring {subject.study}/{subject.id}')
     deidentify = deidentify_flag(Lochness, subject.study)
@@ -319,17 +399,25 @@ def sync(Lochness, subject, dry=False):
 
             proc_dst = Path(proc_folder) / fname
 
+            # Data Entry Trigger
             # check if the data has been updated by checking the redcap data
             # entry trigger db
-            if dst.is_file():
-                if check_if_modified(redcap_subject, dst, db_df):
-                    pass  # if modified, carry on
-                else:
-                    logger.debug(f"{subject.study}/{subject.id} "
-                                 "No DET updates")
-                    # break  # if not modified break
+            # UPENN redcap does not have data download limit, therefore no DET
+            if 'UPENN' in redcap_instance:
+                pass
+            else:
+                if dst.is_file():
+                    # load dataframe for redcap data entry trigger
+                    db_df = get_data_entry_trigger_df(Lochness, subject.study)
 
-            logger.debug("Downloading REDCap data")
+                    if check_if_modified(redcap_subject, dst, db_df):
+                        pass  # if modified, download REDCap data
+                    else:
+                        logger.debug(f"{subject.study}/{subject.id} "
+                                     "No DET updates")
+                        # break  # if not modified, don't pull
+
+            logger.debug(f"Downloading REDCap ({redcap_instance}) data")
             _debug_tup = (redcap_instance, redcap_project, redcap_subject)
 
             if 'UPENN' in redcap_instance:
@@ -345,43 +433,57 @@ def sync(Lochness, subject, dry=False):
                 }
 
             else:
+                id_field = Lochness['redcap_id_colname']
+                redcap_subject_sl = redcap_subject.lower()
                 record_query = {
                     'token': api_key,
                     'content': 'record',
                     'format': 'json',
-                    'records': redcap_subject
-                }
-
-            if deidentify:
-                # get fields that aren't identifiable and narrow record query
-                # by field name
-                metadata_query = {
-                    'token': api_key,
-                    'content': 'metadata',
-                    'format': 'json'
-                }
-
-                content = post_to_redcap(api_url, metadata_query, _debug_tup)
-                metadata = json.loads(content)
-                field_names = []
-                for field in metadata:
-                    if field['identifier'] != 'y':
-                        field_names.append(field['field_name'])
-                record_query['fields'] = ','.join(field_names)
+                    'filterLogic': f"[{id_field}] = '{redcap_subject}' or "
+                                   f"[{id_field}] = '{redcap_subject_sl}'"
+                   }
+                    # 'records': redcap_subject
 
             # post query to redcap
-            content = post_to_redcap(api_url, record_query, _debug_tup)
+            content = post_to_redcap(api_url,
+                                     record_query,
+                                     _debug_tup)
 
             # check if response body is nothing but a sad empty array
             if content.strip() == b'[]':
                 logger.info(f'no redcap data for {redcap_subject}')
                 continue
+            content_dict_list = json.loads(content)
+
+            for content_dict in content_dict_list:
+                if deidentify:
+                    # get fields that contains PII
+                    metadata_query = {'token': api_key,
+                                      'content': 'metadata',
+                                      'format': 'json'}
+                    content = post_to_redcap(api_url,
+                                             metadata_query,
+                                             _debug_tup)
+                    metadata = json.loads(content)
+                    for field in metadata:
+                        if field['identifier'] == 'y':
+                            try:
+                                content_dict.pop(field['field_name'])
+                            except:
+                                print(field['field_name'], ': not in record')
+
+            content = json.dumps(content_dict_list).encode('utf-8')
 
             if not dry:
                 if not os.path.exists(dst):
                     logger.debug(f'saving {dst}')
                     lochness.atomic_write(dst, content)
-                    get_run_sheets_for_datatypes(dst)
+                    # Extract run sheet information
+                    if 'UPENN' in redcap_instance:
+                        continue
+                    get_run_sheets_for_datatypes(api_url, api_key,
+                                                 subject.id, id_field,
+                                                 dst)
                     # process_and_copy_db(Lochness, subject, dst, proc_dst)
                     # update_study_metadata(subject, json.loads(content))
                     
@@ -393,12 +495,16 @@ def sync(Lochness, subject, dry=False):
                     if crc_dst != crc_src:
                         logger.info('different - crc32: downloading data')
                         logger.warn(f'file has changed {dst}')
-                        lochness.backup(dst)
+                        # lochness.backup(dst)
                         logger.debug(f'saving {dst}')
                         lochness.atomic_write(dst, content)
 
+                        if 'UPENN' in redcap_instance:
+                            continue
                         # Extract run sheet information
-                        get_run_sheets_for_datatypes(dst)
+                        get_run_sheets_for_datatypes(api_url, api_key,
+                                                     subject.id, id_field,
+                                                     dst)
                         # process_and_copy_db(Lochness, subject, dst, proc_dst)
                         # update_study_metadata(subject, json.loads(content))
                     else:
@@ -407,7 +513,7 @@ def sync(Lochness, subject, dry=False):
                                     'Not saving the data')
                         # update the dst file's mtime so it can prevent the
                         # same file being pulled from REDCap
-                        os.utime(dst)
+                        # os.utime(dst)
 
 
 class REDCapError(Exception):
@@ -550,3 +656,27 @@ def update_study_metadata(subject, content: List[dict]) -> None:
 
         # overwrite metadata
         new_metadata_df.to_csv(subject.metadata_csv, index=False)
+
+
+if __name__ == '__main__':
+    # testing purposes
+    # config_loc = '/mnt/prescient/Prescient_data_sync/config.yml'
+    from lochness.config import load
+    config_loc = '/opt/software/Pronet_data_sync/config.yml'
+    Lochness = load(config_loc)
+
+    # get URL
+    keyring = Lochness['keyring']
+    api_url = keyring['redcap.Pronet']['URL'] + '/api/'
+    api_key = keyring['redcap.Pronet']['API_TOKEN']['Pronet']
+    print(api_url, api_key)
+
+    id_field = Lochness['redcap_id_colname']
+    for subject_path in (
+            Path(Lochness['phoenix_root']) / 'PROTECTED').glob('*/raw/*'):
+        subject = subject_path.name
+        print(subject)
+        json_path = subject_path / 'surveys' / f'{subject}.Pronet.json'
+        get_run_sheets_for_datatypes(
+                api_url, api_key, subject, id_field, json_path)
+
