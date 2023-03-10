@@ -246,11 +246,15 @@ def do(args, Lochness):
     if args.lochness_sync_send:
         if args.s3:
             # for data under GENERAL
-            lochness_to_lochness_transfer_s3(Lochness)
+            lochness_to_lochness_transfer_s3(Lochness,
+                                             args.studies,
+                                             args.input_sources)
 
             # for data under PROTECTED (for selected datatypes)
             if 's3_selective_sync' in Lochness:
-                lochness_to_lochness_transfer_s3_protected(Lochness)
+                lochness_to_lochness_transfer_s3_protected(Lochness,
+                                                           args.studies,
+                                                           args.input_sources)
 
             # save details of transferred files under PHOENIX/s3_log.csv
             create_s3_transfer_table(Lochness)
