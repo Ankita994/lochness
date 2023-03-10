@@ -522,4 +522,5 @@ if __name__ == '__main__':
     Lochness = load(config_loc)
     Lochness['file_check_notify']['__global__'] = [
             'kevincho@bwh.harvard.edu']
-    check_source(Lochness, test=True)
+    # check_source(Lochness, test=True)
+    check_source(Lochness, test=False)
