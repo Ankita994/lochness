@@ -123,7 +123,6 @@ def check_list_all_redcap_subjects(project_name: str,
 
     df = pd.DataFrame(content_dict_list)
     if len(df) > 1:
-        print(df)
         df.columns = ['subject', '_', 'consent_date']
 
         # select records that start with the project name
