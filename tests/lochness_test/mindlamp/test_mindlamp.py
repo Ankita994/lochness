@@ -472,18 +472,45 @@ def test_pronet_mindlamp(args):
     create_lochness_template(args)
     syncArgs.config = args.outdir / 'config.yml'
     # _ = KeyringAndEncryptMindlampAdminIP(args.outdir)
+    # _ = KeyringAndEncryptMindlampAdmin(args.outdir)
     _ = KeyringAndEncryptMindlamp(args.outdir)
     # _ = KeyringAndEncryptMindlampYoon(args.outdir)
 
     phoenix_root = args.outdir / 'PHOENIX'
     information_to_add_to_metadata = {'mindlamp': [
-        {'subject_id': '1001', 'source_id': 'U2763080389'},
-        {'subject_id': '1002', 'source_id': 'U4361826716'}
+        {'subject_id': '1001', 'source_id': 'U5891709819'},
         ]}
+        # {'subject_id': '1001', 'source_id': 'U2763080389'},
+        # {'subject_id': '1002', 'source_id': 'U4361826716'}
     
     initialize_metadata_test(phoenix_root, 'StudyA',
                              information_to_add_to_metadata)
     Lochness = config_load_test(syncArgs.config)
+
+    Lochness['mindlamp_days_to_pull'] = 3
+    for subject in lochness.read_phoenix_metadata(Lochness, syncArgs.studies):
+        sync(Lochness, subject, False)
+
+
+def test_sync_yoon_and_habib_feb_2022(args):
+    syncArgs = SyncArgs(args.outdir)
+    syncArgs.studies = ['StudyA']
+    sources = ['mindlamp']
+    syncArgs.update_source(sources)
+
+    create_lochness_template(args)
+    syncArgs.config = args.outdir / 'config.yml'
+    # _ = KeyringAndEncryptMindlampAdminIP(args.outdir)
+    _ = KeyringAndEncryptMindlampAdmin(args.outdir)
+    information_to_add_to_metadata = {'mindlamp': [
+        {'subject_id': '1003', 'source_id': 'U5891709819'},
+        {'subject_id': '1004', 'source_id': 'U2862696942'}
+        ]}
+    phoenix_root = args.outdir / 'PHOENIX'
+    initialize_metadata_test(phoenix_root, 'StudyA',
+                             information_to_add_to_metadata)
+    Lochness = config_load_test(syncArgs.config)
+    Lochness['mindlamp_days_to_pull'] = 8
     for subject in lochness.read_phoenix_metadata(Lochness, syncArgs.studies):
         sync(Lochness, subject, False)
 
@@ -512,4 +539,3 @@ def test_pronet_mindlamp_with_while(args):
     Lochness['mindlamp_days_to_pull'] = 14
     for subject in lochness.read_phoenix_metadata(Lochness, syncArgs.studies):
         sync(Lochness, subject, False)
-
