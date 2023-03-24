@@ -19,14 +19,14 @@ support new services is also a fairly simple process.
 Just use `pip`
 
 ```
-pip install lochness
+pip install ampscz-lochness
 ```
 
 
 For most recent DPACC-lochness
 
 ```
-pip install git+https://github.com/PREDICT-DPACC/lochness
+pip install git+https://github.com/AMP-SCZ/lochness
 ```
 
 
@@ -34,7 +34,7 @@ For debugging
 
 ```
 cd ~
-git clone https://github.com/PREDICT-DPACC/lochness
+git clone https://github.com/AMP-SCZ/lochness
 pip install -r ~/lochness/requirements.txt
 
 export PATH=${PATH}:~/lochness/scripts  # add to ~/.bashrc
@@ -120,8 +120,16 @@ Running one of the commands above will create the structure below
 ```
 
 
-1. Change information in `config.yml` and `lochness.json` as needed.
+1. Change `config.yml` and `lochness.json`.
 
+`lochness.json` is a template json file, which can be used to collect different
+credentials for the data sources to be used with Lochness. Once the json file
+has all information, it should be encrypted. (See step 3 below)
+
+
+`config.yml` is a configuration file, which will be used by lochness to load
+non-sensitive information about the server, lochness instance and different
+data sources.
 
 2. Either manually update the `PHOENIX/GENERAL/*/*_metadata.csv` or
    amend the field names in REDCap / RPMS sources correctly for lochness to

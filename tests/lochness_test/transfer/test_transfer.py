@@ -2,6 +2,8 @@ import lochness
 import os
 import shutil
 from datetime import datetime
+from lochness.config import load
+from lochness.transfer import get_updated_files, compress_list_of_files
 from lochness.transfer import get_updated_files, compress_list_of_files
 from lochness.transfer import compress_new_files
 from lochness.transfer import lochness_to_lochness_transfer_sftp
@@ -9,8 +11,11 @@ from lochness.transfer import decompress_transferred_file_and_copy
 from lochness.transfer import lochness_to_lochness_transfer_receive_sftp
 from lochness.transfer import lochness_to_lochness_transfer_s3
 from lochness.transfer import lochness_to_lochness_transfer_s3_protected
+from lochness.transfer import create_s3_transfer_table
+from lochness.transfer import send_file_to_s3_phoenix
 
 from pathlib import Path
+import re
 
 import sys
 lochness_root = Path(lochness.__path__[0]).parent
@@ -438,4 +443,185 @@ def test_create_s3_transfer_table():
 
     print(df)
     df.to_csv('ha.csv')
+
+
+def test_aws_s3_no_sync_when_no_data():
+    args = Args('tmp_lochness')
+    args.rsync = True
+    args.s3_selective_sync = ['actigraphy']
+    create_lochness_template(args)
+    k = KeyringAndEncrypt(args.outdir)
+    k.update_var_subvars('lochness_sync', 'transfer')
+
+    lochness = config_load_test('tmp_lochness/config.yml', '')
+    # print(lochness)
+
+    # create fake files
+    tmp_file = Path(lochness['phoenix_root']) / \
+            'PROTECTED/StudyA/raw/subject01/actigraphy/haha.txt'
+    tmp_file.parent.mkdir(parents=True, exist_ok=True)
+    # if not tmp_file.is_file():
+    tmp_file.touch()
+
+    tmp_file = Path(lochness['phoenix_root']) / \
+            'PROTECTED/StudyA/raw/subject01/actigraphy/haha2.txt'
+    # if not tmp_file.is_file():
+    tmp_file.touch()
+
+    tmp_file = Path(lochness['phoenix_root']) / \
+            'PROTECTED/StudyA/raw/subject02/actigraphy/haha2.txt'
+    tmp_file.parent.mkdir(parents=True, exist_ok=True)
+    # if not tmp_file.is_file():
+    tmp_file.touch()
+
+    tmp_file = Path(lochness['phoenix_root']) / \
+            'PROTECTED/StudyA/processed/subject02/actigraphy/haha2.txt'
+    tmp_file.parent.mkdir(parents=True, exist_ok=True)
+    # if not tmp_file.is_file():
+    tmp_file.touch()
+
+    lochness['AWS_BUCKET_NAME'] = 'prod-ampscz-pronet'
+    lochness['AWS_BUCKET_ROOT'] = 'TEST_aws'
+    lochness_to_lochness_transfer_s3_protected(lochness)
+
+    print('second upload')
+    # s3_log = Path(lochness['phoenix_root']) / 'aws_s3_sync_stdouts.log'
+    # with open(s3_log, 'a') as fp:
+        # fp.write('second run\n')
+
+    lochness_to_lochness_transfer_s3_protected(lochness)
+    print('completed')
+
+
+    # print('permission change')
+    os.chmod(tmp_file, 0o777)
+    # os.chown(tmp_file, 0, 1004)
+    lochness_to_lochness_transfer_s3_protected(lochness)
+    print('completed')
+
+
+def test_aws_s3_sync_pure():
+    temp_dir = Path('tmp_pure_dir')
+    temp_dir.mkdir(exist_ok=True)
+
+    temp_file_1 = temp_dir / 'test1.csv'
+    temp_file_2 = temp_dir / 'test2.csv'
+
+    for i in temp_file_1, temp_file_2:
+        if not i.is_file():
+            i.touch()
+
+    command = f'aws s3 sync {temp_dir} s3://prod-ampscz-pronet/TEST_aws2'
+    print(command)
+
+    print(os.popen(command).read())
+
+
+def test_create_s3_transfer_table():
+    args = Args('tmp_lochness')
+    args.rsync = True
+    args.s3_selective_sync = ['actigraphy']
+    create_lochness_template(args)
+    k = KeyringAndEncrypt(args.outdir)
+    k.update_var_subvars('lochness_sync', 'transfer')
+
+    Lochness = config_load_test('tmp_lochness/config.yml', '')
+    create_s3_transfer_table(Lochness)
+
+
+def test_create_s3_transfer_table_real():
+    Lochness = load('/mnt/ProNET/Lochness/config.yml')
+    create_s3_transfer_table(Lochness)
+
+
+def test_parallel_transfer():
+    Lochness = load('/mnt/ProNET/Lochness/config.yml')
+    # lochness_to_lochness_transfer_s3_protected(
+            # Lochness,
+            # ['PronetYA', 'PronetCA'],
+            # sources=['redcap', 'box', 'mindlamp'])
+    lochness_to_lochness_transfer_s3(
+            Lochness,
+            ['PronetYA', 'PronetCA'],
+            sources=['box'])
+
+    # create_s3_transfer_table(Lochness)
+
+
+def test_create_s3_transfer_table_with_prev_data():
+    args = Args('tmp_lochness')
+    args.rsync = True
+    args.s3_selective_sync = ['actigraphy']
+    create_lochness_template(args)
+    k = KeyringAndEncrypt(args.outdir)
+    k.update_var_subvars('lochness_sync', 'transfer')
+
+    lochness = config_load_test('tmp_lochness/config.yml', '')
+    shutil.copy(
+        '/mnt/ProNET/Lochness/PHOENIX/aws_s3_sync_stdouts.log',
+        lochness['phoenix_root'])
+
+    log_file = Path(lochness['phoenix_root']) / 'aws_s3_sync_stdouts.log'
+    out_file = Path(lochness['phoenix_root']) / 's3_log.csv'
+
+    max_ts_prev_df = pd.to_datetime('2000-01-01')
+    df = pd.DataFrame()
+    with open(log_file, 'r') as fp:
+        for line in fp.readlines():
+            if 'LA00145' not in line:
+                continue
+
+            if not 'upload' in line:
+                continue
+
+            try:
+                re_line = re.search(r'^(\S+ \w+:\w+:\w+) upload: (\S+)', line)
+                ts = pd.to_datetime(re_line.group(1))
+                print(line)
+                print(len(line))
+                # if len(line) > 500:
+                    # print(line)
+                    # return
+            except AttributeError:
+                print(line)
+                return
+                continue
+
+            more_recent = ts > max_ts_prev_df
+            if not more_recent:
+                continue
+
+            source = re_line.group(2)
+
+            # make source relative to PHOENIX root parent
+            if not source.startswith('PHOENIX'):
+                source = 'PHOENIX/' + source.split('/PHOENIX/')[1]
+
+            source = Path(source)
+            # do not save metadata.csv update since it
+            # gets updated every pull
+            if 'metadata.csv' in source.name:
+                continue
+
+            target = re.search(r'upload: (\S+) to (\S+)',
+                               line).group(2)
+
+            df_tmp = pd.DataFrame({'timestamp': [ts],
+                                   'source': source,
+                                   'destination': Path(target)})
+
+            df = pd.concat([df, df_tmp])
+
+    print(df)
+
+
+def test_send_file_to_s3_phoenix():
+    print()
+    Lochness = {'AWS_BUCKET_NAME': 'test',
+                'AWS_BUCKET_ROOT': 'test-phoenix',
+                'phoenix_root': '/data/predict/PHOENIX'}
+
+    prac_file = Path(Lochness['phoenix_root']) / \
+            'GENERAL/PronetAB/raw/AB00000/survey/hoho.csv'
+    send_file_to_s3_phoenix(Lochness, prac_file)
 

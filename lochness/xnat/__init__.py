@@ -6,6 +6,7 @@ import lochness
 import logging
 import tempfile as tf
 import collections as col
+from pathlib import Path
 import lochness.net as net
 import lochness.tree as tree
 import lochness.config as config
@@ -17,7 +18,7 @@ yaml.SafeDumper.add_representer(
 logger = logging.getLogger(__name__)
 
 @net.retry(max_attempts=5)
-def sync(Lochness, subject, dry=False):
+def sync_old(Lochness, subject, dry=False):
     logger.debug('exploring {0}/{1}'.format(subject.study, subject.id))
 
     for alias, xnat_uids in iter(subject.xnat.items()):
@@ -70,12 +71,68 @@ def sync(Lochness, subject, dry=False):
                     os.chmod(tmpdir, 0o0755)
                     yaxil.download(auth, experiment.label,
                                    project=experiment.project,
-                                   scan_ids=['ALL'], out_dir=tmpdir,
+                                   scan_ids=['ALL'], out_dir=dst,
                                    in_mem=False, attempts=3,
                                    out_format='native')
                     logger.debug('saving .experiment file')
                     save_experiment_file(tmpdir, auth.url, experiment)
                     os.rename(tmpdir, dst)
+
+
+
+@net.retry(max_attempts=5)
+def sync(Lochness, subject, dry=False):
+    logger.debug('exploring {0}/{1}'.format(subject.study, subject.id))
+
+    for alias, xnat_uids in iter(subject.xnat.items()):
+        Keyring = Lochness['keyring'][alias]
+        auth = yaxil.XnatAuth(url=Keyring['URL'], username=Keyring['USERNAME'],
+                              password=Keyring['PASSWORD'])
+        '''
+        pull XNAT data agnostic to the case of subject IDs loop over lower and
+        upper case IDs if the data for one ID do not exist, experiments(auth,
+        xnat_uid) returns nothing preventing the execution of inner loop
+        '''
+        _xnat_uids= xnat_uids + [(x[0], x[1].lower()) for x in xnat_uids]
+        for xnat_uid in _xnat_uids:
+            for experiment in experiments(auth, xnat_uid):
+                logger.info(experiment)
+                dirname = tree.get('mri',
+                                   subject.protected_folder,
+                                   processed=False,
+                                   BIDS=Lochness['BIDS'])
+                dst = os.path.join(dirname, f'{experiment.label.upper()}.zip')
+
+                # do not re-download already transferred & removed data
+                if is_transferred_and_removed(Lochness, dst):
+                    continue
+
+                archieved_date = experiment.archived_date
+                archieved_date_log = os.path.join(
+                        dirname, f'.{experiment.label.upper()}')
+                if os.path.exists(dst):
+                    if Path(archieved_date_log).is_file():
+                        with open(archieved_date_log, 'r') as fp:
+                            archieved_date_prev = fp.read().strip()
+
+                        if archieved_date == archieved_date_prev:
+                            # same archieved date
+                            continue
+
+                message = 'downloading {PROJECT}/{LABEL} to {FOLDER}'
+                logger.debug(message.format(PROJECT=experiment.project,
+                                            LABEL=experiment.label,
+                                            FOLDER=dst))
+
+                if not dry:
+                    yaxil.download(auth, experiment.label,
+                                   project=experiment.project,
+                                   scan_ids=['ALL'], out_file=dst,
+                                   in_mem=False, attempts=3,
+                                   out_format='native', extract=False)
+                    save_experiment_file(dirname, auth.url, experiment)
+                    with open(archieved_date_log, 'w') as fp:
+                        fp.write(archieved_date)
 
 
 def check_consistency(d, experiment):
@@ -96,9 +153,14 @@ class ConsistencyError(Exception):
     pass
 
 
-def save_experiment_file(d, url, experiment):
+def save_experiment_file(d, url, experiment, extract=False):
     '''save xnat experiment metadata to a file named .experiment'''
-    experiment_file = os.path.join(d, '.experiment')
+    if extract:
+        experiment_file = os.path.join(d, '.experiment')
+    else:
+        experiment_file = os.path.join(
+                d, f'{experiment.label.upper()}.experiment')
+
     blob = experiment._asdict()
     blob['source'] = url.rstrip('/') + '/'
     blob['uuid'] = str(uuid.uuid4())

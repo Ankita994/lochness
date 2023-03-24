@@ -14,6 +14,7 @@ import lochness.hdd as HDD
 import lochness.xnat as XNAT
 import lochness.beiwe as Beiwe
 import lochness.redcap as REDCap
+from lochness.redcap import save_redcap_metadata
 import lochness.mindlamp as Mindlamp
 import lochness.dropbox as Dropbox
 import lochness.box as Box
@@ -181,7 +182,7 @@ def main():
                     fp.write(str(date.today()))
 
             poll_interval = int(Lochness['poll_interval'])
-            logger.info('sleeping for {0} seconds'.format(poll_interval))
+            logger.info(f'sleeping for {poll_interval} seconds')
             time.sleep(Lochness['poll_interval'])
     else:
         # remove already transferred files
@@ -216,21 +217,28 @@ def do(args, Lochness):
         lochness.initialize_metadata(Lochness, args,
                                      multiple_site, upenn_redcap)
 
+    n = 0
     for subject in lochness.read_phoenix_metadata(Lochness, args.studies):
+        if n == 0:
+            save_redcap_metadata(Lochness, subject)
+
         if args.subject:
             if subject.id not in args.subject:
+                n += 1
                 continue
 
         if not subject.active and args.skip_inactive:
             logger.info(f'skipping inactive subject={subject.id}, '
                         f'study={subject.study}')
             continue
+
         if args.hdd:
             for Module in args.hdd:
                 lochness.attempt(Module.sync, Lochness, subject, dry=args.dry)
         else:
             for Module in args.source:
                 lochness.attempt(Module.sync, Lochness, subject, dry=args.dry)
+        n += 1
 
     # anonymize PII
 
@@ -247,11 +255,15 @@ def do(args, Lochness):
     if args.lochness_sync_send:
         if args.s3:
             # for data under GENERAL
-            lochness_to_lochness_transfer_s3(Lochness)
+            lochness_to_lochness_transfer_s3(Lochness,
+                                             args.studies,
+                                             args.input_sources)
 
             # for data under PROTECTED (for selected datatypes)
             if 's3_selective_sync' in Lochness:
-                lochness_to_lochness_transfer_s3_protected(Lochness)
+                lochness_to_lochness_transfer_s3_protected(Lochness,
+                                                           args.studies,
+                                                           args.input_sources)
 
             # save details of transferred files under PHOENIX/s3_log.csv
             create_s3_transfer_table(Lochness)
