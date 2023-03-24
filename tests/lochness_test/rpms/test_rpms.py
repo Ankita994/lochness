@@ -15,7 +15,7 @@ from lochness_create_template import create_lochness_template
 from test_lochness import Tokens, KeyringAndEncrypt, args, Lochness
 from test_lochness import show_tree_then_delete, config_load_test
 from lochness.rpms import initialize_metadata, sync, get_rpms_database
-from lochness.rpms import get_run_sheets_for_datatypes
+from lochness.rpms import get_run_sheets_for_datatypes, get_subject_data
 
 import pytest
 
@@ -243,3 +243,69 @@ def test_get_runsheets_for_datatypes():
         sync(Lochness, subject, dry)
 
     show_tree_then_delete('tmp_lochness_2')
+
+
+def test_loading_db():
+    rpms_root_path = '/mnt/prescient/RPMS_incoming'
+    db_dict = get_rpms_database(rpms_root_path)
+
+
+def test_repeated_measure_first():
+    rpms_root_path = '/mnt/prescient/RPMS_incoming'
+    db_dict = get_rpms_database(rpms_root_path)
+    example_repeated_keyname = 'past_pharmaceutical_treatment'
+    example_repeated_keyname = 'chrdbb_lamp_id'
+    print(db_dict[example_repeated_keyname])
+
+
+def test_repeated_measure_second():
+    rpms_root_path = '/mnt/prescient/RPMS_incoming'
+    all_df_dict = get_rpms_database(rpms_root_path)
+    example_repeated_keyname = 'past_pharmaceutical_treatment'
+    dup_id = 'ME08857'
+
+    df_measure_all_subj = all_df_dict['informed_consent_run_sheet']
+    for subject, table in df_measure_all_subj.groupby('subjectkey'):
+        table = table[['subjectkey',
+            'chric_consent_date', 'LastModifiedDate']].drop_duplicates()
+
+        if len(table) > 1:
+            table['LastModifiedDate'] = pd.to_datetime(
+                    table['LastModifiedDate'])
+            table = table.sort_values('LastModifiedDate')
+            print(table)
+            print(table.iloc[-1])
+    return
+    for measure, df_measure_all_subj in all_df_dict.items():
+        # if not measure == example_repeated_keyname:
+            # continue
+
+        # loop through each line of the RPMS database
+        # for index, df_measure in df_measure_all_subj.iterrows():
+        for subject, df_measure in df_measure_all_subj.groupby('subjectkey'):
+            if len(df_measure) > 1:
+                print(df_measure)
+                break
+                # return
+
+            # return
+            # if 'chrdbb_lamp_id' in df_measure:
+                # print(df_measure_all_subj)
+                # return
+                # print(df_measure['chrdbb_lamp_id'])
+            # if df_measure.subjectkey == dup_id:
+                # print(df_measure)
+
+
+
+def test_gets_subject_data():
+    class SubjectTest(object):
+        pass
+    rpms_root_path = '/mnt/prescient/RPMS_incoming'
+    all_df_dict = get_rpms_database(rpms_root_path)
+    subject = SubjectTest()
+    subject.id = 'TE00001'
+    id_colname = 'subjectkey'
+    subject_df_dict = get_subject_data(all_df_dict, subject, id_colname)
+    for key, table in subject_df_dict.items():
+        print(key, len(table))

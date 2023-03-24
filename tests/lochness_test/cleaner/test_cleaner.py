@@ -1,10 +1,12 @@
 from pathlib import Path
 import os
+import lochness.config as config
 from lochness.cleaner import is_transferred_and_removed
 from lochness.cleaner import get_ok2remove_df_from_s3_log
 from lochness.cleaner import rm_transferred_files_under_phoenix
 import pandas as pd
-pd.set_option('max_columns', 50)
+
+# pd.set_option('max_columns', 50)
 
 def test_get_source_path_load_s3_log():
     phoenix_root = Path('/opt/software/Pronet_data_sync/PHOENIX')
@@ -26,3 +28,11 @@ def test_get_source_path_load_s3_log():
                                                     # 'removed_files.csv')
             # if is_removed:
                 # print(file_path)
+
+def test_is_transferred_and_removed():
+    file_path = Path('/mnt/prescient/Prescient_data_sync/PHOENIX/PROTECTED/PrescientME/raw/ME00005/mri/ME00005_MR_2021_12_08_1.zip')
+    config_file = '/mnt/prescient/Prescient_data_sync/config.yml'
+    Lochness = config.load(config_file, None)
+    var = is_transferred_and_removed(Lochness, file_path)
+    print(var)
+

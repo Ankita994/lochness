@@ -116,8 +116,9 @@ def sync_module(Lochness: 'lochness.config',
                             if remote is nan:
                                 continue
 
-                            if not re.search(patt.replace('*', '(.+?)'),
-                                             remote):
+                            if not re.search(
+                                    patt.replace('*', '(.+?)').lower(),
+                                    remote.lower()):
                                 continue
                             else:
                                 remote = remote.split(':')[1]
@@ -147,7 +148,8 @@ def sync_module(Lochness: 'lochness.config',
                             mf_local = tree.get(datatype,
                                                 subj_dir,
                                                 processed=processed,
-                                                BIDS=Lochness['BIDS'])
+                                                BIDS=Lochness['BIDS'],
+                                                makedirs=True)
 
                             mf_local = str(mf_local / prod['out_dir'] \
                                     if 'out_dir' in prod else mf_local) / \
@@ -172,8 +174,8 @@ def sync_module(Lochness: 'lochness.config',
 
                             p = Popen(cmd, shell=True,
                                       stdout=DEVNULL, stderr=STDOUT)
-
                             p.wait()
+
                             # verify checksum after download completes if
                             # checksum does not match, data will be downloaded
                             # again ENH should we verify checksum 5 times?

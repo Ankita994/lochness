@@ -58,7 +58,7 @@ def update_mri_check(df: pd.DataFrame) -> pd.DataFrame:
     mri_index = df[df['modality'] == 'MRI'].index
     mri_df = df.loc[mri_index]
     mri_df['file_check'] = mri_df['file_name'].str.match(
-            '[A-Z]{2}\d{5}_MR_\d{4}_\d{2}_\d{2}_\d.zip')
+            '[A-Z]{2}\d{5}_MR_\d{4}_\d{2}_\d{2}_\d.[Zz][Ii][Pp]')
 
     df.loc[mri_index] = mri_df
 
@@ -105,17 +105,21 @@ def update_interviews_transcript_check(df: pd.DataFrame) -> pd.DataFrame:
     # check site and AMPSCZ IDs in the transcript file name
     for index, row in transcript_int_df.iterrows():
         if not row['subject_check']:
-            transcript_int_df.loc[index, 'subject'] = re.search(
-                r'[A-Z]{2}\d{5}', row['subject']).group(0)
-            row['subject'] = transcript_int_df.loc[index, 'subject']
-            row['subject_check'] = ampscz_id_validate(row['subject'])
-            transcript_int_df.loc[index,
-                                  'subject_check'] = row['subject_check']
+            try:
+                #TODO: fix this
+                transcript_int_df.loc[index, 'subject'] = re.search(
+                    r'[A-Z]{2}\d{5}', row['subject']).group(0)
+                row['subject'] = transcript_int_df.loc[index, 'subject']
+                row['subject_check'] = ampscz_id_validate(row['subject'])
+                transcript_int_df.loc[index,
+                                      'subject_check'] = row['subject_check']
+            except:
+                pass
         subject = row['subject']
         site = row['site']
         transcript_int_df.loc[index, 'file_check'] = re.match(
-                f'{site}_{subject}_'
-                'interviewAudioTranscript_open_day\d+_session\d+.txt',
+                f'(Prescient|){site}_{subject}_'
+                'interviewAudioTranscript_(open|psychs)_day[-\d]+_session\d+.txt',
                 row['file_name'])
 
     df.loc[transcript_int_index] = transcript_int_df
@@ -141,6 +145,28 @@ def update_interviews_video_check(df: pd.DataFrame) -> pd.DataFrame:
     df.loc[video_int_index] = video_int_df
 
 
+def update_interviews_teams_data_check(df: pd.DataFrame) -> pd.DataFrame:
+    '''Check logics in rows for Interviews video'''
+    # interviews transcript
+    video_int_index = df[
+            (df.modality=='Interviews') &
+            (df.file_name.str.lower().str.endswith('.wav'))
+            ].index
+
+    video_int_df = df.loc[video_int_index]
+
+    # directory check
+    video_int_df['directory_check'] = video_int_df['parent_dir'] \
+            == video_int_df['subject']
+
+    # file name pattern check
+    video_int_df['file_pattern_check'] = video_int_df['file_name'].str.match(
+                r'\d{4}\d{2}\d{2}\d{6}_[A-Z]{2}\d{5}_(OPEN|PSYSCS).(wav|WAV)')
+    video_int_df['file_check'] = video_int_df['directory_check'] & \
+        video_int_df['file_name']
+    df.loc[video_int_index] = video_int_df
+
+
 def update_interviews_audio_check(df: pd.DataFrame) -> pd.DataFrame:
     '''Check logics in rows for Interviews audio'''
     # interviews audio
@@ -160,13 +186,20 @@ def update_interviews_audio_check(df: pd.DataFrame) -> pd.DataFrame:
 
     df.loc[audio_int_index] = audio_int_df
 
-
     # ignore playback.m3u audio files
     audio_int_index = df[(df.modality=='Interviews') &
                          (df.file_name == 'playback.m3u')].index
     audio_int_df = df.loc[audio_int_index]
     audio_int_df['file_check'] = True
     df.loc[audio_int_index] = audio_int_df
+
+    # ignore 'Audio Record' folder
+    rec_index = df[(df.modality=='Interviews') &
+                   (df.file_name.str.endswith('Audio Record'))].index
+    rec_df = df.loc[rec_index]
+    rec_df['file_check'] = True
+    df.loc[rec_index] = rec_df
+
 
 
 def update_by_adding_notes(df: pd.DataFrame) -> None:
@@ -232,6 +265,7 @@ def check_file_path_df(df: pd.DataFrame,
 
     update_interviews_check(df)
     update_interviews_transcript_check(df)
+    update_interviews_teams_data_check(df)
     update_interviews_video_check(df)
     update_interviews_audio_check(df)
 

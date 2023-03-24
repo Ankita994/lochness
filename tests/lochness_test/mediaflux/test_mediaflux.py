@@ -100,3 +100,24 @@ def test_sync_from_empty(args_and_Lochness):
 
     show_tree_then_delete('tmp_lochness')
 
+
+def test_config_patterns():
+    from lochness.config import load
+    import re
+    config_loc = '/mnt/prescient/Prescient_data_sync/config.yml'
+    Lochness = load(config_loc)
+
+    interview_products = Lochness['mediaflux'][
+            'PrescientCP']['file_patterns']['interviews'][0]
+    patts = interview_products['pattern'].split(',')
+    for patt in patts:
+        patt = patt.strip()
+        remote = '/projects/20220526000542_CP00091_OPEN.wav'
+        remote = "2022-05-20 14.35.34 S I's Personal Meeting Room"
+        if not re.search(patt.replace('*', '(.+?)'),
+                         remote):
+            print(patt, ' not matched')
+            continue
+        print(remote)
+
+

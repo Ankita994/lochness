@@ -121,7 +121,8 @@ def sync(Lochness: 'lochness.config',
     dst_folder = tree.get('mindlamp',
                           subject.protected_folder,
                           processed=False,
-                          BIDS=Lochness['BIDS'])
+                          BIDS=Lochness['BIDS'],
+                          makedirs=True)
 
     # the loop below downloads all data from mindlamp from the current date
     # to (current date - 100 days), overwriting pre-downloaded files.

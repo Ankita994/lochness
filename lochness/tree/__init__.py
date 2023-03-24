@@ -4,6 +4,7 @@ import logging
 from pathlib import Path
 from string import Template
 import re
+from datetime import datetime
 
 
 Templates = {
@@ -84,6 +85,9 @@ def get(data_type, base, **kwargs):
     if data_type not in Templates:
         raise TreeError('no tree templates defined for {0}'.format(data_type))
 
+    general_folder = Path(base).parent.parent.parent / 'GENERAL'
+    protected_folder = Path(base).parent.parent.parent / 'PROTECTED'
+
     raw_folder = None
     processed_folder = None
 
@@ -113,18 +117,40 @@ def get(data_type, base, **kwargs):
         if 'processed' in Templates[data_type]:
             processed_folder = Templates[data_type]['processed'].substitute(base=base)
 
+    if kwargs.get('makedirs', True):#  and \
+            # processed_folder and not os.path.exists(processed_folder):
+
+        protected_str = Path(re.sub('GENERAL', 'PROTECTED',
+                             str(processed_folder)))
+        general_str = Path(re.sub('GENERAL', 'PROTECTED',
+                           str(processed_folder)))
+        Path(protected_str).mkdir(exist_ok=True, parents=True)
+        Path(general_str).mkdir(exist_ok=True, parents=True)
+        os.chmod(protected_str, 0o01770)
+        os.chmod(general_str, 0o01770)
+
+        for path in protected_str, general_str:
+            if not (path / '.log').is_file():
+                with open(path / '.log', 'w') as fp:
+                    fp.write(f'Created on: {datetime.today().isoformat()}')
+
+    if kwargs.get('makedirs', True):# and \
+            # raw_folder and not os.path.exists(raw_folder):
+        protected_str = Path(re.sub('GENERAL', 'PROTECTED', str(raw_folder)))
+        general_str = Path(re.sub('GENERAL', 'PROTECTED', str(raw_folder)))
+        protected_str.mkdir(exist_ok=True, parents=True)
+        general_str.mkdir(exist_ok=True, parents=True)
+        os.chmod(protected_str, 0o01770)
+        os.chmod(general_str, 0o01770)
+
+        for path in protected_str, general_str:
+            if not (path / '.log').is_file():
+                with open(path / '.log', 'w') as fp:
+                    fp.write(f'Created on: {datetime.today().isoformat()}')
+
     if kwargs.get('processed', True):
-        if kwargs.get('makedirs', True) and \
-                processed_folder and not os.path.exists(processed_folder):
-            logger.debug(f'creating processed folder {processed_folder}')
-            os.makedirs(processed_folder)
-            os.chmod(processed_folder, 0o01777)
         return processed_folder
     else:
-        if kwargs.get('makedirs', True) and \
-                raw_folder and not os.path.exists(raw_folder):
-            logger.debug(f'creating raw folder {raw_folder}')
-            os.makedirs(raw_folder)
         return raw_folder
 
 
