@@ -311,6 +311,8 @@ lochness_sync_history_csv: {args.lochness_sync_history_csv}
 days_to_keep: 100
 removed_df_loc: {args.outdir}/PHOENIX/removed_files.csv
 removed_phoenix_root: {args.outdir}/track_removed_files_PHOENIX
+redcap_id_colname: chric_record_id
+redcap_consent_colname: chric_consent_date
 
 '''
 
@@ -415,7 +417,7 @@ AWS_BUCKET_ROOT: TEST_PHOENIX_ROOT_PRONET'''
                    - product: transcripts
                      data_dir: {study}_Interviews/transcripts/Approved
                      out_dir: transcripts
-                     pattern: '*.*'
+                     pattern: '*.txt
              '''
 
             config_example += line_to_add
@@ -428,6 +430,10 @@ admins:
     - {args.email}
 sender: {args.email}
 notify:
+    __global__:
+        - {args.email}
+
+file_check_notify:
     __global__:
         - {args.email}
                 '''

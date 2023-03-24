@@ -7,14 +7,30 @@ import os
 
 def get_ok2remove_df_from_s3_log(phoenix_root: Path,
                                  days_to_keep: int = 15) -> pd.DataFrame:
-    '''Load s3_log.csv file and returns okay-to-remove pd.DataFrame'''
+    '''Load s3_log.csv file and returns okay-to-remove pd.DataFrame
+
+    Key arguments:
+        phoenix_root: Root of a PHOENIX path, Path.
+        days_to_keep: number of days to keep the data, int.
+
+    Returns:
+        pd.DataFrame: each row for a path with 'timestamp', 'datatypes',
+                      and 'source' as the columns.
+
+    Note:
+        Data aggregation server is limited in space and some modalities have
+        a big data size, eg) mindlamp data. To save space, lochness cleans up
+        files, which are transferred to s3 bucket. This function returns
+        df_okay_to_remove, which contains list of file paths okay to remove,
+        from the s3_log.
+    '''
     s3_log_file = phoenix_root / 's3_log.csv'
 
     if Path(s3_log_file).is_file():
         s3_log_df = pd.read_csv(s3_log_file, index_col=0)
         s3_log_df['timestamp'] = pd.to_datetime(s3_log_df['timestamp'])
     else:
-         s3_log_df = pd.DataFrame()
+        s3_log_df = pd.DataFrame()
 
     date_point = datetime.now() - timedelta(days=days_to_keep)
     df_okay_to_remove = s3_log_df[s3_log_df['timestamp'] < date_point]
@@ -24,12 +40,12 @@ def get_ok2remove_df_from_s3_log(phoenix_root: Path,
     df_okay_to_remove = df_okay_to_remove[
             ~df_okay_to_remove.source.isin(df_not_okay_to_remove.source)]
 
+    # XNAT
     # since lochness.xnat pulls a zip file to a temporary file and extracts
-    # to a directory, a root directory of the saved MRI data needs to be added 
-    mri_root_names = df_okay_to_remove[
-            df_okay_to_remove['datatypes']=='mri'][
-                    'source'].str.extract(
-                            r'([\w/]*/mri/\w+)/').drop_duplicates()
+    # to a directory, a root directory of the saved MRI data needs to be added
+    mri_df = df_okay_to_remove[df_okay_to_remove['datatypes'] == 'mri']
+    mri_root_names = mri_df['source'].str.extract(r'([\w/]*/mri/\w+)/')
+    mri_root_names.drop_duplicates(inplace=True)
     mri_root_names.columns = ['source']
     mri_root_names.dropna(inplace=True)
     df_okay_to_remove = pd.concat([df_okay_to_remove, mri_root_names])
@@ -43,9 +59,9 @@ def is_path_ok2remove(phoenix_root: Path,
     '''Return True if a path is okay to remove
 
     Key Arguments:
-        phoenix_root: path of the PHOENIX directory, Path
-        file_path: path of a file to check if okay to remove, Path
-        df_okay_to_remove: database for files okay to remove, pd.Dataframe 
+        phoenix_root: path of the PHOENIX directory, Path.
+        file_path: path of a file to check if okay to remove, Path.
+        df_okay_to_remove: database for files okay to remove, pd.Dataframe.
 
     Returns:
         Boolean of okay to remove, bool.
@@ -74,14 +90,15 @@ def make_deleted_structure(phoenix_root: Path,
     '''Create PHOENIX structure of deleted files to keep track of deleted files
 
     Key Arguments:
+        phoenix_root: Root of a PHOENIX path, Path.
         file_path: path of the file deleted, Path.
         removed_phoenix_root: root of the new PHOENIX directory to keep track
-                              of the file being deleted.
+                              of the file being deleted, Path.
     '''
     file_path_relative = file_path.relative_to(phoenix_root.parent)
 
     file_path_new = Path(removed_phoenix_root) / \
-            file_path_relative.relative_to('PHOENIX')
+        file_path_relative.relative_to('PHOENIX')
     file_path_new.parent.mkdir(parents=True, exist_ok=True)
     file_path_new.touch()
 
@@ -95,16 +112,17 @@ def rm_transferred_files_under_phoenix(
 
     Key Arguments:
         phoenix_root: path of the PHOENIX directory, Path
-        days_to_keep: days to keep the data for, str.
+        days_to_keep: days to keep the data for, str. default = 15.
         removed_df_loc: path of a csv file to keep track of the removed files,
                         Path.
         removed_phoenix_root: new phoenix directory to keep the track of
                               removed files, Path. If None, the function does
                               not create this new phoenix directory.
+    Returns:
+        None
     '''
     phoenix_root = Path(phoenix_root)
-
-    df_okay_to_remove = get_ok2remove_df_from_s3_log(phoenix_root,
+    df_okay_to_remove = get_ok2remove_df_from_s3_log(Path(phoenix_root),
                                                      days_to_keep)
 
     if removed_df_loc is None:
@@ -115,11 +133,13 @@ def rm_transferred_files_under_phoenix(
     else:
         df_removed = pd.DataFrame()
 
-    for root, dirs, files in os.walk(phoenix_root):
+    for root, _, files in os.walk(phoenix_root):
         for file in files:
             file_path = Path(root) / file
             if is_path_ok2remove(phoenix_root, file_path, df_okay_to_remove):
-                os.remove(file_path)
+            
+                # os.remove(file_path)  # safelock
+
                 df_removed_tmp = pd.DataFrame({
                     'source': [file_path],
                     'removal_date': datetime.now()})
@@ -134,14 +154,17 @@ def rm_transferred_files_under_phoenix(
 
 def is_transferred_and_removed(Lochness,
                                destination: str,
-                               removed_df_loc: str = None):
-    '''Check if a file path is a path that Lochness has never removed
+                               removed_df_loc: str = None) -> bool:
+    '''Check if a file path is a path that Lochness has removed previously
 
     Key Arguments:
         Lochness: Lochness object, requires 'phoenix_root', dict.
         destination: path of a file to save a data by a lochness submodule,
                      str.
         removed_df_loc: path of a 'removed_files.csv', str.
+
+    Returns:
+        bool: True if removed previously
     '''
     if removed_df_loc is None:
         removed_df_loc = Path(Lochness['removed_df_loc'])
@@ -156,4 +179,3 @@ def is_transferred_and_removed(Lochness,
         return True
     else:
         return False
-
