@@ -337,6 +337,19 @@ def lochness_to_lochness_transfer_s3(Lochness,
     s3_bucket_name = Lochness['AWS_BUCKET_NAME']
     s3_phoenix_root = Lochness['AWS_BUCKET_ROOT']
 
+    # metadata
+    metadata_files = Path(Lochness['phoenix_root']).glob(
+                    f'GENERAL/*/*_metadata.csv')
+    for metadata_file in metadata_files:
+        s3_phoenix_metadata = re.sub(Lochness['phoenix_root'],
+                                       s3_phoenix_root,
+                                       str(metadata_file))
+        command = f'aws s3 sync \
+                {metadata_file}/ \
+                s3://{s3_bucket_name}/{s3_phoenix_metadata}'
+
+        os.popen(command).read()
+
     for datatype in ['mri', 'surveys', 'phone',
                      'actigraphy', 'eeg', 'interviews']:
         if not is_datatype_in_sources(datatype, sources):
