@@ -160,8 +160,8 @@ def sync_module(Lochness: 'lochness.config',
                                 continue
 
                             # ENH set different permissions
-                            # GENERAL: 0o755, PROTECTED: 0700
                             os.makedirs(mf_local, exist_ok=True)
+                            os.chmod(mf_local, 0o0770)
 
                             # subprocess call unimelb-mf-download
                             cmd = (' ').join(['unimelb-mf-download',
@@ -172,8 +172,8 @@ def sync_module(Lochness: 'lochness.config',
 
                             p = Popen(cmd, shell=True,
                                       stdout=DEVNULL, stderr=STDOUT)
-                            p.wait()
 
+                            p.wait()
                             # verify checksum after download completes if
                             # checksum does not match, data will be downloaded
                             # again ENH should we verify checksum 5 times?
@@ -181,6 +181,16 @@ def sync_module(Lochness: 'lochness.config',
                             p = Popen(cmd, shell=True,
                                       stdout=DEVNULL, stderr=STDOUT)
                             p.wait()
+
+                            # for A/V related files, force permission to 770
+                            # so A/V pipeline can work
+                            if 'interviews' in str(mf_local):
+                                for root, dirs, files in os.walk(mf_local):
+                                    for file in files:
+                                        file_p = Path(root) / file
+                                        perm = oct(file_p.stat().st_mode)[-3:]
+                                        if perm != '770':
+                                            os.chmod(file_p, 0o0770)
 
 
 def sync(Lochness, subject, dry):

@@ -11,6 +11,7 @@ import lochness.net as net
 import lochness.tree as tree
 from typing import List, Dict, Union
 import pandas as pd
+from datetime import datetime
 import re
 from lochness.redcap.process_piis import process_and_copy_db
 pd.set_option('mode.chained_assignment', None)
@@ -64,7 +65,7 @@ def get_rpms_database(rpms_root_path: str) -> Dict[str, pd.DataFrame]:
                 'measure_file_date', ascending=False).iterrows():
             if n == 0:
                 try:
-                    df_tmp = pd.read_csv(row.measure_file)
+                    df_tmp = pd.read_csv(row.measure_file, dtype=str)
                 except pd.errors.EmptyDataError:  # ignore csv is empty
                     continue
 
@@ -87,7 +88,7 @@ def get_run_sheets_for_datatypes(target_df_loc: Union[Path, str]) -> None:
             {STUDY}/{DATATYPE}/{subject}.{study}.Run_sheet_{DATATYPE}.csv
 
     Key Arguments:
-        - target_df_loc: REDCap json path, Path.
+        - target_df_loc: subject RPMS csv path, Path.
 
     Returns:
         - None
@@ -96,10 +97,11 @@ def get_run_sheets_for_datatypes(target_df_loc: Union[Path, str]) -> None:
     if not target_df_loc.is_file():
         return
 
-    modality_fieldname_dict = {'eeg': 'EEG',
+    modality_fieldname_dict = {'eeg': 'eeg_run_sheet',
                                'actigraphy': 'Actigraphy',
-                               'mri': 'MRI',
-                               'surveys': 'PennCNB'}
+                               'mri': 'mri_run_sheet',
+                               'surveys': 'penncnb',
+                               'interviews': 'speech_sampling_run_sheet'}
 
     for modality, fieldname in modality_fieldname_dict.items():
         if target_df_loc.name.endswith(f"_{fieldname}.csv"):
@@ -131,6 +133,16 @@ def get_run_sheets_for_datatypes(target_df_loc: Union[Path, str]) -> None:
             target_df['timepoint'] = target_df['visit'].map(time_to_timepoint)
             for tp, table in target_df.groupby('timepoint'):
                 run_sheet_output = f'{run_sheet_output_prefix}_{tp}.csv'
+
+                # compare existing table
+                if Path(run_sheet_output).is_file():
+                    run_sheet_prev = pd.read_csv(
+                        run_sheet_output, dtype=str).reset_index(drop=True)
+                    same_df = table.astype(str).equals(
+                            run_sheet_prev.astype(str))
+                    if same_df:
+                        continue
+
                 table.to_csv(run_sheet_output, index=False)
                 os.chmod(run_sheet_output, 0o0755)
 
@@ -164,6 +176,10 @@ def initialize_metadata(Lochness: 'Lochness object',
 
     df = pd.DataFrame()
 
+    ids_with_consent = all_df_dict['informed_consent_run_sheet'][
+            ~all_df_dict['informed_consent_run_sheet'][
+                rpms_consent_colname].isnull()].subjectkey.tolist()
+
     # all_df_dict - key: name of measure, value: pd.DataFrame of the whole file
     for measure, df_measure_all_subj in all_df_dict.items():
         # get the site information from the study name, eg. PrescientAD
@@ -172,6 +188,9 @@ def initialize_metadata(Lochness: 'Lochness object',
 
         # loop through each line of the RPMS database
         for index, df_measure in df_measure_all_subj.iterrows():
+            if not df_measure[rpms_id_colname] in ids_with_consent:
+                continue
+
             # if multistudy:
             # site of the subject for the line
 
@@ -191,9 +210,12 @@ def initialize_metadata(Lochness: 'Lochness object',
 
             # Consent date
             if rpms_consent_colname in df_measure:
-                subject_dict['Consent'] = df_measure[rpms_consent_colname]
+                subject_dict['Consent'] = datetime.strptime(
+                        df_measure[rpms_consent_colname],
+                        '%d/%m/%Y %I:%M:%S %p').strftime('%Y-%m-%d')
             else:
-                subject_dict['Consent'] = '1988-09-16'  # pseudo-random date
+                # subject_dict['Consent'] = '2021-10-01'  # pseudo-random date
+                continue  ## subject without consent date will be ignored
 
             # mediaflux source has its foldername as its subject ID
             subject_dict['RPMS'] = f'rpms.{study_name}:' + \
@@ -213,7 +235,6 @@ def initialize_metadata(Lochness: 'Lochness object',
 
             df_tmp = pd.DataFrame.from_dict(subject_dict, orient='index')
             df = pd.concat([df, df_tmp.T])
-
 
     # if there is no data for the study, return without saving metadata
     if len(df) == 0:
@@ -263,6 +284,9 @@ def get_subject_data(all_df_dict: Dict[str, pd.DataFrame],
             for unique_visit, table in subject_df.groupby('visit'):
                 if len(table) == 1 or 'Row#' in subject_df:
                     pass
+                # entry_status form does not have LastModifiedDate
+                elif measure == 'entry_status':
+                    pass
                 else:
                     most_recent_row_index = pd.to_datetime(
                             table['LastModifiedDate']).idxmax()
@@ -308,21 +332,14 @@ def sync(Lochness, subject, dry=False):
         # if the csv already exists, compare the dataframe
         if Path(target_df_loc).is_file():
             # index might be different, so drop it before comparing it
-            prev_df = pd.read_csv(target_df_loc).reset_index(drop=True)
+            prev_df = pd.read_csv(target_df_loc,
+                                  dtype=str).reset_index(drop=True)
 
-            # in order to use df.equals function, which also checks for data
-            # types of each data, the source_df needs to be saved and re-loaded
-            # to make the datatype consistent to that of prev_df
-            with tf.NamedTemporaryFile(delete=True) as f:
-                source_df.to_csv(f.name, index=False)
-                same_df = pd.read_csv(f.name).reset_index(
-                        drop=True).equals(prev_df)
-                if same_df:
-                    print(f'No new updates in {subject_id}:{measure}')
-                    continue
-
-        else:
-            latest_pull_mtime = 0
+            # source_df still has an index from the larger RPMS export
+            # drop the index before the comparison to target_df
+            same_df = source_df.reset_index(drop=True).equals(prev_df)
+            if same_df:
+                continue
 
         if len(source_df) == 0:  # do not save if the dataframe is empty
             continue
