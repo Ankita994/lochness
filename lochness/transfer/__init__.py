@@ -628,6 +628,7 @@ def is_datatype_in_sources(datatype: str, sources: List[str]) -> bool:
     source_dtype_dict = {
             'xnat': ['mri'],
             'redcap': ['surveys'],
+            'rpms': ['surveys'],
             'mindlamp': ['phone'],
             'box': ['actigraphy', 'eeg', 'interviews'],
             'mediaflux': ['mri', 'eeg', 'actigraphy', 'interviews'],
