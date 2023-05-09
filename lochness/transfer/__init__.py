@@ -341,13 +341,14 @@ def lochness_to_lochness_transfer_s3(Lochness,
     metadata_files = Path(Lochness['phoenix_root']).glob(
                     f'GENERAL/*/*_metadata.csv')
     for metadata_file in metadata_files:
+        metadata_dir = metadata_file.parent
         s3_phoenix_metadata = re.sub(Lochness['phoenix_root'],
-                                       s3_phoenix_root,
-                                       str(metadata_file))
-        command = f'aws s3 sync \
-                {metadata_file}/ \
-                s3://{s3_bucket_name}/{s3_phoenix_metadata}'
-
+                                     s3_phoenix_root,
+                                     str(metadata_dir))
+        command = f"aws s3 sync \
+                {metadata_dir} \
+                s3://{s3_bucket_name}/{s3_phoenix_metadata} \
+                --exclude='*' --include='*metadata.csv'"
         os.popen(command).read()
 
     for datatype in ['mri', 'surveys', 'phone',
