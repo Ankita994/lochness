@@ -432,25 +432,12 @@ def test_upenn_inclusive_id():
                        f"{' or '.join(contains_logic)}"
     }
     print()
-    print(record_query)
-    print()
-
-    record_query1 = {
-        'token': api_key,
-        'content': 'record',
-        'format': 'json',
-        'filterLogic': f"[session_subid] = '{redcap_subject}' or "
-                       f"[session_subid] = '{redcap_subject_sl}' or "
-                       f"contains([session_subid],'{redcap_subject}_') or "
-                       f"contains([session_subid],'{redcap_subject_sl}_')"
-    }
-    print(record_query1)
-    print()
+    # print(record_query)
     print()
 
     content = post_to_redcap(api_url,
                              record_query,
                              '')
     content_dict_list = json.loads(content)
-    print(content_dict_list)
     print(len(content_dict_list))
+    assert len(content_dict_list) == 5
