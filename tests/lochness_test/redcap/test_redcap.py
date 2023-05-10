@@ -391,3 +391,50 @@ def test_upenn_longitudinal_data():
                                                   studies=['PronetYA']):
         if 'YA015' in subject.id:
             sync(Lochness, subject, False)
+
+
+def test_upenn_inclusive_id():
+    from lochness.config import load
+    config_loc = '/mnt/ProNET/Lochness/config.yml'
+    Lochness = load(config_loc)
+
+    # get URL
+    keyring = Lochness['keyring']
+    api_url = keyring['redcap.UPENN']['URL'] + '/api/'
+    api_key = keyring['redcap.UPENN']['API_TOKEN']['UPENN']
+    id_field = Lochness['redcap_id_colname']
+    for subject_path in (
+            Path(Lochness['phoenix_root']) / 'PROTECTED').glob('*/raw/*'):
+        subject = subject_path.name
+        if 'YA05293' in subject:
+            break
+    redcap_subject = subject
+    redcap_subject_sl = redcap_subject.lower()
+    record_query = {
+        'token': api_key,
+        'content': 'record',
+        'format': 'json',
+        'filterLogic': f"[session_subid] = '{redcap_subject}' or "
+                       f"[session_subid] = '{redcap_subject_sl}' or "
+                       f"contains([session_subid],'{redcap_subject}=') or "
+                       f"contains([session_subid],'{redcap_subject_sl}=') or "
+                       f"contains([session_subid],'{redcap_subject}_') or "
+                       f"contains([session_subid],'{redcap_subject_sl}_')"
+    }
+
+    record_query = {
+        'token': api_key,
+        'content': 'record',
+        'format': 'json',
+        'filterLogic': f"[session_subid] = '{redcap_subject}' or "
+                       f"[session_subid] = '{redcap_subject_sl}' or "
+                       f"contains([session_subid],'{redcap_subject}_') or "
+                       f"contains([session_subid],'{redcap_subject_sl}_')"
+    }
+
+    content = post_to_redcap(api_url,
+                             record_query,
+                             '')
+    content_dict_list = json.loads(content)
+    print(content_dict_list)
+    print(len(content_dict_list))
