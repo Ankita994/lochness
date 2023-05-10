@@ -410,17 +410,18 @@ def test_upenn_inclusive_id():
             break
     redcap_subject = subject
     redcap_subject_sl = redcap_subject.lower()
-    record_query = {
-        'token': api_key,
-        'content': 'record',
-        'format': 'json',
-        'filterLogic': f"[session_subid] = '{redcap_subject}' or "
-                       f"[session_subid] = '{redcap_subject_sl}' or "
-                       f"contains([session_subid],'{redcap_subject}=') or "
-                       f"contains([session_subid],'{redcap_subject_sl}=') or "
-                       f"contains([session_subid],'{redcap_subject}_') or "
-                       f"contains([session_subid],'{redcap_subject_sl}_')"
-    }
+    # digits = [1, 2]
+    digits = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    digits_str = [str(x) for x in digits]
+    contains_logic = []
+    for subject_id in [redcap_subject, redcap_subject_sl]:
+        contains_logic += [
+                f"contains([session_subid], '{subject_id}_{x}')"
+                for x in digits_str]
+        contains_logic += [
+                f"contains([session_subid], '{subject_id}={x}')"
+                for x in digits_str]
+
 
     record_query = {
         'token': api_key,
@@ -428,9 +429,24 @@ def test_upenn_inclusive_id():
         'format': 'json',
         'filterLogic': f"[session_subid] = '{redcap_subject}' or "
                        f"[session_subid] = '{redcap_subject_sl}' or "
+                       f"{' or '.join(contains_logic)}"
+    }
+    print()
+    print(record_query)
+    print()
+
+    record_query1 = {
+        'token': api_key,
+        'content': 'record',
+        'format': 'json',
+        'filterLogic': f"[session_subid] = '{redcap_subject}' or "
+                       f"[session_subid] = '{redcap_subject_sl}' or "
                        f"contains([session_subid],'{redcap_subject}_') or "
                        f"contains([session_subid],'{redcap_subject_sl}_')"
     }
+    print(record_query1)
+    print()
+    print()
 
     content = post_to_redcap(api_url,
                              record_query,
