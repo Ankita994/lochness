@@ -685,7 +685,9 @@ def sync(Lochness, subject, dry=False):
                     'content': 'record',
                     'format': 'json',
                     'filterLogic': f"[session_subid] = '{redcap_subject}' or "
-                                   f"[session_subid] = '{redcap_subject_sl}'"
+                                   f"[session_subid] = '{redcap_subject_sl}' or "
+                                   f"contains([session_subid],'{redcap_subject}_') or "
+                                   f"contains([session_subid],'{redcap_subject_sl}_')"
                 }
 
             else:
