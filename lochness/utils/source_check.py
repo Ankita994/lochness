@@ -14,7 +14,7 @@ from subprocess import Popen, DEVNULL, STDOUT
 from lochness.box import get_access_token, walk_from_folder_object, \
         get_box_object_based_on_name
 from lochness.utils.path_checker import check_file_path_df, print_deviation, \
-        ampscz_id_validate
+        ampscz_id_validate, ampscz_penn_validate
 from lochness.config import load
 from lochness.email import send_detail
 from lochness.redcap import post_to_redcap
@@ -96,10 +96,10 @@ def check_list_all_penn_cnb_subjects(
                 df['site_orig'].str.split('_').str[1].str.upper()
 
         df['modality'] = 'PENN_CNB'
-        df['subject_check'] = df['subject'].apply(ampscz_id_validate)
-        df['exist_in_db'] = df['subject'].str.upper().isin(
+        df['subject_check'] = df['subject'].apply(ampscz_penn_validate)
+        df['exist_in_db'] = df['subject'].str[:7].str.upper().isin(
                 subject_list).fillna(False)
-        df['site_check'] = df['site'].str.split('_').str[1] == \
+        df['site_check'] = df['site'].str[-2:].str.lower() == \
                 df.subject.str[:2].str.lower()
         df['final_check'] = df['subject_check'] & df['exist_in_db']
         df['file_path'] = 'PENN CNB REDCap'

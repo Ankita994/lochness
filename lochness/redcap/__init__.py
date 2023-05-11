@@ -682,13 +682,28 @@ def sync(Lochness, subject, dry=False):
                 # UPENN REDCap is set up with its own record_id, but have added
                 # "session_subid" field to note AMP-SCZ ID
                 redcap_subject_sl = redcap_subject.lower()
+                digits = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+                digits_str = [str(x) for x in digits]
+                contains_logic = []
+                for subject_id in [redcap_subject, redcap_subject_sl]:
+                    contains_logic += [
+                            f"contains([session_subid], '{subject_id}_{x}')"
+                            for x in digits_str]
+                    # contains_logic += [
+                            # f"contains([session_subid], '{subject_id}={x}')"
+                            # for x in digits_str]
+
+
                 record_query = {
                     'token': api_key,
                     'content': 'record',
                     'format': 'json',
                     'filterLogic': f"[session_subid] = '{redcap_subject}' or "
-                                   f"[session_subid] = '{redcap_subject_sl}'"
+                                   f"[session_subid] = '{redcap_subject_sl}' or "
+                                   f"{' or '.join(contains_logic)}"
                 }
+                                   # f"[session_subid] = '{redcap_subject_sl}' or "
+                                   # f"{' or '.join(contains_logic)}"
 
             else:
                 id_field = Lochness['redcap_id_colname']

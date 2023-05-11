@@ -3,6 +3,7 @@ import re
 from pathlib import Path
 from typing import List
 
+
 def ampscz_id_validate(some_id: str):
     # https://github.com/AMP-SCZ/subject-id-validator
     # Basic checks: len == 7, first two chars are not numbers,
@@ -37,6 +38,27 @@ def ampscz_id_validate(some_id: str):
         return False
 
     return True
+
+
+def ampscz_penn_validate(some_id: str):
+    '''Validate PENN ID field, which is in AB01234_n pattern'''
+    if ampscz_id_validate(some_id):
+        return True
+
+    if len(some_id) != 9:
+        return False
+
+    # check if ampscz id is followed by '_'
+    if not some_id[7] in ['_']:
+        return False
+
+    # check if last str is digit
+    if not some_id[-1] in '123456789':
+        return False
+
+    # now check on the ID part of the scring
+    ampscz_id = some_id[:7]
+    return ampscz_id_validate(ampscz_id)
 
 
 def nth_item_from_path(df: pd.DataFrame, n: int) -> pd.Series:
