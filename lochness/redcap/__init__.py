@@ -689,9 +689,9 @@ def sync(Lochness, subject, dry=False):
                     contains_logic += [
                             f"contains([session_subid], '{subject_id}_{x}')"
                             for x in digits_str]
-                    # contains_logic += [
-                            # f"contains([session_subid], '{subject_id}={x}')"
-                            # for x in digits_str]
+                    contains_logic += [
+                            f"contains([session_subid], '{subject_id}={x}')"
+                            for x in digits_str]
 
 
                 record_query = {
