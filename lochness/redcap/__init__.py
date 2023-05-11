@@ -687,9 +687,9 @@ def sync(Lochness, subject, dry=False):
                     contains_logic += [
                             f"contains([session_subid], '{subject_id}_{x}')"
                             for x in digits_str]
-                    contains_logic += [
-                            f"contains([session_subid], '{subject_id}={x}')"
-                            for x in digits_str]
+                    # contains_logic += [
+                            # f"contains([session_subid], '{subject_id}={x}')"
+                            # for x in digits_str]
 
 
                 record_query = {
@@ -697,7 +697,8 @@ def sync(Lochness, subject, dry=False):
                     'content': 'record',
                     'format': 'json',
                     'filterLogic': f"[session_subid] = '{redcap_subject}' or "
-                                   f"[session_subid] = '{redcap_subject_sl}'"
+                                   f"[session_subid] = '{redcap_subject_sl}' or "
+                                   f"{' or '.join(contains_logic)}"
                 }
                                    # f"[session_subid] = '{redcap_subject_sl}' or "
                                    # f"{' or '.join(contains_logic)}"
