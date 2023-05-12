@@ -113,7 +113,7 @@ def sync_module(Lochness: 'lochness.config',
 
                         df = pd.read_csv(diff_path)
                         for remote in df['SRC_PATH'].values:
-                            if pd.isnull(remote):
+                            if pd.isna(remote):
                                 continue
 
                             if not re.search(
