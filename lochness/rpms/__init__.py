@@ -12,6 +12,7 @@ import lochness.tree as tree
 from typing import List, Dict, Union
 import pandas as pd
 from datetime import datetime
+from time import sleep
 import re
 from lochness.redcap.process_piis import process_and_copy_db
 pd.set_option('mode.chained_assignment', None)
@@ -20,6 +21,24 @@ pd.set_option('mode.chained_assignment', None)
 yaml.SafeDumper.add_representer(
     col.OrderedDict, yaml.representer.SafeRepresenter.represent_dict)
 logger = logging.getLogger(__name__)
+
+
+def _wait():
+    
+    # calculate _sleep in minutes
+    # it is between 15 (7:55 pm) and 0 (8:10 pm)
+    _sleep=0
+    now=datetime.now()
+    if now.hour==19:
+        if now.minute>=55:
+            _sleep=15-(now.minute-55)
+
+    elif now.hour==20:
+        if now.minute<=10:
+            _sleep=10-now.minute
+
+    # argument of sleep() is in seconds
+    sleep(_sleep*60)
 
 
 def get_rpms_database(rpms_root_path: str) -> Dict[str, pd.DataFrame]:
@@ -65,6 +84,10 @@ def get_rpms_database(rpms_root_path: str) -> Dict[str, pd.DataFrame]:
                 'measure_file_date', ascending=False).iterrows():
             if n == 0:
                 try:
+                    # do not read CSV files within 7:55-8:10 pm
+                    # they are exported by RPMS and modified by Tashrif's programs
+                    # during this window
+                    _wait()
                     df_tmp = pd.read_csv(row.measure_file, dtype=str)
                 except pd.errors.EmptyDataError:  # ignore csv is empty
                     shutil.move(row.measure_file,
