@@ -154,7 +154,7 @@ def sync(Lochness: 'lochness.config',
 
             # do not re-download already transferred & removed data
             # if is_transferred_and_removed(Lochness, dst):
-                # continue
+            #    continue
 
             prev_file_sha256 = ''  # set previous sha as empty
             checksum_file = dst.parent / f'.check_sum_{dst.name}'
