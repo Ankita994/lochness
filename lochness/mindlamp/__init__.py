@@ -168,8 +168,9 @@ def sync(Lochness: 'lochness.config',
                     continue
 
             elif days_from_ct < 2 and Path(dst).is_file():
-                # potentially within 24 hours from the data acquisition, thus
-                # check if there is any changes in the data on the source
+                # potentially within 24 hours from the data acquisition, data
+                # may change so check if there is any changes in the data on
+                # the source
                 if checksum_file.is_file():
                     logger.debug(f'{data_name} data has been downloaded more '
                                  'than once for checksum')
