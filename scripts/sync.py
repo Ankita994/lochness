@@ -103,6 +103,8 @@ def main():
                              'server side')
     parser.add_argument('-ds', '--daily_summary', action='store_true',
                         help='Enable daily summary email function')
+    parser.add_argument('-cs', '--check_source', action='store_true',
+                        help='Enable check source email function')
     parser.add_argument('--debug', action='store_true',
                         help='Enable debug messages')
     parser.add_argument('-rof', '--remove_old_files',
@@ -172,11 +174,13 @@ def main():
                     pass  # no email
                 elif datetime.today().isoweekday() == 1:  # Monday
                     days_to_summarize = 3
-                    check_source(Lochness)
                     send_out_daily_updates(Lochness, days=days_to_summarize)
+                    if args.check_source:
+                        check_source(Lochness)
                 else:
-                    check_source(Lochness)
                     send_out_daily_updates(Lochness)
+                    if args.check_source:
+                        check_source(Lochness)
 
                 with open(email_dates_file, 'w') as fp:
                     fp.write(str(date.today()))
@@ -198,7 +202,8 @@ def main():
         # email
         if args.daily_summary:
             check_source(Lochness)
-            send_out_daily_updates(Lochness)
+            if args.check_source:
+                check_source(Lochness)
 
 
 def do(args, Lochness):

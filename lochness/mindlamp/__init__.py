@@ -122,7 +122,8 @@ def sync(Lochness: 'lochness.config',
     dst_folder = tree.get('mindlamp',
                           subject.protected_folder,
                           processed=False,
-                          BIDS=Lochness['BIDS'])
+                          BIDS=Lochness['BIDS'],
+                          makedirs=True)
 
     # the loop below downloads all data from mindlamp from the current date
     # to (current date - 100 days), overwriting pre-downloaded files.
@@ -153,7 +154,7 @@ def sync(Lochness: 'lochness.config',
 
             # do not re-download already transferred & removed data
             # if is_transferred_and_removed(Lochness, dst):
-                # continue
+            #    continue
 
             prev_file_sha256 = ''  # set previous sha as empty
             checksum_file = dst.parent / f'.check_sum_{dst.name}'
@@ -167,8 +168,9 @@ def sync(Lochness: 'lochness.config',
                     continue
 
             elif days_from_ct < 2 and Path(dst).is_file():
-                # potentially within 24 hours from the data acquisition, thus
-                # check if there is any changes in the data on the source
+                # potentially within 24 hours from the data acquisition, data
+                # may change so check if there is any changes in the data on
+                # the source
                 if checksum_file.is_file():
                     logger.debug(f'{data_name} data has been downloaded more '
                                  'than once for checksum')

@@ -37,7 +37,8 @@ def send_detail(Lochness,
                 second_message: str, code: List[str],
                 in_mail_footer: str,
                 test: bool = False,
-                mailx: bool = True) -> None:
+                mailx: bool = True,
+                recipients: list = []) -> None:
     '''Email Lochness updates
     
     This function uses Linux's mailx system by default. But when
@@ -61,11 +62,12 @@ def send_detail(Lochness,
 
     
     '''
-    recipients = []
-    for study, study_recipients in recipients_for_each_study.items():
-        for recipient in study_recipients:
-            if recipients not in recipients:
-                recipients.append(recipient)
+    if recipients == []:
+        for study, study_recipients in recipients_for_each_study.items():
+            for recipient in study_recipients:
+                if recipients not in recipients:
+                    recipients.append(recipient)
+
 
     email_template_dir = os.path.join(__dir__)
     env = Environment(loader=FileSystemLoader(str(email_template_dir)))

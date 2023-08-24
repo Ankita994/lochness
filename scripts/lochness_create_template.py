@@ -233,22 +233,38 @@ def create_keyring_template(keyring_loc: Path, args: object) -> None:
         for study in args.studies:
             template_dict['lochness']['SECRETS'][study] = 'LOCHNESS_SECRETS'
 
+            if args.enter_passwords:
+                mediaflux_user = getpass.getpass('Mediaflux User: ')
+                mediaflux_password = getpass.getpass('Mediaflux Password: ')
+            else:
+                mediaflux_user = '*****'
+                mediaflux_password = '*****'
+
             # lower part of the keyring
             template_dict[f'mediaflux.{study}'] = {
                 'HOST': 'mediaflux.researchsoftware.unimelb.edu.au',
                 'PORT': '443',
                 'TRANSPORT': 'https',
                 'DOMAIN': 'local',
-                'USER': '**ID**',
-                'PASSWORD': '**PASSWORD**'}
+                'USER': mediaflux_user,
+                'PASSWORD': mediaflux_password}
 
     if 'mindlamp' in args.sources:
         for study in args.studies:
             # lower part of the keyring
+            if args.enter_passwords:
+                mindlamp_url = getpass.getpass('Mindlamp URL: ')
+                mindlamp_ak = getpass.getpass('Mindlamp Access key: ')
+                mindlamp_sk = getpass.getpass('Mindlamp  Secret key: ')
+            else:
+                mindlamp_url = '*****'
+                mindlamp_ak = '*****'
+                mindlamp_sk = '*****'
+
             template_dict[f'mindlamp.{study}'] = {
-                "URL": "**api.lamp.digital**",
-                "ACCESS_KEY": args.email,
-                "SECRET_KEY": "**PASSWORD**"}
+                "URL": mindlamp_url,
+                "ACCESS_KEY": mindlamp_ak,
+                "SECRET_KEY": mindlamp_sk}
 
     if 'daris' in args.sources:
         for study in args.studies:
@@ -321,6 +337,11 @@ redcap_consent_colname: chric_consent_date
 RPMS_id_colname: subjectkey
 RPMS_consent_colname: Consent
 '''
+    if 'redcap' in args.sources:
+        config_example += '''redcap_id_colname: chric_record_id
+redcap_consent_colname: chric_consent_date
+'''
+
 
     if args.s3:
         if 'rpms' in args.sources:
