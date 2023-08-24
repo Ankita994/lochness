@@ -94,7 +94,7 @@ def sync_module(Lochness: 'lochness.config',
 
                     # obtain mediaflux remote paths
                     with tf.TemporaryDirectory() as tmpdir:
-                        diff_path= pjoin(tmpdir,'diff.csv')
+                        diff_path = pjoin(tmpdir,'diff.csv')
                         cmd = (' ').join(['unimelb-mf-check',
                                           '--mf.config', mflux_cfg,
                                           '--nb-retries 5',
@@ -115,6 +115,14 @@ def sync_module(Lochness: 'lochness.config',
                         for remote in df['SRC_PATH'].values:
                             if pd.isnull(remote):
                                 continue
+
+                            # ignore mp3 or mp4 in non-interviews
+                            if datatype != 'interviews':
+                                if remote.endswith('mp3') or \
+                                        remote.endswith('mp4'):
+                                    logger.warning('mp3 or mp4 file detected '
+                                        f'in non-interviews datatype: {root}')
+                                    continue
 
                             if not re.search(
                                     patt.replace('*', '(.+?)').lower(),
