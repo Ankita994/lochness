@@ -559,6 +559,15 @@ def sync_module(Lochness: 'lochness.config',
                         if not product:
                             continue
 
+                        # ignore mp3 or mp4 files in non-interviews datatypes
+                        if datatype != 'interviews':
+                            if box_file_object.name.endswith('mp3') or \
+                                    box_file_object.name.endswith('mp4'):
+                                logger.warning('mp3 or mp4 detected in '
+                                    f'non-interviews datatype in {root}')
+                                continue
+
+
                         protect = product.get('protect', True)
 
                         # GENERAL / STUDY or PROTECTED / STUDY
