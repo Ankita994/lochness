@@ -241,8 +241,13 @@ def do(args, Lochness):
             for Module in args.hdd:
                 lochness.attempt(Module.sync, Lochness, subject, dry=args.dry)
         else:
-            for Module in args.source:
-                lochness.attempt(Module.sync, Lochness, subject, dry=args.dry)
+            for source, Module in zip(args.input_sources, args.source):
+                if source == 'xnat':
+                    lochness.attempt(Module.sync_xnatpy, Lochness,
+                                     subject, dry=args.dry)
+                else:
+                    lochness.attempt(Module.sync, Lochness,
+                                     subject, dry=args.dry)
         n += 1
 
     # anonymize PII
