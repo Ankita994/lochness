@@ -143,15 +143,15 @@ class NoMatchingSubjectXNAT(Exception):
 
 
 @net.retry(max_attempts=5)
-def sync_new(Lochness, subject, dry=False):
+def sync_xnatpy(Lochness, subject, dry=False):
     """A new sync function with XNATpy"""
     logger.debug('exploring {0}/{1}'.format(subject.study, subject.id))
 
     for alias, xnat_uids in iter(subject.xnat.items()):
-        Keyring = Lochness['keyring'][alias]
-        session = xnat.connect(Keyring['URL'],
-                               Keyring['USERNAME'],
-                               Keyring['PASSWORD'])
+        keyring = Lochness['keyring'][alias]
+        session = xnat.connect(keyring['URL'],
+                               keyring['USERNAME'],
+                               keyring['PASSWORD'])
         '''
         pull XNAT data agnostic to the case of subject IDs loop over lower and
         upper case IDs if the data for one ID do not exist, experiments(auth,

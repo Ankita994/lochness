@@ -1,6 +1,7 @@
 import os
-from lochness.xnat import sync_new
+from lochness.xnat import sync_xnatpy
 from lochness.config import load
+import pytest
 
 
 class Subject():
@@ -11,11 +12,11 @@ class Subject():
         self.id ='id'
 
 
-def test_sync_new():
+def test_sync_xnatpy():
     Lochness = load('/mnt/ProNET/Lochness/config.yml')
     subject = Subject('SL00005')
     dry = False
-    sync_new(Lochness, subject, dry=dry)
+    sync_xnatpy(Lochness, subject, dry=dry)
 
     print(os.popen('tree').read())
     print(os.popen('rm -rf processed raw'))
@@ -25,7 +26,5 @@ def test_wrong_id():
     Lochness = load('/mnt/ProNET/Lochness/config.yml')
     subject = Subject('SL00000')
     dry = False
-    sync_new(Lochness, subject, dry=dry)
-
-    print(os.popen('tree').read())
-    print(os.popen('rm -rf processed raw'))
+    with pytest.raises(Exception):
+        sync_xnatpy(Lochness, subject, dry=dry)
