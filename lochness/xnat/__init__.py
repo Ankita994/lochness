@@ -157,7 +157,7 @@ def sync_new(Lochness, subject, dry=False):
         upper case IDs if the data for one ID do not exist, experiments(auth,
         xnat_uid) returns nothing preventing the execution of inner loop
         '''
-        _xnat_uids = [xnat_uids.upper(), xnat_uids.lower()]
+        _xnat_uids = [xnat_uids.lower(), xnat_uids.upper()]
         site = xnat_uids[:2]
         for ses in session.projects:
             if 'pronet' in ses.lower():
