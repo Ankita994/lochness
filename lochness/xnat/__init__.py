@@ -3,8 +3,9 @@ import yaml
 import uuid
 import xnat
 import yaxil
-import lochness
+import shutil
 import logging
+import lochness
 import tempfile as tf
 import collections as col
 from pathlib import Path
@@ -149,14 +150,14 @@ def sync_new(Lochness, subject, dry=False):
     for alias, xnat_uids in iter(subject.xnat.items()):
         Keyring = Lochness['keyring'][alias]
         session = xnat.connect(Keyring['URL'],
-                               username=Keyring['USERNAME'],
-                               password=Keyring['PASSWORD'])
+                               Keyring['USERNAME'],
+                               Keyring['PASSWORD'])
         '''
         pull XNAT data agnostic to the case of subject IDs loop over lower and
         upper case IDs if the data for one ID do not exist, experiments(auth,
         xnat_uid) returns nothing preventing the execution of inner loop
         '''
-        _xnat_uids = xnat_uids + [(x[0], x[1].lower()) for x in xnat_uids]
+        _xnat_uids = [xnat_uids.upper(), xnat_uids.lower()]
         site = xnat_uids[:2]
         for ses in session.projects:
             if 'pronet' in ses.lower():
@@ -184,11 +185,6 @@ def sync_new(Lochness, subject, dry=False):
             dst = os.path.join(dirname, f'{experiment.label.upper()}.zip')
 
             logger.info(experiment)
-
-            # do not re-download already transferred & removed data
-            if is_transferred_and_removed(Lochness, dst):
-                continue
-
             if os.path.exists(dst):
                 continue
 
@@ -198,7 +194,10 @@ def sync_new(Lochness, subject, dry=False):
                                         FOLDER=dst))
 
             if not dry:
-                experiment.download(experiment)
+                with tf.NamedTemporaryFile(delete=False) as tmpfilename:
+                    experiment.download(tmpfilename.name)
+                    shutil.move(tmpfilename.name, dst)
+                    os.chmod(dst, 0o0755)
 
 
 def check_consistency(d, experiment):
