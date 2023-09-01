@@ -169,13 +169,14 @@ def sync_new(Lochness, subject, dry=False):
         for xnat_uid in _xnat_uids:
             try:
                 xnat_subject = project.subjects[xnat_uid]
+                break
             except KeyError:
                 continue
 
         if xnat_subject == '':
-            logger.warn('There is no matching subject in XNAT database: '
-                        f'{xnat_uid}')
-            raise NoMatchingSubjectXNAT('There is no matching subject in XNAT')
+            msg = f'There is no matching subject in XNAT database: {xnat_uid}'
+            logger.warn(msg)
+            raise NoMatchingSubjectXNAT('No matching subject in XNAT')
 
         for exp_id, experiment in xnat_subject.experiments.items():
             dirname = tree.get('mri',
