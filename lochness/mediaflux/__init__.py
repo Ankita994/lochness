@@ -94,7 +94,7 @@ def sync_module(Lochness: 'lochness.config',
 
                     # obtain mediaflux remote paths
                     with tf.TemporaryDirectory() as tmpdir:
-                        diff_path= pjoin(tmpdir,'diff.csv')
+                        diff_path = pjoin(tmpdir,'diff.csv')
                         cmd = (' ').join(['unimelb-mf-check',
                                           '--mf.config', mflux_cfg,
                                           '--nb-retries 5',
@@ -112,9 +112,17 @@ def sync_module(Lochness: 'lochness.config',
                             continue
 
                         df = pd.read_csv(diff_path)
-                        for remote in df['SRC_PATH'].values:
-                            if pd.isnull(remote):
-                                continue
+                        for row in df[~df['SRC_PATH'].isnull()]:
+                            remote = row.SRC_PATH
+                            checksum = row.SRC_CHECKSUM
+
+                            # ignore mp3 or mp4 in non-interviews
+                            if datatype != 'interviews':
+                                if remote.endswith('mp3') or \
+                                        remote.endswith('mp4'):
+                                    logger.warning('mp3 or mp4 file detected '
+                                        f'in non-interviews datatype: {root}')
+                                    continue
 
                             if not re.search(
                                     patt.replace('*', '(.+?)').lower(),
@@ -155,6 +163,18 @@ def sync_module(Lochness: 'lochness.config',
                                     if 'out_dir' in prod else mf_local) / \
                                         subpath.parent
 
+                            # do not re-download already downloaded data
+                            prev_checksum_file = Path(mf_local).parent / \
+                                    f'.checksum_{Path(mf_local).name}'
+                            if prev_checksum_file.is_file():
+                                with open(prev_checksum_file, 'r') as fp:
+                                    prev_checksum = fp.read().strip()
+
+                                if prev_checksum == checksum:
+                                    continue
+                                else:
+                                    shutil.remove(mf_local)
+
                             # do not re-download already transferred &
                             # removed data
                             if is_transferred_and_removed(
@@ -176,13 +196,9 @@ def sync_module(Lochness: 'lochness.config',
                                       stdout=DEVNULL, stderr=STDOUT)
                             p.wait()
 
-                            # verify checksum after download completes if
-                            # checksum does not match, data will be downloaded
-                            # again ENH should we verify checksum 5 times?
-                            cmd += ' --csum-check'
-                            p = Popen(cmd, shell=True,
-                                      stdout=DEVNULL, stderr=STDOUT)
-                            p.wait()
+                            # write checksum to local
+                            with open(prev_checksum_file, 'w') as fp:
+                                fp.write(checksum)
 
                             # for A/V related files, force permission to 770
                             # so A/V pipeline can work

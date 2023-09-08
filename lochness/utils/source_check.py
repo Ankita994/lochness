@@ -96,6 +96,16 @@ def check_list_all_penn_cnb_subjects(
                 df['site_orig'].str.split('_').str[1].str.upper()
 
         df['modality'] = 'PENN_CNB'
+
+        # PennCNB accepts subject IDs with '_\d' suffix that denotes different
+        # timepoint of the data submission
+
+        # get only the first XX\d\d\d\d\d pattern
+        df['subject_orig'] = df['subject'].copy()
+        pattern = r'([A-Z]{2}\d{5}(?=_|=|$))'
+        df['subject'] = df['subject'].str.extract(pattern)
+        df['subject'] = df['subject'].fillna(df['subject_orig'])
+
         df['subject_check'] = df['subject'].apply(ampscz_penn_validate)
         df['exist_in_db'] = df['subject'].str[:7].str.upper().isin(
                 subject_list).fillna(False)
