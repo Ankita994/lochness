@@ -26,7 +26,8 @@ logger = logging.getLogger(__name__)
 def _wait():
     
     # RPMS dumps data at 20:00 (AEDT) or at 19:00 (AEST)
-    RPMS_DUMP_HOUR=os.getenv('RPMS_DUMP_HOUR',20)
+    tz=os.getenv('TIME_ZONE','AEDT')
+    RPMS_DUMP_HOUR=20 if tz=='AEDT' else 19
 
     # calculate _sleep in minutes
     # it is between 15 (7:55 pm) and 0 (8:10 pm)
