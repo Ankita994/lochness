@@ -25,15 +25,18 @@ logger = logging.getLogger(__name__)
 
 def _wait():
     
+    # RPMS dumps data at 20:00 (AEDT) or at 19:00 (AEST)
+    RPMS_DUMP_HOUR=os.getenv('RPMS_DUMP_HOUR',20)
+
     # calculate _sleep in minutes
     # it is between 15 (7:55 pm) and 0 (8:10 pm)
     _sleep=0
     now=datetime.now()
-    if now.hour==19:
+    if now.hour==RPMS_DUMP_HOUR-1:
         if now.minute>=55:
             _sleep=15-(now.minute-55)
 
-    elif now.hour==20:
+    elif now.hour==RPMS_DUMP_HOUR:
         if now.minute<=10:
             _sleep=10-now.minute
 
