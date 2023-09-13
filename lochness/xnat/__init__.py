@@ -157,8 +157,10 @@ def sync_xnatpy(Lochness, subject, dry=False):
         upper case IDs if the data for one ID do not exist, experiments(auth,
         xnat_uid) returns nothing preventing the execution of inner loop
         '''
-        _xnat_uids = [xnat_uids.lower(), xnat_uids.upper()]
-        site = xnat_uids[:2]
+        site = xnat_uids[0][1][:2]
+        _xnat_uids = [(x[0], x[1].upper()) for x in xnat_uids] + \
+                     [(x[0], x[1].lower()) for x in xnat_uids]
+
         for ses in session.projects:
             if 'pronet' in ses.lower():
                 if site in ses:
@@ -168,15 +170,16 @@ def sync_xnatpy(Lochness, subject, dry=False):
         xnat_subject = ''
         for xnat_uid in _xnat_uids:
             try:
-                xnat_subject = project.subjects[xnat_uid]
+                xnat_subject = project.subjects[xnat_uid[1]]
                 break
-            except KeyError:
+            except KeyError as e:
                 continue
 
         if xnat_subject == '':
-            msg = f'There is no matching subject in XNAT database: {xnat_uid}'
-            logger.warn(msg)
-            raise NoMatchingSubjectXNAT('No matching subject in XNAT')
+            msg = 'There is no matching subject in XNAT database: '
+            msg += f"{' / '.join([x[1] for x in _xnat_uids])}"
+            logger.debug(msg)
+            continue
 
         for exp_id, experiment in xnat_subject.experiments.items():
             dirname = tree.get('mri',
@@ -185,7 +188,6 @@ def sync_xnatpy(Lochness, subject, dry=False):
                                BIDS=Lochness['BIDS'])
             dst = os.path.join(dirname, f'{experiment.label.upper()}.zip')
 
-            logger.info(experiment)
             if os.path.exists(dst):
                 continue
 
