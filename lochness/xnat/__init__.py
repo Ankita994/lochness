@@ -142,10 +142,30 @@ class NoMatchingSubjectXNAT(Exception):
     pass
 
 
+def set_TMPDIR(Lochness):
+    try:
+        tmp_dir = Lochness['tmp_dir']
+    except KeyError:
+        tmp_dir = os.environ.get('TMPDIR')
+        if tmp_dir is None:
+            tmp_dir = tf.gettempdir()
+
+    # Set the TMPDIR environment variable to a default value
+    os.environ['TMPDIR'] = tmp_dir
+
+    return tmp_dir
+
+
 @net.retry(max_attempts=5)
 def sync_xnatpy(Lochness, subject, dry=False):
     """A new sync function with XNATpy"""
     logger.debug('exploring {0}/{1}'.format(subject.study, subject.id))
+
+    tmp_dir = set_TMPDIR(Lochness)
+
+    # remove xnatpy tmp files
+    for tmp_file in Path(tmp_dir).glob('*generated_xnat.py'):
+        os.remove(tmp_file)
 
     for alias, xnat_uids in iter(subject.xnat.items()):
         keyring = Lochness['keyring'][alias]
@@ -197,10 +217,13 @@ def sync_xnatpy(Lochness, subject, dry=False):
                                         FOLDER=dst))
 
             if not dry:
-                with tf.NamedTemporaryFile(delete=False) as tmpfilename:
+                with tf.NamedTemporaryFile(dir=tmp_dir,
+                                           delete=False) as tmpfilename:
                     experiment.download(tmpfilename.name)
                     shutil.move(tmpfilename.name, dst)
                     os.chmod(dst, 0o0755)
+
+
 
 
 def check_consistency(d, experiment):
