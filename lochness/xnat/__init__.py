@@ -167,6 +167,9 @@ def sync_xnatpy(Lochness, subject, dry=False):
     for tmp_file in Path(tmp_dir).glob('*generated_xnat.py'):
         os.remove(tmp_file)
 
+    for tmp_file in Path(tmp_dir).glob('tmp_xnat*'):
+        os.remove(tmp_file)
+
     for alias, xnat_uids in iter(subject.xnat.items()):
         keyring = Lochness['keyring'][alias]
         session = xnat.connect(keyring['URL'],
@@ -218,6 +221,7 @@ def sync_xnatpy(Lochness, subject, dry=False):
 
             if not dry:
                 with tf.NamedTemporaryFile(dir=tmp_dir,
+                                           prefix='tmp_xnat_',
                                            delete=False) as tmpfilename:
                     experiment.download(tmpfilename.name)
                     shutil.move(tmpfilename.name, dst)
