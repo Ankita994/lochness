@@ -468,8 +468,10 @@ def sync_module(Lochness: 'lochness.config',
                                          enterprise_id)
         # error get_access_token may occur when your box app is not authorized
         except TokenAccessError as err:
+            logger.debug('Refreshing token')
             refresh_token_path = Path(Lochness['keyring_file']).parent / \
                     '.refresh_token'
+            logger.debug(refresh_token_path)
             api_token = refresh_access_token(refresh_token_path,
                                              client_id,
                                              client_secret)
@@ -549,8 +551,8 @@ def sync_module(Lochness: 'lochness.config',
                 for root, dirs, files in walk_from_folder_object(
                         bx_head, datatype_obj):
                     for box_file_object in files:
-                        logger.info(f'Found a file matching the pattern: '
-                                    f'{box_file_object}')
+                        logger.debug(f'Found a file matching the pattern: '
+                                     f'{box_file_object}')
                         bx_tail = join(basename(root), box_file_object.name)
                         product = _find_product(bx_tail,
                                                 product,
