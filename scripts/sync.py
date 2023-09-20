@@ -123,7 +123,7 @@ def main():
     # replace args.source with corresponding lochness modules
     if args.source:
         args.input_sources = args.source
-        args.source = list(set([SOURCES[x] for x in args.source]))
+        args.source = [SOURCES[x] for x in args.source]
     else:
         args.input_sources = []
 
