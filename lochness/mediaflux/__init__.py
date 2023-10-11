@@ -112,9 +112,12 @@ def sync_module(Lochness: 'lochness.config',
                             continue
 
                         df = pd.read_csv(diff_path)
-                        for row in df[~df['SRC_PATH'].isnull()]:
+                        for _, row in df[~df['SRC_PATH'].isnull()].iterrows():
                             remote = row.SRC_PATH
                             checksum = row.SRC_CHECKSUM
+
+                            if pd.isnull(checksum):
+                                continue
 
                             # ignore mp3 or mp4 in non-interviews
                             if datatype != 'interviews':
@@ -164,16 +167,19 @@ def sync_module(Lochness: 'lochness.config',
                                         subpath.parent
 
                             # do not re-download already downloaded data
-                            prev_checksum_file = Path(mf_local).parent / \
-                                    f'.checksum_{Path(mf_local).name}'
+                            prev_checksum_file = Path(mf_local) / \
+                                    f'.checksum_{subpath.name}'
+
+
                             if prev_checksum_file.is_file():
                                 with open(prev_checksum_file, 'r') as fp:
                                     prev_checksum = fp.read().strip()
 
                                 if prev_checksum == checksum:
                                     continue
-                                else:
-                                    shutil.remove(mf_local)
+                                # else:
+                                    # pass
+                                    # os.remove(Path(mf_local) / subpath.name)
 
                             # do not re-download already transferred &
                             # removed data
@@ -190,6 +196,7 @@ def sync_module(Lochness: 'lochness.config',
                                               '--mf.config', mflux_cfg,
                                               '-o', f'"{mf_local}"',
                                               '--nb-retries 5',
+                                              '--overwrite',
                                               f'\"{remote}\"'])
 
                             p = Popen(cmd, shell=True,
