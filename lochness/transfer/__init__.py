@@ -299,7 +299,7 @@ def send_file_to_s3_phoenix(Lochness, source_file: Path) -> None:
 
     command = f"aws s3 cp \
             {source_file} s3://{s3_bucket_name}/{target_path} \
-            --exclude '*.mp3' --exclude '.checksum*'"
+            --exclude '*.mp3' --exclude '.checksum*' --exclude '.check_sum*'"
     command_out = os.popen(command).read()
 
     # update s3 log
@@ -561,7 +561,8 @@ def lochness_to_lochness_transfer_s3_protected(Lochness,
                 command = f"aws s3 sync \
                         {source_directory}/ \
                         s3://{s3_bucket_name}/{s3_phoenix_root_dtype} \
-                        --exclude '*.mp3' --exclude '.check_sum*'"
+                        --exclude '*.mp3' --exclude '.check_sum*' \
+                        --exclude '.checksum*' "
 
                 # logger.debug(re.sub(r'\s+', r' ', command))
 
