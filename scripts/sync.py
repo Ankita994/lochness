@@ -201,7 +201,7 @@ def main():
 
         # email
         if args.daily_summary:
-            check_source(Lochness)
+            send_out_daily_updates(Lochness)
             if args.check_source:
                 check_source(Lochness)
 
