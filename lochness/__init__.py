@@ -580,23 +580,10 @@ def atomic_write(filename, content, overwrite=True,
     :type permissions: octal
     '''
     filename = os.path.expanduser(filename)
-    if not overwrite and os.path.exists(filename):
-        raise WriteError("file already exists: %s" % filename)
-    dirname = os.path.dirname(filename)
-    with tf.NamedTemporaryFile(dir=dirname, prefix='.', delete=False) as tmp:
-        if isinstance(content, six.string_types):
-            tmp.write(content.decode(encoding))
-        else:
-            tmp.write(content)
-        tmp.flush()
-        os.fsync(tmp.fileno())
-
-    try:  #
-        os.chmod(tmp.name, permissions)
-    except PermissionError:  # when admin forces output file permissions
-        pass
-
-    os.rename(tmp.name, filename)
+    
+    with open(filename,'w') as f:
+        f.write(content.decode(encoding))
+        f.flush()
 
 
 def WriteError(Exception):
