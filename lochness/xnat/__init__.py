@@ -1,4 +1,5 @@
 import os
+import subprocess
 import yaml
 import uuid
 import xnat
@@ -156,6 +157,49 @@ def set_TMPDIR(Lochness):
     return tmp_dir
 
 
+def download_xnat_session_dataorc(
+    host: str,
+    project: str,
+    subject: str,
+    session: str,
+    out_dir: str
+) -> None:
+    """
+    Downloads session data from an XNAT server using the dataorc command-line tool.
+
+    Args:
+        host (str): The hostname of the XNAT server.
+        project (str): The name of the project containing the session data.
+        subject (str): The ID of the subject.
+        session (str): The ID of the session to download.
+        out_dir (str): The directory to which the session data should be downloaded.
+
+    Returns:
+        None
+    """
+
+    command_array = [
+        '/opt/software/dataorc-bin/dataorc',
+        'xnat-download-session',
+        '--host', host,
+        '--project', project,
+        '--subject', subject,
+        '--session', session,
+        '--output-dir', out_dir
+    ]
+
+    command = ' '.join(command_array)
+
+    logger.info(f'Executing command: {command}')
+
+    try:
+        subprocess.check_call(command, shell=True)
+    except subprocess.CalledProcessError as e:
+        logger.error(f'Failed to execute command: {command}')
+        logger.error(f'Error message: {e}')
+        raise e
+
+
 @net.retry(max_attempts=5)
 def sync_xnatpy(Lochness, subject, dry=False):
     """A new sync function with XNATpy"""
@@ -220,14 +264,30 @@ def sync_xnatpy(Lochness, subject, dry=False):
                                         FOLDER=dst))
 
             if not dry:
-                with tf.NamedTemporaryFile(dir=tmp_dir,
-                                           prefix='tmp_xnat_',
-                                           delete=False) as tmpfilename:
-                    experiment.download(tmpfilename.name)
-                    shutil.move(tmpfilename.name, dst)
+                #with tf.NamedTemporaryFile(dir=tmp_dir,
+                #                           prefix='tmp_xnat_',
+                #                           delete=False) as tmpfilename:
+                #    experiment.download(tmpfilename.name)
+                #    shutil.move(tmpfilename.name, dst)
+                #    os.chmod(dst, 0o0755)
+
+                with tf.TemporaryDirectory(dir=tmp_dir,
+                                           prefix='tmp_xnat_') as tmpdirname:
+                    download_xnat_session_dataorc(
+                        host=keyring['URL'],
+                        project=experiment.project,
+                        subject=xnat_subject.label,
+                        session=experiment.label,
+                        out_dir=tmpdirname
+                    )
+
+                    downloaded_files = os.listdir(tmpdirname)
+
+                    downloaded_file = downloaded_files[0]
+                    downloaded_file_path = os.path.join(tmpdirname, downloaded_file)
+
+                    shutil.move(downloaded_file_path, dst)
                     os.chmod(dst, 0o0755)
-
-
 
 
 def check_consistency(d, experiment):
