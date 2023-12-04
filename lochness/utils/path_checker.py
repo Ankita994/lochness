@@ -235,6 +235,32 @@ def update_by_removing_unused_files(df: pd.DataFrame) -> None:
     ds_store_index = df[df.file_name == '.DS_Store'].index
     df.drop(ds_store_index, inplace=True)
 
+    # recording.conf files
+    recording_conf_index = df[df.file_name == 'recording.conf'].index
+    df.drop(recording_conf_index, inplace=True)
+
+    # chat.txt files
+    chat_txt_index = df[df.file_name == 'chat.txt'].index
+    df.drop(chat_txt_index, inplace=True)
+
+
+def update_skipped_av_files(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Update the 'file_check' column in the DataFrame based on the 'parent_dir' column.
+
+    Args:
+        df (pd.DataFrame): The DataFrame containing the data.
+
+    Returns:
+        pd.DataFrame: The updated DataFrame.
+    """
+    for idx, row in df.iterrows():
+        if row["parent_dir"] == ("Extraneous files"):
+            df.loc[idx, "file_check"] = True
+        elif row["parent_dir"] == ("Additional interview files"):
+            df.loc[idx, "file_check"] = True
+    return df
+
 
 def update_by_removing_genetics_and_fluids(df: pd.DataFrame) -> None:
     '''Remove files under GeneticsAndFluids directory'''
@@ -288,13 +314,14 @@ def check_file_path_df(df: pd.DataFrame,
     update_interviews_check(df)
     update_interviews_transcript_check(df)
     update_interviews_teams_data_check(df)
+    update_skipped_av_files(df)
     update_interviews_video_check(df)
     update_interviews_audio_check(df)
 
     # ignore genetics and fluids
     update_by_removing_genetics_and_fluids(df)
 
-    # ignore .DS_Store files
+    # ignore .DS_Store, recording.conf, chat.txt
     update_by_removing_unused_files(df)
 
     # check if the subject exist in metadata
