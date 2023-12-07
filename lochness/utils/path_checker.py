@@ -255,9 +255,9 @@ def update_skipped_av_files(df: pd.DataFrame) -> pd.DataFrame:
         pd.DataFrame: The updated DataFrame.
     """
     for idx, row in df.iterrows():
-        if row["parent_dir"] == ("Extraneous files"):
+        if "Extraneous files" in row["parent_dir"]:
             df.loc[idx, "file_check"] = True
-        elif row["parent_dir"] == ("Additional interview files"):
+        elif "Additional interview files" in row["parent_dir"]:
             df.loc[idx, "file_check"] = True
     return df
 
