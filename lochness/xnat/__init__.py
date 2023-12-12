@@ -1,5 +1,6 @@
 import os
 import subprocess
+import pexpect
 import yaml
 import uuid
 import xnat
@@ -162,7 +163,9 @@ def download_xnat_session_dataorc(
     project: str,
     subject: str,
     session: str,
-    out_dir: str
+    out_dir: str,
+    xnat_username: str,
+    xnat_password: str
 ) -> None:
     """
     Downloads session data from an XNAT server using the dataorc command-line tool.
@@ -173,13 +176,24 @@ def download_xnat_session_dataorc(
         subject (str): The ID of the subject.
         session (str): The ID of the session to download.
         out_dir (str): The directory to which the session data should be downloaded.
+        xnat_username (str): The username to use when authenticating with the XNAT server.
+        xnat_password (str): The password to use when authenticating with the XNAT server.
 
     Returns:
         None
     """
 
+    dataorc_binary_path = Path('/opt/software/dataorc-bin/dataorc')
+
+    def clear_stored_credentials(dataorc_bindary_path: Path):
+        cli = f"{dataorc_bindary_path} reset-credentials"
+        subprocess.run(cli, shell=True, timeout=10, stdout=subprocess.DEVNULL)
+
+    logger.info('Clearing stored credentials for dataorc')
+    clear_stored_credentials(dataorc_binary_path)
+
     command_array = [
-        '/opt/software/dataorc-bin/dataorc',
+        str(dataorc_binary_path),
         'xnat-download-session',
         '--host', host,
         '--project', project,
@@ -189,15 +203,14 @@ def download_xnat_session_dataorc(
     ]
 
     command = ' '.join(command_array)
-
     logger.info(f'Executing command: {command}')
 
-    try:
-        subprocess.check_call(command, shell=True)
-    except subprocess.CalledProcessError as e:
-        logger.error(f'Failed to execute command: {command}')
-        logger.error(f'Error message: {e}')
-        raise e
+    child = pexpect.spawn(command)
+    child.expect("Please enter your username:", timeout=5)
+    child.sendline(xnat_username)
+    child.expect("Please enter your password:", timeout=5)
+    child.sendline(xnat_password)
+    child.expect(pexpect.EOF, timeout=None)
 
 
 @net.retry(max_attempts=5)
@@ -278,7 +291,9 @@ def sync_xnatpy(Lochness, subject, dry=False):
                         project=experiment.project,
                         subject=xnat_subject.label,
                         session=experiment.label,
-                        out_dir=tmpdirname
+                        out_dir=tmpdirname,
+                        xnat_username=keyring['USERNAME'],
+                        xnat_password=keyring['PASSWORD']
                     )
 
                     downloaded_files = os.listdir(tmpdirname)
