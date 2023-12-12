@@ -183,7 +183,12 @@ def download_xnat_session_dataorc(
         None
     """
 
-    dataorc_binary_path = Path('/opt/software/dataorc-bin/dataorc')
+    dataorc_binary_path = shutil.which('dataorc')
+    if dataorc_binary_path is None:
+        logger.error('dataorc binary not in PATH')
+        raise Exception('dataorc binary not in PATH')
+    else:
+        dataorc_binary_path = Path(dataorc_binary_path)
 
     def clear_stored_credentials(dataorc_bindary_path: Path):
         cli = f"{dataorc_bindary_path} reset-credentials"
