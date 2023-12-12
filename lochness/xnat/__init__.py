@@ -4,7 +4,7 @@ import pexpect
 import yaml
 import uuid
 import xnat
-import yaxil
+# import yaxil
 import shutil
 import logging
 import lochness
@@ -225,7 +225,10 @@ def sync_xnatpy(Lochness, subject, dry=False):
         os.remove(tmp_file)
 
     for tmp_file in Path(tmp_dir).glob('tmp_xnat*'):
-        os.remove(tmp_file)
+        try:
+            os.rmdir(tmp_file)
+        except OSError as e:
+            logger.warning(f'Failed to remove {tmp_file}: {e}')
 
     for alias, xnat_uids in iter(subject.xnat.items()):
         keyring = Lochness['keyring'][alias]
