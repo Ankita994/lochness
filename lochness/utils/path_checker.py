@@ -255,9 +255,9 @@ def update_skipped_av_files(df: pd.DataFrame) -> pd.DataFrame:
         pd.DataFrame: The updated DataFrame.
     """
     for idx, row in df.iterrows():
-        if "Extraneous files" in row["parent_dir"]:
+        if "Extraneous files" in row["file_path"]:
             df.loc[idx, "file_check"] = True
-        elif "Additional interview files" in row["parent_dir"]:
+        elif "Additional interview files" in row["file_path"]:
             df.loc[idx, "file_check"] = True
     return df
 
@@ -314,9 +314,9 @@ def check_file_path_df(df: pd.DataFrame,
     update_interviews_check(df)
     update_interviews_transcript_check(df)
     update_interviews_teams_data_check(df)
-    update_skipped_av_files(df)
     update_interviews_video_check(df)
     update_interviews_audio_check(df)
+    update_skipped_av_files(df)
 
     # ignore genetics and fluids
     update_by_removing_genetics_and_fluids(df)
