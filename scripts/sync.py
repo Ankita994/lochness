@@ -65,14 +65,17 @@ def get_daily_email_config(Lochness: dict, args) -> tuple:
     else:
         dates_email_sent = []
 
-        if args.daily_summary and str(date.today()) not in dates_email_sent:
-            if datetime.today().isoweekday() in [6, 7]:  # Weekends
-                pass  # no email
-            elif datetime.today().isoweekday() == 1:  # Monday
-                days_to_summarize = 3
-                send_email = True
-            else:
-                send_email = True
+    if args.daily_summary and str(date.today()) not in dates_email_sent:
+        if datetime.today().isoweekday() in [6, 7]:  # Weekends
+            logger.debug("Skipping daily update: Weekends")
+            pass  # no email
+        elif datetime.today().isoweekday() == 1:  # Monday
+            logger.debug("Sending daily update summarizing 3 days: Monday")
+            days_to_summarize = 3
+            send_email = True
+        else:
+            logger.debug("Sending daily update")
+            send_email = True
 
     return send_email, days_to_summarize
 
@@ -106,13 +109,16 @@ def send_email_update(Lochness: dict, args) -> None:
     - None
     """
     send_email, days_to_summarize = get_daily_email_config(Lochness, args)
+    logger.info(f"send_email: {send_email}, days_to_summarize: {days_to_summarize}")
     if send_email:
+        logger.info("Sending out daily update")
         send_out_daily_updates(Lochness, days=days_to_summarize)
         if args.check_source:
             check_source(Lochness)
 
         log_email_sent(Lochness)
-
+    else:
+        logger.info("Skipping daily update email: Already sent for today!")
 
 SOURCES = {
     'xnat': XNAT,
