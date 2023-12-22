@@ -56,7 +56,7 @@ def get_daily_email_config(Lochness: dict, args) -> tuple:
         tuple: A tuple containing the send_email(bool) flag and the number of days to summarize(int).
     """
     send_email = False
-    days_to_summarize = 1
+    days_to_summarize = 2
     email_dates_file = Path(Lochness['phoenix_root']).parent / '.email_tmp.txt'
 
     if email_dates_file.is_file():
@@ -70,8 +70,8 @@ def get_daily_email_config(Lochness: dict, args) -> tuple:
             logger.debug("Skipping daily update: Weekends")
             pass  # no email
         elif datetime.today().isoweekday() == 1:  # Monday
-            logger.debug("Sending daily update summarizing 3 days: Monday")
-            days_to_summarize = 3
+            logger.debug("Sending daily update summarizing Weekends too: Monday")
+            days_to_summarize += 2
             send_email = True
         else:
             logger.debug("Sending daily update")
