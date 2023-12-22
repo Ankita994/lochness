@@ -36,6 +36,90 @@ from lochness.cleaner import rm_transferred_files_under_phoenix
 from lochness.utils.source_check import check_source
 # import dpanonymize
 
+
+def get_daily_email_config(Lochness: dict, args) -> tuple:
+    """
+    Check if daily summary email should be sent out.
+
+    Email is sent out if:
+    - daily_summary flag is set
+    - today's date is not in the email_dates_file
+    - today is not a weekend
+
+    After email is sent, today's date is logged to the email_dates_file.
+
+    Args:
+        Lochness (dict): The Lochness object.
+        args: The command line arguments.
+
+    Returns:
+        tuple: A tuple containing the send_email(bool) flag and the number of days to summarize(int).
+    """
+    send_email = False
+    days_to_summarize = 1
+    email_dates_file = Path(Lochness['phoenix_root']).parent / '.email_tmp.txt'
+
+    if email_dates_file.is_file():
+        with open(email_dates_file, 'r') as fp:
+            dates_email_sent = [x.strip() for x in fp.readlines()]
+    else:
+        dates_email_sent = []
+
+    if args.daily_summary and str(date.today()) not in dates_email_sent:
+        if datetime.today().isoweekday() in [6, 7]:  # Weekends
+            logger.debug("Skipping daily update: Weekends")
+            pass  # no email
+        elif datetime.today().isoweekday() == 1:  # Monday
+            logger.debug("Sending daily update summarizing 3 days: Monday")
+            days_to_summarize = 3
+            send_email = True
+        else:
+            logger.debug("Sending daily update")
+            send_email = True
+
+    return send_email, days_to_summarize
+
+
+def log_email_sent(Lochness: dict) -> None:
+    """
+    Logs the date when an email is sent.
+
+    Args:
+        Lochness (dict): A dictionary containing the Lochness configuration.
+
+    Returns:
+        None
+    """
+    email_dates_file = Path(Lochness['phoenix_root']).parent / '.email_tmp.txt'
+    with open(email_dates_file, 'w') as fp:
+        fp.write(str(date.today()))
+
+
+def send_email_update(Lochness: dict, args) -> None:
+    """
+    Sends email updates based CLI arguments.
+
+    If email is sent, the send date is logged to a file.
+
+    Parameters:
+    - Lochness (dict): The Lochness object
+    - args: The command line arguments.
+
+    Returns:
+    - None
+    """
+    send_email, days_to_summarize = get_daily_email_config(Lochness, args)
+    logger.info(f"send_email: {send_email}, days_to_summarize: {days_to_summarize}")
+    if send_email:
+        logger.info("Sending out daily update")
+        send_out_daily_updates(Lochness, days=days_to_summarize)
+        if args.check_source:
+            check_source(Lochness)
+
+        log_email_sent(Lochness)
+    else:
+        logger.info("Skipping daily update email: Already sent for today!")
+
 SOURCES = {
     'xnat': XNAT,
     'beiwe': Beiwe,
@@ -145,27 +229,6 @@ def main():
         logger.info('pausing execution until {0}'.format(until))
         scheduler.until(until)
 
-    # email report preparation
-    send_email = False
-    days_to_summarize = 1
-    email_dates_file = Path(Lochness['phoenix_root']).parent / \
-            '.email_tmp.txt'
-    if email_dates_file.is_file():
-        with open(email_dates_file, 'r') as fp:
-            dates_email_sent = [x.strip() for x in fp.readlines()]
-    else:
-        dates_email_sent = []
-
-    if args.daily_summary and \
-            str(date.today()) not in dates_email_sent:
-        if datetime.today().isoweekday() in [6, 7]:  # Weekends
-            pass  # no email
-        elif datetime.today().isoweekday() == 1:  # Monday
-            days_to_summarize = 3
-            send_email = True
-        else:
-            send_email = True
-
     # run downloader once, or continuously
     if args.continuous:
         while True:
@@ -180,13 +243,7 @@ def main():
             do(args, Lochness)
 
             # daily email
-            if args.daily_summary and send_email:
-                send_out_daily_updates(Lochness, days=days_to_summarize)
-                if args.check_source:
-                    check_source(Lochness)
-
-                with open(email_dates_file, 'w') as fp:
-                    fp.write(str(date.today()))
+            send_email_update(Lochness, args)
 
             poll_interval = int(Lochness['poll_interval'])
             logger.info(f'sleeping for {poll_interval} seconds')
@@ -203,13 +260,7 @@ def main():
         do(args, Lochness)
 
         # daily email
-        if args.daily_summary and send_email:
-            send_out_daily_updates(Lochness, days=days_to_summarize)
-            if args.check_source:
-                check_source(Lochness)
-
-            with open(email_dates_file, 'w') as fp:
-                fp.write(str(date.today()))
+        send_email_update(Lochness, args)
 
 
 def do(args, Lochness):
