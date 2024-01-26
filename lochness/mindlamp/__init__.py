@@ -144,7 +144,8 @@ def sync(Lochness: 'lochness.config',
         logger.debug(f'Mindlamp {subject_id} {date_str} data pull - start')
 
         # store both data types
-        for data_name in ['activity', 'sensor']:
+        # for data_name in ['activity', 'sensor']:
+        for data_name in ['activity']:
             dst = Path(dst_folder) / \
                 f'{subject_id}_{subject.study}_{data_name}_{date_str}.json'
 
