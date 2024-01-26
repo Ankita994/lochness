@@ -210,7 +210,18 @@ def sync_module(Lochness: 'lochness.config',
                             # for A/V related files, force permission to 770
                             # so A/V pipeline can work
                             if 'interviews' in str(mf_local):
-                                for root, dirs, files in os.walk(mf_local):
+                                interviews_root = tree.get(
+                                        datatype,
+                                        subj_dir,
+                                        processed=processed,
+                                        BIDS=Lochness['BIDS'],
+                                        makedirs=True)
+                                for root, dirs, files in os.walk(
+                                        interviews_root):
+                                    dir_path = Path(root)
+                                    perm = oct(dir_path.stat().st_mode)[-3:]
+                                    if perm != '770':
+                                        os.chmod(dir_path, 0o0770)
                                     for file in files:
                                         file_p = Path(root) / file
                                         perm = oct(file_p.stat().st_mode)[-3:]
