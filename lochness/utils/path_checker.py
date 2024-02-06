@@ -254,7 +254,7 @@ def update_by_checking_against_subject_list(
     '''pass'''
     df['exist_in_db'] = df['subject'].isin(subject_id_list).fillna(False)
 
-    df.loc[df[df['exist_in_db']].index,
+    df.loc[df[~df['exist_in_db']].index,
            'notes'] = 'Subject missing from database'
 
 
