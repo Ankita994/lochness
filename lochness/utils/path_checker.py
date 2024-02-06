@@ -235,6 +235,11 @@ def update_by_removing_unused_files(df: pd.DataFrame) -> None:
     ds_store_index = df[df.file_name == '.DS_Store'].index
     df.drop(ds_store_index, inplace=True)
 
+    # Ignore For review
+    for_review_index = df[df.file_path.str.contains(
+        'TRANSCRIPTS/For review')].index
+    df.drop(for_review_index, inplace=True)
+
 
 def update_by_removing_genetics_and_fluids(df: pd.DataFrame) -> None:
     '''Remove files under GeneticsAndFluids directory'''
