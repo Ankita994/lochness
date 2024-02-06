@@ -243,6 +243,10 @@ def update_by_removing_unused_files(df: pd.DataFrame) -> None:
     chat_txt_index = df[df.file_name == 'chat.txt'].index
     df.drop(chat_txt_index, inplace=True)
 
+    # Ignore For review
+    for_review_index = df[df.file_path.str.contains(
+        'TRANSCRIPTS/For review')].index
+    df.drop(for_review_index, inplace=True)
 
 def update_skipped_av_files(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -275,7 +279,7 @@ def update_by_checking_against_subject_list(
     '''pass'''
     df['exist_in_db'] = df['subject'].isin(subject_id_list).fillna(False)
 
-    df.loc[df[df['exist_in_db']].index,
+    df.loc[~df[df['exist_in_db']].index,
            'notes'] = 'Subject missing from database'
 
 
