@@ -183,7 +183,7 @@ def update_interviews_teams_data_check(df: pd.DataFrame) -> pd.DataFrame:
 
     # file name pattern check
     video_int_df['file_pattern_check'] = video_int_df['file_name'].str.match(
-                r'\d{4}\d{2}\d{2}\d{6}_[A-Z]{2}\d{5}_(OPEN|PSYSCS).(wav|WAV)')
+                r'\d{4}\d{2}\d{2}\d{6}(wav|WAV)')
     video_int_df['file_check'] = video_int_df['directory_check'] & \
         video_int_df['file_name']
     df.loc[video_int_index] = video_int_df
