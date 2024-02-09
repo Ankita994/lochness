@@ -1,3 +1,11 @@
+"""
+Checks Mediaflux file paths for deviations from the standard operating
+procedures (SOP).
+
+Note: This module checks files at source (Mediaflux) and not at the
+destination (local storage). So this will check files that will be
+pulled by Lochness and those that will not be pulled by Lochness.
+"""
 import pandas as pd
 import re
 from pathlib import Path
@@ -168,7 +176,20 @@ def update_interviews_video_check(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def update_interviews_teams_data_check(df: pd.DataFrame) -> pd.DataFrame:
-    '''Check logics in rows for Interviews video'''
+    '''
+    Check logics in rows for Interviews with WAV audio files.
+
+    Validate the following:
+        - The directory structure
+        - The file name pattern
+            - The file name should be in the format of 'YYYYMMDDHHMMSS.wav'
+
+    Args:
+        df (pd.DataFrame): The DataFrame containing the data.
+
+    Returns:
+        pd.DataFrame: The updated DataFrame.
+    '''
     # interviews transcript
     video_int_index = df[
             (df.modality=='Interviews') &
@@ -183,21 +204,41 @@ def update_interviews_teams_data_check(df: pd.DataFrame) -> pd.DataFrame:
 
     # file name pattern check
     video_int_df['file_pattern_check'] = video_int_df['file_name'].str.match(
-                r'\d{4}\d{2}\d{2}\d{6}_[A-Z]{2}\d{5}_(OPEN|PSYSCS).(wav|WAV)')
+        r'\d{4}\d{2}\d{2}\d{6}(wav|WAV)'
+    )
     video_int_df['file_check'] = video_int_df['directory_check'] & \
         video_int_df['file_name']
     df.loc[video_int_index] = video_int_df
 
 
 def update_interviews_audio_check(df: pd.DataFrame) -> pd.DataFrame:
-    '''Check logics in rows for Interviews audio'''
+    '''
+    Check logics in rows for Interviews audio
+
+    Skip the following files:
+        - 'playback.m3u' files
+        - 'Audio Record' directory
+        - 'Zoomver.tag' files
+        - files ending with '.log'
+
+    Skip here means to set the 'file_check' column to True, essentially
+    ignoring these files.
+
+    Args:
+        df (pd.DataFrame): The DataFrame containing the data.
+
+    Returns:
+        pd.DataFrame: The updated DataFrame.
+    '''
     # interviews audio
-    audio_int_index = df[(df.modality=='Interviews') &
-                         (df.file_name.str.endswith('.m4a'))].index
+    audio_int_index = df[
+        (df.modality == 'Interviews') & (df.file_name.str.endswith('.m4a'))
+    ].index
 
     audio_int_df = df.loc[audio_int_index]
     audio_int_df['zoom_name'] = audio_int_df['parent_dir'].str.extract(
-            '\d{4}-\d{2}-\d{2} \d{2}\.\d{2}\.\d{2} (.+)')
+        '\d{4}-\d{2}-\d{2} \d{2}\.\d{2}\.\d{2} (.+)'
+    )
 
     # audio files need to be under either the zoom or Audio Record folder
     audio_int_df['file_check_1'] = ~audio_int_df['zoom_name'].isnull()
@@ -209,19 +250,36 @@ def update_interviews_audio_check(df: pd.DataFrame) -> pd.DataFrame:
     df.loc[audio_int_index] = audio_int_df
 
     # ignore playback.m3u audio files
-    audio_int_index = df[(df.modality=='Interviews') &
-                         (df.file_name == 'playback.m3u')].index
+    audio_int_index = df[
+        (df.modality == 'Interviews') & (df.file_name == 'playback.m3u')
+    ].index
     audio_int_df = df.loc[audio_int_index]
     audio_int_df['file_check'] = True
     df.loc[audio_int_index] = audio_int_df
 
     # ignore 'Audio Record' folder
-    rec_index = df[(df.modality=='Interviews') &
-                   (df.file_name.str.endswith('Audio Record'))].index
+    rec_index = df[
+        (df.modality == 'Interviews') & (df.file_name.str.endswith('Audio Record'))
+    ].index
     rec_df = df.loc[rec_index]
     rec_df['file_check'] = True
     df.loc[rec_index] = rec_df
 
+    # ignore 'Zoomver.tag" files
+    zoomver_index = df[
+        (df.modality == 'Interviews') & (df.file_name.str.endswith('Zoomver.tag'))
+    ].index
+    zoomver_df = df.loc[zoomver_index]
+    zoomver_df['file_check'] = True
+    df.loc[zoomver_index] = zoomver_df
+
+    # Ignore files ending with '.log'
+    log_index = df[
+        (df.modality == 'Interviews') & (df.file_name.str.endswith('.log'))
+    ].index
+    log_df = df.loc[log_index]
+    log_df['file_check'] = True
+    df.loc[log_index] = log_df
 
 
 def update_by_adding_notes(df: pd.DataFrame) -> None:
@@ -230,13 +288,27 @@ def update_by_adding_notes(df: pd.DataFrame) -> None:
 
 
 def update_by_removing_unused_files(df: pd.DataFrame) -> None:
-    '''Remove unused files'''
+    '''
+    Remove unused files.
+
+    The following files will be removed:
+        - .DS_Store
+        - recording.conf
+        - chat.txt
+        - Files under TRANSCRIPTS/For review
+
+    Args:
+        df (pd.DataFrame): The DataFrame containing the data.
+
+    Returns:
+        None
+    '''
     # .DS_Store
     ds_store_index = df[df.file_name == '.DS_Store'].index
     df.drop(ds_store_index, inplace=True)
 
     # recording.conf files
-    recording_conf_index = df[df.file_name == 'recording.conf'].index
+    recording_conf_index = df[df.file_name.str.endswith('recording.conf')].index
     df.drop(recording_conf_index, inplace=True)
 
     # chat.txt files
