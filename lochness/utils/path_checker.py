@@ -156,21 +156,37 @@ def update_interviews_transcript_check(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def update_interviews_video_check(df: pd.DataFrame) -> pd.DataFrame:
-    '''Check logics in rows for Interviews video'''
+    '''
+    Check logics in rows for Interviews video
+
+    Check the following:
+        - Zoom name in the parent directory
+        - Zoom name should be in the format of 'YYYY-MM-DD HH.MM.SS <name>'
+        - Video files should be under the zoom folder
+
+    Args:
+        df (pd.DataFrame): The DataFrame containing the data.
+
+    Returns:
+        pd.DataFrame: The updated DataFrame.
+    '''
     # interviews transcript
     video_int_index = df[
-            (df.modality=='Interviews') &
-            ((df.file_name.str.endswith('.mp4')) |
-             (df.file_name=='recording.conf'))
-            ].index
+        (df.modality == "Interviews")
+        & (
+            (df.file_name.str.endswith(".mp4"))
+            | (df.file_name.str.endswith("recording.conf"))
+        )
+    ].index
 
     video_int_df = df.loc[video_int_index]
 
-    video_int_df['zoom_name'] = video_int_df['parent_dir'].str.extract(
-            '\d{4}-\d{2}-\d{2} \d{2}\.\d{2}\.\d{2} (.+)')
+    video_int_df["zoom_name"] = video_int_df["parent_dir"].str.extract(
+        "\d{4}-\d{2}-\d{2} \d{2}\.\d{2}\.\d{2} (.+)"
+    )
 
     # video files must be under the zoom folder
-    video_int_df['file_check'] = ~video_int_df['zoom_name'].isnull()
+    video_int_df["file_check"] = ~video_int_df["zoom_name"].isnull()
 
     df.loc[video_int_index] = video_int_df
 
@@ -267,7 +283,7 @@ def update_interviews_audio_check(df: pd.DataFrame) -> pd.DataFrame:
 
     # ignore 'Zoomver.tag" files
     zoomver_index = df[
-        (df.modality == 'Interviews') & (df.file_name.str.endswith('Zoomver.tag'))
+        (df.modality == 'Interviews') & (df.file_name.str.endswith('ver.tag'))
     ].index
     zoomver_df = df.loc[zoomver_index]
     zoomver_df['file_check'] = True
