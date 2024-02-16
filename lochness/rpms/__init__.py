@@ -248,6 +248,7 @@ def initialize_metadata(Lochness: 'Lochness object',
         if not rpms_id_colname in df_measure_all_subj.columns:
             continue
 
+        consent_dict = {}
         for subject, df_table in df_measure_all_subj.groupby(
                 rpms_id_colname):
             for index, df_measure in df_table.iterrows():
@@ -293,9 +294,24 @@ def initialize_metadata(Lochness: 'Lochness object',
 
                 # Consent date
                 if rpms_consent_colname in df_measure.index:
-                    subject_dict['Consent'] = datetime.strptime(
+                    consent_tmp = datetime.strptime(
                             df_measure[rpms_consent_colname],
-                            '%d/%m/%Y %I:%M:%S %p').strftime('%Y-%m-%d')
+                            '%d/%m/%Y %I:%M:%S %p')
+
+                    if subject in consent_dict.keys():
+                        prev_consent = datetime.strptime(
+                            consent_dict[subject], '%Y-%m-%d')
+                        if prev_consent > consent_tmp:
+                            subject_dict['Consent'] = consent_tmp.strftime(
+                                    '%Y-%m-%d')
+                            consent_dict[subject] = subject_dict['Consent']
+                        else:
+                            subject_dict['Consent'] = prev_consent.strftime(
+                                '%Y-%m-%d')
+                    else:
+                        subject_dict['Consent'] = consent_tmp.strftime(
+                                '%Y-%m-%d')
+                        consent_dict[subject] = subject_dict['Consent']
 
                 # mediaflux source has its foldername as its subject ID
                 subject_dict['RPMS'] = f'rpms.{study_name}:' + \

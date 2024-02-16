@@ -309,3 +309,24 @@ def test_gets_subject_data():
     subject_df_dict = get_subject_data(all_df_dict, subject, id_colname)
     for key, table in subject_df_dict.items():
         print(key, len(table))
+
+
+def test_subjects_with_multiple_consent_dates():
+    Lochness = {}
+    Lochness['RPMS_PATH'] = '/mnt/prescient/RPMS_incoming'
+    Lochness['phoenix_root'] = 'test'
+    study_name = 'GW'
+    rpms_consent_colname = 'chric_consent_date'
+    rpms_id_colname = 'subjectkey'
+    Lochness['RPMS_id_colname'] = rpms_id_colname
+    out_metadata = Path(f'test/GENERAL/{study_name}/{study_name}_metadata.csv')
+    out_metadata.parent.mkdir(exist_ok=True)
+
+    initialize_metadata(Lochness,
+                        study_name,
+                        rpms_id_colname,
+                        rpms_consent_colname)
+    df = pd.read_csv(out_metadata)
+    with open('tmp_subject_id_to_check.txt', 'r') as fp:
+        subject_id = fp.read().strip()
+    print(df[df['Subject ID']==subject_id]['Consent'])
