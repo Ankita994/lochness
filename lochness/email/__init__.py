@@ -1,3 +1,4 @@
+import re
 import os
 from pathlib import Path
 import string
@@ -119,7 +120,8 @@ def send_detail(Lochness,
 
 
 def send_out_daily_updates(Lochness, days: int = 1,
-                           test: bool = False, mailx: bool = True):
+                           test: bool = False, mailx: bool = True,
+                           shorten: bool = True):
     '''Send daily updates from Lochness'''
 
     s3_log = Path(Lochness['phoenix_root']) / 's3_log.csv'
@@ -142,13 +144,16 @@ def send_out_daily_updates(Lochness, days: int = 1,
 
         s3_df_selected['date'] = s3_df_selected['timestamp'].apply(
                 lambda x: x.date())
+
+        # remove logfile
+        s3_df_selected = s3_df_selected[s3_df_selected.filename != '.log']
         count_df = s3_df_selected.groupby([
             'date', 'protected', 'study',
-            'processed', 'subject', 'datatypes']).count()[['filename']]
+            'processed', 'datatypes']).count()[['filename']]
         count_df.columns = ['file count']
         count_df = count_df.reset_index()
         count_df.columns = ['Transfer date', 'Protected vs General', 'Site',
-                'Raw vs Processed', 'Subject', 'Data type',
+                'Raw vs Processed', 'Data type',
                 'Number of files transferred']
         s3_df_selected.drop('date', axis=1, inplace=True)
 
@@ -199,6 +204,40 @@ def send_out_daily_updates(Lochness, days: int = 1,
             sample_mri_df]).sort_index().reset_index(drop=True)
 
         in_mail_footer = 'Only the files transferred to NDA are shown.'
+
+        if shorten:
+            s3_df_tmp = s3_df_selected.copy()
+            for index, row in s3_df_tmp.iterrows():
+                s3_df_tmp.loc[index, 'File name'] = re.sub(
+                        row['Subject'], 'SUBJECT', row['File name'])
+
+                mindlamp_act_patt = r'_activity_(\d{4}_\d{2}_\d{2}.+)$'
+                if re.search(mindlamp_act_patt, row['File name']):
+                    rest_str = re.search(mindlamp_act_patt,
+                                         row['File name']).group(1)
+                    s3_df_tmp.loc[index, 'File name'] = \
+                            f'SUBJECT_activity_{rest_str}'
+
+                for patt in ['-diaryTranscriptQC-day', '_audioJournal_day',
+                        '-diaryAudioQC-day']:
+                    if re.search(patt,
+                                 row['File name']):
+                        s3_df_tmp.loc[index, 'File name'] = \
+                                re.search(r'([a-zA-Z]+)[-_]day', patt).group(1)
+
+            gb = s3_df_tmp.groupby('File name')
+            for unique_filename, table in gb:
+                s3_df_tmp.loc[table.index, 'Subject'] = \
+                    f'{len(table)} subjects'
+                s3_df_tmp.loc[table.index, 'Transfer time (UTC)'] = \
+                        table['Transfer time (UTC)'].iloc[0]
+                s3_df_tmp.loc[table.index, 'Download time (UTC)'] = \
+                        table['Download time (UTC)'].iloc[0]
+            s3_df_selected = s3_df_tmp.drop_duplicates()
+            rename_Subject = lambda x: 'Number of subjects' if x == 'Subject' \
+                    else x
+            s3_df_selected.columns = [rename_Subject(x) for x in
+                                      s3_df_selected.columns]
 
         send_detail(
             Lochness,

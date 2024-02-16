@@ -5,6 +5,7 @@ from lochness import config
 from pathlib import Path
 
 import sys
+from lochness.config import load
 lochness_root = Path(lochness.__path__[0]).parent
 scripts_dir = lochness_root / 'scripts'
 test_dir = lochness_root / 'tests'
@@ -54,3 +55,10 @@ def test_box_sync_module_mailx(args_and_Lochness_BIDS):
     send_out_daily_updates(Lochness)
 
 
+def test_email_size():
+    config_loc = '/mnt/prescient/Prescient_production/config.yml'
+    Lochness = load(config_loc)
+    Lochness['sender'] = 'kevincho@bwh.harvard.edu'
+
+    Lochness['notify']['test'] = ['kevincho@bwh.harvard.edu']
+    send_out_daily_updates(Lochness)
