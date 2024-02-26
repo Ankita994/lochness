@@ -366,9 +366,9 @@ def update_by_checking_against_subject_list(
         subject_id_list: List[str]) -> None:
     '''pass'''
     df['exist_in_db'] = df['subject'].isin(subject_id_list).fillna(False)
+    missing_in_db_index = df[~df.exist_in_db].index.tolist()
 
-    df.loc[~df[df['exist_in_db']].index,
-           'notes'] = 'Subject missing from database'
+    df.loc[missing_in_db_index, 'notes'] = 'Subject missing from database'
 
 
 def check_file_path_df(df: pd.DataFrame,
