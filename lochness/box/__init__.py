@@ -299,8 +299,8 @@ def save(Lochness: 'lochness',
     # local path
     local_fullfile = os.path.join(out_base, box_path_name + ext)
 
-    if os.path.exists(local_fullfile):
-        return
+    #if os.path.exists(local_fullfile):
+    #    return
     local_dirname = os.path.dirname(local_fullfile)
     if not os.path.exists(local_dirname):
         os.makedirs(local_dirname)
@@ -355,6 +355,15 @@ class DeletionError(Exception):
 
 @hash_retry(3)
 def _save(box_file_object, box_fullpath, local_fullfile, key, compress):
+    if Path(local_fullfile).is_file():
+        try:
+            if verify(local_fullfile, box_file_object.sha1,
+                      key=key, compress=compress):  # same file
+                return
+        except BoxHashError:  # hash different
+            logger.info('Source file has been changed')
+            pass
+
     # request the file from box.com
     logger.debug(f'Reading content of {box_file_object}')
     try:
@@ -387,6 +396,10 @@ def _save(box_file_object, box_fullpath, local_fullfile, key, compress):
     verify(tmp_name, box_file_object.sha1, key=key, compress=compress)
     os.chmod(tmp_name, 0o0644)
     os.rename(tmp_name, local_fullfile)
+    check_sum_file = Path(local_fullfile).parent / \
+        f'.check_sum_{Path(local_fullfile).name}'
+    with open(check_sum_file, 'w') as fp:
+        fp.write(box_file_object.sha1)
 
 
 class DownloadError(Exception):
@@ -415,22 +428,33 @@ def _savetemp(content, dirname=None, compress=False):
 
 def verify(f, content_hash, key=None, compress=False):
     '''compute box hash of a local file and compare to content_hash'''
-    hasher = hashlib.sha1()
-    CHUNK_SIZE = 65536
-    fo = open(f, 'rb')
-    if compress:
-        fo = gzip.GzipFile(fileobj=fo, mode='rb')
-    if key:
-        fo = crypt.buffer(crypt.decrypt(fo, key, chunk_size=CHUNK_SIZE))
-    while 1:
-        buf = fo.read(CHUNK_SIZE)
-        if not buf:
-            break
-        hasher.update(buf)
-    fo.close()
-    if hasher.hexdigest() != content_hash:
+    check_sum_file = Path(f).parent / f'.check_sum_{Path(f).name}'
+
+    if check_sum_file.is_file():
+        with open(check_sum_file, 'r') as fp:
+            file_checksum = fp.read().strip()
+    else:
+        hasher = hashlib.sha1()
+        CHUNK_SIZE = 65536
+        fo = open(f, 'rb')
+        if compress:
+            fo = gzip.GzipFile(fileobj=fo, mode='rb')
+        if key:
+            fo = crypt.buffer(crypt.decrypt(fo, key, chunk_size=CHUNK_SIZE))
+        while 1:
+            buf = fo.read(CHUNK_SIZE)
+            if not buf:
+                break
+            hasher.update(buf)
+        fo.close()
+        file_checksum = hasher.hexdigest()
+
+    if file_checksum != content_hash:
         message = f'hash mismatch detected for {f}'
+        logger.info(message)
         raise BoxHashError(message, f)
+    else:
+        return True
 
 
 class BoxHashError(Exception):
